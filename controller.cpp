@@ -4,13 +4,13 @@
 
 #include <chrono>
 #include <thread>
+#include <functional>
 #include <mutex>
 
 #include <fstream>
 
 #include <string>
 #include <random>
-#include <zmq.hpp>
 #include <ctime>
 #include <cmath>
 
@@ -20,8 +20,18 @@
 
 #include <unistd.h>
 #include <zcm/zcm-cpp.hpp>
-#include <leg_state.hpp>
 #include <sys/types.h>
+
+#include "leg_state.hpp"
+#include "torque_setpoint.hpp"
+
+#include <errno.h> //It defines macros for reporting and retrieving error conditions through error codes
+#include <time.h> //contains various functions for manipulating date and time
+#include <unistd.h> //contains various constants
+#include <sys/types.h> //contains a number of basic derived types that should be used whenever appropriate
+#include <arpa/inet.h> // defines in_addr structure
+#include <sys/socket.h> // for socket creation
+#include <netinet/in.h> //contains constants and structures needed for internet domain addresses
 
 //#include "model_functions.cpp"
 
@@ -136,7 +146,17 @@ double lower_torque_limit = -50;
 
 double omega_desired = 8;
 
-zcm::ZCM zcm_context {"ipc"};
+zcm::ZCM zcm_context { "ipc" };
+
+const char* left_leg_state_channel = ".left_leg_state";
+const char* right_leg_state_channel = ".right_leg_state";
+
+const char* left_leg_torque_setpoint_channel = "left_leg_torque_setpoint";
+const char* right_leg_torque_setpoint_channel = "right_leg_torque_setpoint";
+
+const int udp_port = 4200;
+
+const int udp_buffer_size = 4096;
 
 #pragma region Left leg
 
@@ -168,19 +188,27 @@ Eigen::Matrix<double, 3, 1> vel_desired_left_leg;
 Eigen::Matrix<double, 3, 1> accel_desired_left_leg;
 
 void update_q_left_leg(double theta1, double theta2, double theta3, double theta4, double theta5) {
+    q_left_leg_mutex.lock();
+    
     q_left_leg << theta1,
                   theta2,
                   theta3,
                   theta4,
                   theta5;
+
+    q_left_leg_mutex.unlock();
 }
 
 void update_q_dot_left_leg(double theta1dot, double theta2dot, double theta3dot, double theta4dot, double theta5dot) {
+    q_dot_left_leg_mutex.lock();
+    
     q_dot_left_leg << theta1dot,
                       theta2dot,
                       theta3dot,
                       theta4dot,
                       theta5dot;
+
+    q_dot_left_leg_mutex.unlock();
 }
 
 void update_B_left_leg(double theta_1, double theta_2, double theta_3, double theta_4, double theta_5, double thetadot1, double theta2dot, double theta3dot, double theta4dot, double theta5dot) {
@@ -566,7 +594,7 @@ std::thread left_leg_torque_thread;
 std::thread right_leg_torque_thread;
 
 double state_update_interval = 1000.0; //microseconds
-double torque_calculation_interval = 1500.0; //microseconds
+double torque_calculation_interval = 1000.0; //microseconds
 
 void update_left_leg_state() {
 
@@ -574,12 +602,6 @@ void update_left_leg_state() {
     high_resolution_clock::time_point end = high_resolution_clock::now();
 
     double duration = 0.0f;
-
-    zmq::context_t context(1);
-    // zmq::socket_t subscriber (context, ZMQ_SUB);
-    
-    // subscriber.connect("tcp://127.0.0.1:1337");
-    // subscriber.setsockopt(ZMQ_SUBSCRIBE, "lState", 0);
 
     struct timespec deadline;
 
@@ -597,81 +619,7 @@ void update_left_leg_state() {
     }
 }
 
-void update_right_leg_state() {
-    high_resolution_clock::time_point start = high_resolution_clock::now();
-    high_resolution_clock::time_point end = high_resolution_clock::now();
-
-    struct timespec deadline;
-
-    double duration = 0.0f;
-
-    zmq::context_t context(1);
-    zmq::socket_t subscriber (context, ZMQ_SUB);
-    
-    subscriber.connect("tcp://127.0.0.1:9999");
-    subscriber.setsockopt(ZMQ_SUBSCRIBE, "rState", 0);
-
-    while(true) {
-        // This timed loop approach calculates the time that the execution of the main code took,
-        // then calculates the remaining time for the loop and waits this duration.
-        
-        start = high_resolution_clock::now();
-
-        zmq::message_t msg;
-        subscriber.recv(&msg);
-
-        std::string data = std::string(static_cast<char*>(msg.data()), msg.size());
-
-        std::vector<std::string> state_no_topic = split_string(data, ' ');
-        std::vector<std::string> state = split_string(state_no_topic[1], '|');
-
-        if(static_cast<int>(state.size()) >= 9) {
-
-            double q_1 = atof(state[0].c_str());
-            double q_2 = atof(state[1].c_str());
-            double q_3 = atof(state[2].c_str());
-            double q_4 = atof(state[3].c_str());
-            double q_5 = atof(state[4].c_str());
-
-            double q_dot_1 = atof(state[5].c_str());
-            double q_dot_2 = atof(state[6].c_str());
-            double q_dot_3 = atof(state[7].c_str());
-            double q_dot_4 = atof(state[8].c_str());
-            double q_dot_5 = atof(state[9].c_str());
-
-            //try to use std::lock in future
-            q_right_leg_mutex.lock();
-
-            q_right_leg << q_1,
-                            q_2,
-                            q_3,
-                            q_4,
-                            q_5;
-
-            q_right_leg_mutex.unlock();
-
-            q_dot_right_leg_mutex.lock();
-
-            q_dot_right_leg << q_dot_1,
-                                q_dot_2,
-                                q_dot_3,
-                                q_dot_4,
-                                q_dot_5;
-
-            q_dot_right_leg_mutex.unlock();
-        }
-
-        end = high_resolution_clock::now();
-        duration = duration_cast<microseconds>(end - start).count();
-        long long remainder = (state_update_interval - duration) * 1e+03;
-        deadline.tv_nsec = remainder;
-        deadline.tv_sec = 0;
-        clock_nanosleep(CLOCK_REALTIME, 0, &deadline, NULL);
-    }
-}
-
 void calculate_left_leg_torques() {
-
     high_resolution_clock::time_point start = high_resolution_clock::now();
     high_resolution_clock::time_point end = high_resolution_clock::now();
 
@@ -682,89 +630,115 @@ void calculate_left_leg_torques() {
     Eigen::Matrix<double, 5, 1> q_temp;
     Eigen::Matrix<double, 5, 1> q_dot_temp;
 
-    zmq::context_t context(1);	
-    zmq::socket_t publisher(context, ZMQ_PUB);
+    int sockfd; 
+    char buffer[udp_buffer_size];
+    struct sockaddr_in servaddr, cliaddr; 
+      
+    // Creating socket file descriptor 
+    if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) { 
+        perror("socket creation failed"); 
+        exit(EXIT_FAILURE); 
+    } 
+      
+    memset(&servaddr, 0, sizeof(servaddr)); 
+    memset(&cliaddr, 0, sizeof(cliaddr)); 
+      
+    // Filling server information 
+    servaddr.sin_family    = AF_INET; // IPv4 
+    servaddr.sin_addr.s_addr = INADDR_ANY; 
+    servaddr.sin_port = htons(udp_port); 
+      
+    // Bind the socket with the server address 
+    if ( bind(sockfd, (const struct sockaddr *)&servaddr,  
+            sizeof(servaddr)) < 0 ) 
+    { 
+        perror("bind failed"); 
+        exit(EXIT_FAILURE);
+    } 
+      
+    int n; 
 
-    publisher.setsockopt(ZMQ_SNDHWM, 100);
-    publisher.bind("tcp://*:42000");
-    
-    zmq::socket_t subscriber (context, ZMQ_SUB);
-    subscriber.connect("tcp://127.0.0.1:9998");
-    subscriber.setsockopt(ZMQ_SUBSCRIBE, "lState", 0);
+    socklen_t len;
 
     while(true) {
-
         start = high_resolution_clock::now();
+        
+        // q_left_leg_mutex.lock();
 
-        zmq::message_t msg_recv;
-        subscriber.recv(&msg_recv);
+        // q_temp = q_left_leg;
 
-        std::string data = std::string(static_cast<char*>(msg_recv.data()), msg_recv.size());
+        // q_left_leg_mutex.unlock();
 
-        std::vector<std::string> state_no_topic = split_string(data, ' ');
-        std::vector<std::string> state = split_string(state_no_topic[1], '|');
+        // q_dot_left_leg_mutex.lock();
+
+        // q_dot_temp = q_dot_left_leg;
+
+        // q_dot_left_leg_mutex.unlock();
+
+        // double theta1 = q_temp(0);
+        // double theta2 = q_temp(1);
+        // double theta3 = q_temp(2);
+        // double theta4 = q_temp(3);
+        // double theta5 = q_temp(4);
+
+        // //std::cout << q_temp << std::endl;
+
+        // double theta1_dot = q_dot_temp(0);
+        // double theta2_dot = q_dot_temp(1);
+        // double theta3_dot = q_dot_temp(2);
+        // double theta4_dot = q_dot_temp(3);
+        // double theta5_dot = q_dot_temp(4);
+        
+        double theta1;
+        double theta2;
+        double theta3;
+        double theta4;
+        double theta5;
+
+        double theta1_dot;
+        double theta2_dot;
+        double theta3_dot;
+        double theta4_dot;
+        double theta5_dot;
+
+        n = recvfrom(sockfd, (char *)buffer, udp_buffer_size, MSG_WAITALL, ( struct sockaddr *) &cliaddr, &len);
+        buffer[n] = '\0';
+
+        string raw_state(buffer);
+
+        //std::cout << "Received state: " << raw_state << std::endl;
+
+        std::vector<std::string> state = split_string(raw_state, '|');
+
+        //std::cout << "State size:" << static_cast<int>(state.size()) << std::endl;
 
         if(static_cast<int>(state.size()) >= 9) {
 
-            double q_1 = atof(state[0].c_str());
-            double q_2 = atof(state[1].c_str());
-            double q_3 = atof(state[2].c_str());
-            double q_4 = atof(state[3].c_str());
-            double q_5 = atof(state[4].c_str());
+            theta1 = atof(state[0].c_str());
+            theta2 = atof(state[1].c_str());
+            theta3 = atof(state[2].c_str());
+            theta4 = atof(state[3].c_str());
+            theta5 = atof(state[4].c_str());
 
-            double q_dot_1 = atof(state[5].c_str());
-            double q_dot_2 = atof(state[6].c_str());
-            double q_dot_3 = atof(state[7].c_str());
-            double q_dot_4 = atof(state[8].c_str());
-            double q_dot_5 = atof(state[9].c_str());
+            //std::cout << "Theta1:" << theta1 << std::endl;
 
-            //std::cout << q_1 << std::endl;
-
-            //try to use std::lock in future
-            //std::lock(q_left_leg_mutex, q_dot_left_leg_mutex);
-
-            q_left_leg << q_1,
-                            q_2,
-                            q_3,
-                            q_4,
-                            q_5;
-
-            //std::cout << q_left_leg << std::endl;
-
-            //q_left_leg_mutex.unlock();
-
-            q_dot_left_leg << q_dot_1,
-                                q_dot_2,
-                                q_dot_3,
-                                q_dot_4,
-                                q_dot_5;
-
-            //q_dot_left_leg_mutex.unlock();
+            theta1_dot = atof(state[5].c_str());
+            theta2_dot = atof(state[6].c_str());
+            theta3_dot = atof(state[7].c_str());
+            theta4_dot = atof(state[8].c_str());
+            theta5_dot = atof(state[9].c_str());
         }
 
-        q_temp = q_left_leg;
-
-        //q_dot_left_leg_mutex.unlock();
-
-        q_dot_temp = q_dot_left_leg;
-
-        //q_dot_left_leg_mutex.unlock();
-
-        double theta1 = q_temp(0);
-        double theta2 = q_temp(1);
-        double theta3 = q_temp(2);
-        double theta4 = q_temp(3);
-        double theta5 = q_temp(4);
-
-        //std::cout << q_temp << std::endl;
-
-        double theta1_dot = q_dot_temp(0);
-        double theta2_dot = q_dot_temp(1);
-        double theta3_dot = q_dot_temp(2);
-        double theta4_dot = q_dot_temp(3);
-        double theta5_dot = q_dot_temp(4);
-
-        high_resolution_clock::time_point t2_temp = high_resolution_clock::now();
+        // theta1 = 0;
+        // theta2 = 0;
+        // theta3 = 0;
+        // theta4 = 0;
+        // theta5 = 0;
+        // theta1_dot = 0;
+        // theta2_dot = 0;
+        // theta3_dot = 0;
+        // theta4_dot = 0;
+        // theta5_dot = 0;
 
         update_B_left_leg(theta1, theta2, theta3, theta4, theta5, theta1_dot, theta2_dot, theta3_dot, theta4_dot, theta5_dot);
 
@@ -774,7 +748,7 @@ void calculate_left_leg_torques() {
 
         update_G_left_leg(theta1, theta2, theta3, theta4, theta5);
 
-        //update_C_left_leg
+        //update_C_left_leg();
 
         update_Lambda_left_leg();
 
@@ -801,17 +775,25 @@ void calculate_left_leg_torques() {
             }
         }
 
-        std::stringstream s;
-        s << "lTorques " << G_left_leg(0) << "|" << G_left_leg(1) << "|" << G_left_leg(2) << "|" << G_left_leg(3) << "|" << G_left_leg(4);
+        torque_setpoint setpoint;
 
-        auto msg = s.str();
-        zmq::message_t message(msg.length());
-        
-        memcpy(message.data(), msg.c_str(), msg.length());
-        
-        publisher.send(message);
+        setpoint.tau1 = G_left_leg(0);
+        setpoint.tau2 = G_left_leg(1);
+        setpoint.tau3 = G_left_leg(2);
+        setpoint.tau4 = G_left_leg(3);
+        setpoint.tau5 = G_left_leg(4);
 
-        std::cout << msg << std::endl;
+        //std::cout << "before publish in left leg" << std::endl;
+
+        stringstream s;
+
+        s << setpoint.tau1 << "|" << setpoint.tau2 << "|" << setpoint.tau3 << "|" << setpoint.tau4 << "|" << setpoint.tau5;
+
+        //zcm_context.publish(left_leg_torque_setpoint_channel, &setpoint);
+
+        sendto(sockfd, (const char *)s.str().c_str(), strlen(s.str().c_str()), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
+
+        std::cout << "Sent: " << G_left_leg(0) << " , " << G_left_leg(1) << " , " << G_left_leg(2) << " , " << G_left_leg(3) << " , " << G_left_leg(4) << std::endl;
 
         end = high_resolution_clock::now();
 
@@ -823,158 +805,36 @@ void calculate_left_leg_torques() {
     }
 }
 
-void calculate_right_leg_torques() {
-    //limit to 1kHz
-    high_resolution_clock::time_point start = high_resolution_clock::now();
-    high_resolution_clock::time_point end = high_resolution_clock::now();
+class Handler
+{
+    public:
+        ~Handler() {}
 
-    struct timespec deadline;
-
-    double duration = 0.0f;
-
-    Eigen::Matrix<double, 5, 1> q_temp;
-    Eigen::Matrix<double, 5, 1> q_dot_temp;
-
-    zmq::context_t context(1);	
-    zmq::socket_t publisher(context, ZMQ_PUB);
-
-    publisher.setsockopt(ZMQ_SNDHWM, 100);
-    publisher.bind("tcp://*:42001");
-    
-    zmq::socket_t subscriber (context, ZMQ_SUB);
-    subscriber.connect("tcp://127.0.0.1:9999");
-    subscriber.setsockopt(ZMQ_SUBSCRIBE, "rState", 0);
-
-    while(true) {
-        start = high_resolution_clock::now();
-
-        zmq::message_t msg_recv;
-        subscriber.recv(&msg_recv);
-
-        std::string data = std::string(static_cast<char*>(msg_recv.data()), msg_recv.size());
-
-        std::vector<std::string> state_no_topic = split_string(data, ' ');
-        std::vector<std::string> state = split_string(state_no_topic[1], '|');
-
-        if(static_cast<int>(state.size()) >= 9) {
-
-            double q_1 = atof(state[0].c_str());
-            double q_2 = atof(state[1].c_str());
-            double q_3 = atof(state[2].c_str());
-            double q_4 = atof(state[3].c_str());
-            double q_5 = atof(state[4].c_str());
-
-            double q_dot_1 = atof(state[5].c_str());
-            double q_dot_2 = atof(state[6].c_str());
-            double q_dot_3 = atof(state[7].c_str());
-            double q_dot_4 = atof(state[8].c_str());
-            double q_dot_5 = atof(state[9].c_str());
-
-            //std::cout << q_1 << std::endl;
-
-            //try to use std::lock in future
-            //std::lock(q_right_leg_mutex, q_dot_right_leg_mutex);
-
-            q_right_leg << q_1,
-                            q_2,
-                            q_3,
-                            q_4,
-                            q_5;
-
-            //std::cout << q_right_leg << std::endl;
-
-            //q_right_leg_mutex.unlock();
-
-            q_dot_right_leg << q_dot_1,
-                                q_dot_2,
-                                q_dot_3,
-                                q_dot_4,
-                                q_dot_5;
-
-            //q_dot_right_leg_mutex.unlock();
+        void handleLeftLegMessage(const zcm::ReceiveBuffer* rbuf,
+                           const string& chan,
+                           const leg_state *state)
+        {
+            std::cout << "Got message, updating state..." << std::endl;
+            update_q_left_leg(state->theta1, state->theta2, state->theta3, state->theta4, state->theta5);
+            update_q_dot_left_leg(state->theta1_dot, state->theta2_dot, state->theta3_dot, state->theta4_dot, state->theta5_dot);
         }
 
-        q_temp = q_right_leg;
-
-        //q_dot_right_leg_mutex.unlock();
-
-        q_dot_temp = q_dot_right_leg;
-
-        //q_dot_right_leg_mutex.unlock();
-
-        double theta1 = q_temp(0);
-        double theta2 = q_temp(1);
-        double theta3 = q_temp(2);
-        double theta4 = q_temp(3);
-        double theta5 = q_temp(4);
-
-        //std::cout << q_temp << std::endl;
-
-        double theta1_dot = q_dot_temp(0);
-        double theta2_dot = q_dot_temp(1);
-        double theta3_dot = q_dot_temp(2);
-        double theta4_dot = q_dot_temp(3);
-        double theta5_dot = q_dot_temp(4);
-
-        update_B_right_leg(theta1, theta2, theta3, theta4, theta5, theta1_dot, theta2_dot, theta3_dot, theta4_dot, theta5_dot);
-
-        update_J_foot_right_leg(theta1, theta2, theta3, theta4, theta5);
-
-        update_J_foot_dot_right_leg(theta1, theta2, theta3, theta4, theta5, theta1_dot, theta2_dot, theta3_dot, theta4_dot, theta5_dot);
-
-        update_G_right_leg(theta1, theta2, theta3, theta4, theta5);
-
-        //update_C_right_leg
-
-        update_Lambda_right_leg();
-
-        update_tau_ff_right_leg();
-
-        update_Kp_right_leg();
-        update_Kd_right_leg();
-
-        update_foot_pos_right_leg(theta1, theta2, theta3, theta4, theta5, theta1_dot, theta2_dot, theta3_dot, theta4_dot, theta5_dot);
-        update_foot_vel_right_leg(q_dot_temp);
-
-        update_tau_setpoint_right_leg();
-
-        for(int i = 0; i < 5; ++i) {
-            //tau_setpoint_right_leg(i) = -tau_setpoint_right_leg(i);
-            if(isnan(tau_setpoint_right_leg(i))) {
-                tau_setpoint_right_leg(i) = 0;
-            }
-            if(tau_setpoint_right_leg(i) > 100) {
-                tau_setpoint_right_leg(i) = 100;
-            }
-            if(tau_setpoint_right_leg(i) < -100) {
-                tau_setpoint_right_leg(i) = -100;
-            }
+        void handleRightLegMessage(const zcm::ReceiveBuffer* rbuf,
+                           const string& chan,
+                           const leg_state *state)
+        {
+            update_q_right_leg(state->theta1, state->theta2, state->theta3, state->theta4, state->theta5);
+            update_q_dot_right_leg(state->theta1_dot, state->theta2_dot, state->theta3_dot, state->theta4_dot, state->theta5_dot);
         }
-
-        std::stringstream s;
-        s << "rTorques " << tau_setpoint_right_leg(0) << "|" << tau_setpoint_right_leg(1) << "|" << tau_setpoint_right_leg(2) << "|" << tau_setpoint_right_leg(3) << "|" << tau_setpoint_right_leg(4);
-
-        auto msg = s.str();
-        zmq::message_t message(msg.length());
-        
-        memcpy(message.data(), msg.c_str(), msg.length());
-
-        std::cout << s.str() << std::endl;
-        
-        publisher.send(message);
-
-        end = high_resolution_clock::now();
-        duration = duration_cast<microseconds>(end - start).count();
-        long long remainder = (torque_calculation_interval - duration) * 1e+03;
-        deadline.tv_nsec = remainder;
-        deadline.tv_sec = 0;
-        clock_nanosleep(CLOCK_REALTIME, 0, &deadline, NULL);
-    }
-}
-
+};
 
 int main()
 {
+    if(!zcm_context.good()) {
+        std::cout << "ZCM isn't feeling too well, exiting..." << std::endl; 
+        return 1;
+    }
+
     pos_desired_left_leg << 0.2, -0.4, -0.5;
     vel_desired_left_leg << 0, 0, 0;
     accel_desired_left_leg << 0, 0, 0;
@@ -982,6 +842,14 @@ int main()
     pos_desired_right_leg << -0.2, 0.4, -0.5;
     vel_desired_right_leg << 0, 0, 0;
     accel_desired_right_leg << 0, 0, 0;
+
+    Handler handlerObject;
+
+    auto left_leg_subs = zcm_context.subscribe(left_leg_state_channel, &Handler::handleLeftLegMessage, &handlerObject);
+    //zcm_context.subscribe(right_leg_state_channel, &Handler::handleRightLegMessage, &handlerObject);
+
+    zcm_context.start();
+    zcm_context.run();
     
     //left_leg_state_thread = std::thread(std::bind(update_left_leg_state));
     //right_leg_state_thread = std::thread(std::bind(update_right_leg_state));
@@ -993,6 +861,9 @@ int main()
     //std::cout << G_left_leg << std::endl;
 
     while(true) {
-        //std::cout << foot_pos_left_leg(2) << std::endl;
+
     }
 }
+
+//COMPILE: g++ controller.cpp leg_state.hpp torque_setpoint.hpp -o controller -lzcm -pthread -I .
+//Also, ALWAYS run sudo due to IPC rights
