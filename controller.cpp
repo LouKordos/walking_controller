@@ -366,9 +366,9 @@ int main()
          0, 1, 0,
          0, 0, 1;
                             
-    omega_desired << 2 * M_PI * 2, 2 * M_PI * 2, 2 * M_PI * 2;  
+    omega_desired << 1.5 * M_PI * 2, 1.5 * M_PI * 2, 1.5 * M_PI * 2;  
 
-    pos_desired_left_leg << 0.2, -0.4, -0.5;
+    pos_desired_left_leg << 0, 0, -1.115;
     vel_desired_left_leg << 0, 0, 0;
     accel_desired_left_leg << 0, 0, 0;
 
