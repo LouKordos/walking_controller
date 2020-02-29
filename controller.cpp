@@ -281,8 +281,14 @@ void calculate_left_leg_torques() {
         }
 
         for(int i = 0; i < 3; ++i) {
-            constrain(Kp_left_leg(i, i), -6, 10);
-            constrain(Kd_left_leg(i, i), -0.2, 0.2);
+            if(i < 2000) {
+                constrain(Kp_left_leg(i, i), -0.5, 0.5);
+                constrain(Kd_left_leg(i, i), -0.1, 0.1);
+            }
+            else {
+                constrain(Kp_left_leg(i, i), -15, 20);
+                constrain(Kd_left_leg(i, i), -15, 15);
+            }
         }
 
         torque_setpoint setpoint;
