@@ -169,9 +169,11 @@ void calculate_left_leg_torques() {
         start = high_resolution_clock::now();
 
         double t = iteration_counter * dt;
-        pos_desired_left_leg << 0, 0, 0.2*sin(2*t) - 0.915;
-        vel_desired_left_leg << 0, 0, 0.4*cos(2*t);
-        accel_desired_left_leg << 0, 0, -0.8*sin(2*t);
+        pos_desired_left_leg << 0, 0, 0.1*sin(2*t) - 0.9;
+        // vel_desired_left_leg << 0, 0, 0.2*cos(2*t);
+        vel_desired_left_leg << 0, 0, 0;
+
+        accel_desired_left_leg << 0, 0, -0.4*sin(2*t);
         
         // q_left_leg_mutex.lock();
 
