@@ -385,10 +385,6 @@ int main()
     left_leg_torque_thread = std::thread(std::bind(calculate_left_leg_torques));
     //right_leg_torque_thread = std::thread(std::bind(calculate_right_leg_torques));
 
-    update_B_left_leg(0,1,2,3,4,5,6,7,8,9);
-
-    // std::cout << J_foot_dot_left_leg << std::endl;
-
     std::cout << "omega_desired is currently:" << omega_desired(0) << std::endl;
 
     //std::cout << B_left_leg << std::endl;
