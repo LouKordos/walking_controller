@@ -6,17 +6,21 @@
 
 #include <fstream>
 
+#include "nameof.h"
+
 #include <string>
 #include <random>
 #include <ctime>
 #include <cmath>
+
+#include <fstream>
 
 #include <stdlib.h>
 	
 #include <boost/algorithm/string.hpp>
 
 #include <unistd.h>
-#include <zcm/zcm-cpp.hpp>
+// #include <zcm/zcm-cpp.hpp>
 #include <sys/types.h>
 
 #include "leg_state.hpp"
@@ -35,7 +39,7 @@
 using namespace std;
 using namespace std::chrono;
 
-zcm::ZCM zcm_context { "ipc" };
+//zcm::ZCM zcm_context { "ipc" };
 
 const char* left_leg_state_channel = ".left_leg_state";
 const char* right_leg_state_channel = ".right_leg_state";
@@ -53,6 +57,18 @@ std::vector<std::string> split_string(std::string str, char delimiter) {
     boost::split(results, str, [&delimiter](char c){return c == delimiter;});
 
     return results;
+}
+
+void constrain(double &value, double lower_limit, double upper_limit) {
+    if(isnan(value) || isinf(value)) {
+        value = 0;
+    }
+    else if(value > upper_limit) {
+        value = upper_limit;
+    }
+    else if(value < lower_limit) {
+        value = lower_limit;
+    }
 }
 
 std::thread left_leg_state_thread;
@@ -98,14 +114,17 @@ void calculate_left_leg_torques() {
     Eigen::Matrix<double, 5, 1> q_temp;
     Eigen::Matrix<double, 5, 1> q_dot_temp;
 
-    int sockfd; 
+    long long iteration_counter = 0;
+    float dt = torque_calculation_interval / 1000 / 1000; //in seconds
+
+    int sockfd;
     char buffer[udp_buffer_size];
     struct sockaddr_in servaddr, cliaddr; 
       
     // Creating socket file descriptor 
     if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) { 
         perror("socket creation failed"); 
-        exit(EXIT_FAILURE); 
+        exit(EXIT_FAILURE);
     }
       
     memset(&servaddr, 0, sizeof(servaddr)); 
@@ -128,8 +147,31 @@ void calculate_left_leg_torques() {
 
     socklen_t len;
 
+
+    time_t now = time(0);
+    tm *localTime = localtime(&now);
+
+    std::string filename = std::to_string(localTime->tm_mday) + "-" + std::to_string(1 + localTime->tm_mon) + "-" + std::to_string(localTime->tm_year + 1900) 
+                    + "-" + std::to_string(localTime->tm_hour + 1) + ":" + std::to_string(localTime->tm_min + 1) + ":" + std::to_string(localTime->tm_sec + 1);
+
+    ofstream data_file;
+    data_file.open("/home/loukas/Documents/cpp/walking_controller/plot_data/data_" + filename + ".csv");
+    data_file << "theta1,theta2,theta3,theta4,theta5,theta1_dot,theta2_dot,theta3_dot,theta4_dot,theta5_dot," 
+            << "G_1,G_2,G_3,G_4,G_5,"
+            << "Kp_diag_1,Kp_diag_2,Kp_diag_3,"
+            << "Kd_diag_1,Kd_diag_2,Kd_diag_3,"
+            << "foot_pos_x,foot_pos_y,foot_pos_z,"
+            << "foot_vel_x,foot_vel_y,foot_vel_z,"
+            << "tau_1,tau_2,tau_3,tau_4,tau_5" << std::endl;
+    data_file.close();
+
     while(true) {
         start = high_resolution_clock::now();
+
+        double t = iteration_counter * dt;
+        pos_desired_left_leg << 0, 0, 0.2*sin(2*t) - 0.915;
+        vel_desired_left_leg << 0, 0, 0.4*cos(2*t);
+        accel_desired_left_leg << 0, 0, -0.8*sin(2*t);
         
         // q_left_leg_mutex.lock();
 
@@ -157,17 +199,17 @@ void calculate_left_leg_torques() {
         // double theta4_dot = q_dot_temp(3);
         // double theta5_dot = q_dot_temp(4);
         
-        double theta1;
-        double theta2;
-        double theta3;
-        double theta4;
-        double theta5;
+        double theta1 = 0;
+        double theta2 = 0;
+        double theta3 = 0;
+        double theta4 = 0;
+        double theta5 = 0;
 
-        double theta1_dot;
-        double theta2_dot;
-        double theta3_dot;
-        double theta4_dot;
-        double theta5_dot;
+        double theta1_dot = 0;
+        double theta2_dot = 0;
+        double theta3_dot = 0;
+        double theta4_dot = 0;
+        double theta5_dot = 0;
 
         n = recvfrom(sockfd, (char *)buffer, udp_buffer_size, MSG_WAITALL, ( struct sockaddr *) &cliaddr, &len);
         buffer[n] = '\0';
@@ -216,32 +258,29 @@ void calculate_left_leg_torques() {
 
         update_G_left_leg(theta1, theta2, theta3, theta4, theta5);
 
-        //update_C_left_leg();
+        update_C_left_leg(theta1, theta2, theta3, theta4, theta5, theta1_dot, theta2_dot, theta3_dot, theta4_dot, theta5_dot);
 
         update_Lambda_left_leg();
 
-        update_tau_ff_left_leg();
+        update_tau_ff_left_leg(q_dot_temp);
 
         update_Kp_left_leg();
         update_Kd_left_leg();
 
         update_foot_pos_left_leg(theta1, theta2, theta3, theta4, theta5);
-        std::cout << "Foot position: " << foot_pos_left_leg(0) << "," << foot_pos_left_leg(1) << "," << foot_pos_left_leg(2) << std::endl;
+        //std::cout << "Foot position: " << foot_pos_left_leg(0) << "," << foot_pos_left_leg(1) << "," << foot_pos_left_leg(2) << std::endl;
+        
         update_foot_vel_left_leg(q_dot_temp);
 
         update_tau_setpoint_left_leg();
 
         for(int i = 0; i < 5; ++i) {
-            //tau_setpoint_left_leg(i) = -tau_setpoint_left_leg(i);
-            if(isnan(tau_setpoint_left_leg(i))) {
-                tau_setpoint_left_leg(i) = 0.1;
-            }
-            if(tau_setpoint_left_leg(i) > upper_torque_limit) {
-                tau_setpoint_left_leg(i) = upper_torque_limit;
-            }
-            if(tau_setpoint_left_leg(i) < lower_torque_limit) {
-                tau_setpoint_left_leg(i) = lower_torque_limit;
-            }
+            constrain(tau_setpoint_left_leg(i), -30, 30);
+        }
+
+        for(int i = 0; i < 3; ++i) {
+            constrain(Kp_left_leg(i, i), -6, 10);
+            constrain(Kd_left_leg(i, i), -0.2, 0.2);
         }
 
         torque_setpoint setpoint;
@@ -256,6 +295,21 @@ void calculate_left_leg_torques() {
 
         //std::cout << "before publish in left leg" << std::endl;
 
+        ofstream data_file;
+        data_file.open("/home/loukas/Documents/cpp/walking_controller/plot_data/data_" + filename + ".csv", ios::app);
+        data_file << theta1 << "," << theta2 << "," << theta3 << "," << theta4 << "," << theta5 
+            << "," << theta1_dot << "," << theta2_dot << "," << theta3_dot << "," << theta4_dot << "," << theta5_dot 
+            << "," << G_left_leg(0) << "," << G_left_leg(1) << "," << G_left_leg(2) << "," << G_left_leg(3) << "," << G_left_leg(4)
+            << "," << Kp_left_leg(0, 0) << "," << Kp_left_leg(1, 1) << "," << Kp_left_leg(2, 2)
+            << "," << Kd_left_leg(0, 0) << "," << Kd_left_leg(1, 1) << "," << Kd_left_leg(2, 2)
+            << "," << foot_pos_left_leg(0) << "," << foot_pos_left_leg(1) << "," << foot_pos_left_leg(2)
+            << "," << foot_vel_left_leg(0) << "," << foot_vel_left_leg(1) << "," << foot_vel_left_leg(2)
+            << "," << setpoint.tau1 << "," << setpoint.tau2 << "," << setpoint.tau3 << "," << setpoint.tau4 << "," << setpoint.tau5 << std::endl;
+        data_file.close();
+
+        std::string filename = std::to_string(localTime->tm_mday) + "-" + std::to_string(1 + localTime->tm_mon) + "-" + std::to_string(localTime->tm_year + 1900) 
+                        + "-" + std::to_string(localTime->tm_hour + 1) + ":" + std::to_string(localTime->tm_min + 1) + ":" + std::to_string(localTime->tm_sec + 1);
+
         stringstream s;
 
         s << setpoint.tau1 << "|" << setpoint.tau2 << "|" << setpoint.tau3 << "|" << setpoint.tau4 << "|" << setpoint.tau5;
@@ -263,12 +317,14 @@ void calculate_left_leg_torques() {
         //zcm_context.publish(left_leg_torque_setpoint_channel, &setpoint);
 
         sendto(sockfd, (const char *)s.str().c_str(), strlen(s.str().c_str()), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
+        iteration_counter++;
 
         //std::cout << "Sent: " << G_left_leg(0) << " , " << G_left_leg(1) << " , " << G_left_leg(2) << " , " << G_left_leg(3) << " , " << G_left_leg(4) << std::endl;
-
+        
         end = high_resolution_clock::now();
 
         duration = duration_cast<microseconds>(end - start).count();
+        std::cout << "Loop duration: " << duration << "µS" << std::endl;
         long long remainder = (torque_calculation_interval - duration) * 1e+03;
         deadline.tv_nsec = remainder;
         deadline.tv_sec = 0;
@@ -276,50 +332,60 @@ void calculate_left_leg_torques() {
     }
 }
 
-class Handler
-{
-    public:
-        ~Handler() {}
+// class Handler
+// {
+//     public:
+//         ~Handler() {}
 
-        void handleLeftLegMessage(const zcm::ReceiveBuffer* rbuf,
-                           const string& chan,
-                           const leg_state *state)
-        {
-            std::cout << "Got message, updating state..." << std::endl;
-            update_q_left_leg(state->theta1, state->theta2, state->theta3, state->theta4, state->theta5);
-            update_q_dot_left_leg(state->theta1_dot, state->theta2_dot, state->theta3_dot, state->theta4_dot, state->theta5_dot);
-        }
-};
+//         void handleLeftLegMessage(const zcm::ReceiveBuffer* rbuf,
+//                            const string& chan,
+//                            const leg_state *state)
+//         {
+//             std::cout << "Got message, updating state..." << std::endl;
+//             update_q_left_leg(state->theta1, state->theta2, state->theta3, state->theta4, state->theta5);
+//             update_q_dot_left_leg(state->theta1_dot, state->theta2_dot, state->theta3_dot, state->theta4_dot, state->theta5_dot);
+//         }
+// };
 
 int main()
 {
-    if(!zcm_context.good()) {
-        std::cout << "ZCM isn't feeling too well, exiting..." << std::endl; 
-        return 1;
-    }
+    // if(!zcm_context.good()) {
+    //     std::cout << "ZCM isn't feeling too well, exiting..." << std::endl; 
+    //     return 1;
+    // }
+
+    h << 1, 0, 0, 0, 0,
+         0, 1, 0, 0, 0,
+         0, 0, 1, 0, 0,
+         0, 0, 0, 1, 0,
+         0, 0, 0, 0, 1;
+                            
+    omega_desired << 2 * M_PI * 2, 2 * M_PI * 2, 2 * M_PI * 2;  
 
     pos_desired_left_leg << 0.2, -0.4, -0.5;
     vel_desired_left_leg << 0, 0, 0;
     accel_desired_left_leg << 0, 0, 0;
 
-    Handler handlerObject;
+    //Handler handlerObject;
 
-    auto left_leg_subs = zcm_context.subscribe(left_leg_state_channel, &Handler::handleLeftLegMessage, &handlerObject);
+    //auto left_leg_subs = zcm_context.subscribe(left_leg_state_channel, &Handler::handleLeftLegMessage, &handlerObject);
     //zcm_context.subscribe(right_leg_state_channel, &Handler::handleRightLegMessage, &handlerObject);
 
-    zcm_context.start();
-    zcm_context.run();
+    //zcm_context.start();
+    //zcm_context.run();
     
     //left_leg_state_thread = std::thread(std::bind(update_left_leg_state));
     //right_leg_state_thread = std::thread(std::bind(update_right_leg_state));
     left_leg_torque_thread = std::thread(std::bind(calculate_left_leg_torques));
     //right_leg_torque_thread = std::thread(std::bind(calculate_right_leg_torques));
 
-    // update_J_foot_dot_left_leg(0,1,2,3,4,5,6,7,8,9);
+    update_B_left_leg(0,1,2,3,4,5,6,7,8,9);
 
     // std::cout << J_foot_dot_left_leg << std::endl;
 
-    std::cout << "omega_desired is currently:" << omega_desired << std::endl;
+    std::cout << "omega_desired is currently:" << omega_desired(0) << std::endl;
+
+    //std::cout << B_left_leg << std::endl;
 
     while(true) {
 
