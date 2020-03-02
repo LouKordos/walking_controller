@@ -170,36 +170,10 @@ void calculate_left_leg_torques() {
 
         double t = iteration_counter * dt;
         pos_desired_left_leg << 0, 0, 0.1*sin(2*t) - 0.9;
-        // vel_desired_left_leg << 0, 0, 0.2*cos(2*t);
-        vel_desired_left_leg << 0, 0, 0;
+
+        vel_desired_left_leg << 0, 0, 0.2*cos(2*t);
 
         accel_desired_left_leg << 0, 0, -0.4*sin(2*t);
-        
-        // q_left_leg_mutex.lock();
-
-        // q_temp = q_left_leg;
-
-        // q_left_leg_mutex.unlock();
-
-        // q_dot_left_leg_mutex.lock();
-
-        // q_dot_temp = q_dot_left_leg;
-
-        // q_dot_left_leg_mutex.unlock();
-
-        // double theta1 = q_temp(0);
-        // double theta2 = q_temp(1);
-        // double theta3 = q_temp(2);
-        // double theta4 = q_temp(3);
-        // double theta5 = q_temp(4);
-
-        // //std::cout << q_temp << std::endl;
-
-        // double theta1_dot = q_dot_temp(0);
-        // double theta2_dot = q_dot_temp(1);
-        // double theta3_dot = q_dot_temp(2);
-        // double theta4_dot = q_dot_temp(3);
-        // double theta5_dot = q_dot_temp(4);
         
         double theta1 = 0;
         double theta2 = 0;
@@ -218,11 +192,7 @@ void calculate_left_leg_torques() {
 
         string raw_state(buffer);
 
-        //std::cout << "Received state: " << raw_state << std::endl;
-
         std::vector<std::string> state = split_string(raw_state, '|');
-
-        //std::cout << "State size:" << static_cast<int>(state.size()) << std::endl;
 
         if(static_cast<int>(state.size()) >= 9) {
 
@@ -232,25 +202,12 @@ void calculate_left_leg_torques() {
             theta4 = atof(state[3].c_str());
             theta5 = atof(state[4].c_str());
 
-            //std::cout << "Theta1:" << theta1 << std::endl;
-
             theta1_dot = atof(state[5].c_str());
             theta2_dot = atof(state[6].c_str());
             theta3_dot = atof(state[7].c_str());
             theta4_dot = atof(state[8].c_str());
             theta5_dot = atof(state[9].c_str());
         }
-
-        // theta1 = 0;
-        // theta2 = 0;
-        // theta3 = 0;
-        // theta4 = 0;
-        // theta5 = 0;
-        // theta1_dot = 0;
-        // theta2_dot = 0;
-        // theta3_dot = 0;
-        // theta4_dot = 0;
-        // theta5_dot = 0;
 
         update_B_left_leg(theta1, theta2, theta3, theta4, theta5, theta1_dot, theta2_dot, theta3_dot, theta4_dot, theta5_dot);
 
@@ -269,27 +226,27 @@ void calculate_left_leg_torques() {
         update_Kp_left_leg();
         update_Kd_left_leg();
 
+        for(int i = 0; i < 3; ++i) {
+            if(iteration_counter < 1000) {
+                constrain(Kp_left_leg(i, i), -0.5, 0.5);
+                constrain(Kd_left_leg(i, i), -0.1, 0.1);
+            }
+            else {
+                // constrain(Kp_left_leg(i, i), -20, 30);
+                // constrain(Kd_left_leg(i, i), -10, 10);
+            }
+        }
+
         update_foot_pos_left_leg(theta1, theta2, theta3, theta4, theta5);
-        //std::cout << "Foot position: " << foot_pos_left_leg(0) << "," << foot_pos_left_leg(1) << "," << foot_pos_left_leg(2) << std::endl;
-        
+
         update_foot_vel_left_leg(q_dot_temp);
 
         update_tau_setpoint_left_leg();
 
         for(int i = 0; i < 5; ++i) {
-            constrain(tau_setpoint_left_leg(i), -30, 30);
+            constrain(tau_setpoint_left_leg(i), lower_torque_limit, upper_torque_limit);
         }
-
-        for(int i = 0; i < 3; ++i) {
-            if(i < 2000) {
-                constrain(Kp_left_leg(i, i), -0.5, 0.5);
-                constrain(Kd_left_leg(i, i), -0.1, 0.1);
-            }
-            else {
-                constrain(Kp_left_leg(i, i), -15, 20);
-                constrain(Kd_left_leg(i, i), -15, 15);
-            }
-        }
+        //tau_setpoint_left_leg(4) = 0;
 
         torque_setpoint setpoint;
 
@@ -298,10 +255,6 @@ void calculate_left_leg_torques() {
         setpoint.tau3 = tau_setpoint_left_leg(2);
         setpoint.tau4 = tau_setpoint_left_leg(3);
         setpoint.tau5 = tau_setpoint_left_leg(4);
-
-        //std::cout << "Tau3: " << tau_setpoint_left_leg(2) << std::endl;
-
-        //std::cout << "before publish in left leg" << std::endl;
 
         ofstream data_file;
         data_file.open("/home/loukas/Documents/cpp/walking_controller/plot_data/data_" + filename + ".csv", ios::app);
@@ -322,17 +275,13 @@ void calculate_left_leg_torques() {
 
         s << setpoint.tau1 << "|" << setpoint.tau2 << "|" << setpoint.tau3 << "|" << setpoint.tau4 << "|" << setpoint.tau5;
 
-        //zcm_context.publish(left_leg_torque_setpoint_channel, &setpoint);
-
         sendto(sockfd, (const char *)s.str().c_str(), strlen(s.str().c_str()), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
         iteration_counter++;
 
-        //std::cout << "Sent: " << G_left_leg(0) << " , " << G_left_leg(1) << " , " << G_left_leg(2) << " , " << G_left_leg(3) << " , " << G_left_leg(4) << std::endl;
-        
         end = high_resolution_clock::now();
 
         duration = duration_cast<microseconds>(end - start).count();
-        std::cout << "Loop duration: " << duration << "µS" << std::endl;
+        std::cout << "Loop duration: " << duration << "µS, iteration_counter: " << iteration_counter - 1 << std::endl;
         long long remainder = (torque_calculation_interval - duration) * 1e+03;
         deadline.tv_nsec = remainder;
         deadline.tv_sec = 0;
@@ -340,45 +289,17 @@ void calculate_left_leg_torques() {
     }
 }
 
-// class Handler
-// {
-//     public:
-//         ~Handler() {}
-
-//         void handleLeftLegMessage(const zcm::ReceiveBuffer* rbuf,
-//                            const string& chan,
-//                            const leg_state *state)
-//         {
-//             std::cout << "Got message, updating state..." << std::endl;
-//             update_q_left_leg(state->theta1, state->theta2, state->theta3, state->theta4, state->theta5);
-//             update_q_dot_left_leg(state->theta1_dot, state->theta2_dot, state->theta3_dot, state->theta4_dot, state->theta5_dot);
-//         }
-// };
-
 int main()
 {
-    // if(!zcm_context.good()) {
-    //     std::cout << "ZCM isn't feeling too well, exiting..." << std::endl; 
-    //     return 1;
-    // }
-
     h << 1, 0, 0,
          0, 1, 0,
          0, 0, 1;
                             
-    omega_desired << 1.5 * M_PI * 2, 1.5 * M_PI * 2, 1.5 * M_PI * 2;  
+    omega_desired << 19 * M_PI, 19 * M_PI, 7 * M_PI ;  
 
     pos_desired_left_leg << 0, 0, -1.115;
     vel_desired_left_leg << 0, 0, 0;
     accel_desired_left_leg << 0, 0, 0;
-
-    //Handler handlerObject;
-
-    //auto left_leg_subs = zcm_context.subscribe(left_leg_state_channel, &Handler::handleLeftLegMessage, &handlerObject);
-    //zcm_context.subscribe(right_leg_state_channel, &Handler::handleRightLegMessage, &handlerObject);
-
-    //zcm_context.start();
-    //zcm_context.run();
     
     //left_leg_state_thread = std::thread(std::bind(update_left_leg_state));
     //right_leg_state_thread = std::thread(std::bind(update_right_leg_state));
