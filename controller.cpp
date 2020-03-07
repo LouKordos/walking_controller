@@ -324,8 +324,8 @@ int main()
                             
     omega_desired << 19 * M_PI, 19 * M_PI, 19 * M_PI;
 
-    Kp_orientation = 1;
-    Kd_orientation = 0.1;
+    Kp_orientation = 2;
+    Kd_orientation = 0.25;
 
     pos_desired_left_leg << 0, 0, -1.115, 0, 0; //cartesian xyz + euler roll and pitch
     vel_desired_left_leg << 0, 0, 0, 0, 0; //cartesian xyz + euler roll and pitch
