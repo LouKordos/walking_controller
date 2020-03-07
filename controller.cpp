@@ -59,7 +59,7 @@ std::vector<std::string> split_string(std::string str, char delimiter) {
     return results;
 }
 
-void constrain(double &value, double lower_limit, double upper_limit) {
+inline void constrain(double &value, double lower_limit, double upper_limit) {
     if(isnan(value) || isinf(value)) {
         value = 0;
     }
@@ -70,6 +70,7 @@ void constrain(double &value, double lower_limit, double upper_limit) {
         value = lower_limit;
     }
 }
+
 
 std::thread left_leg_state_thread;
 std::thread right_leg_state_thread;
@@ -169,9 +170,10 @@ void calculate_left_leg_torques() {
         start = high_resolution_clock::now();
 
         double t = iteration_counter * dt;
-        pos_desired_left_leg << 0, 0, 0.1*sin(2*t) - 0.9;
 
-        vel_desired_left_leg << 0, 0, 0.2*cos(2*t);
+        pos_desired_left_leg << 0, 0, 0.1*sin(2*t) - 0.9, 0, 0;
+
+        vel_desired_left_leg << 0, 0, 0.2*cos(2*t), 0, 0;
 
         accel_desired_left_leg << 0, 0, -0.4*sin(2*t);
         
@@ -207,13 +209,46 @@ void calculate_left_leg_torques() {
             theta3_dot = atof(state[7].c_str());
             theta4_dot = atof(state[8].c_str());
             theta5_dot = atof(state[9].c_str());
+
+            q_temp << theta1, theta2, theta3, theta4, theta5;
+            q_dot_temp << theta1_dot, theta2_dot, theta3_dot, theta4_dot, theta5_dot;
         }
+
+        update_orientation(theta1, theta2, theta3, theta4, theta5);
 
         update_B_left_leg(theta1, theta2, theta3, theta4, theta5, theta1_dot, theta2_dot, theta3_dot, theta4_dot, theta5_dot);
 
         update_J_foot_left_leg(theta1, theta2, theta3, theta4, theta5);
 
+        update_J_foot_combined_left_leg(theta1, theta2, theta3, theta4, theta5, theta1_dot, theta2_dot, theta3_dot, theta4_dot, theta5_dot);
+
         update_J_foot_dot_left_leg(theta1, theta2, theta3, theta4, theta5, theta1_dot, theta2_dot, theta3_dot, theta4_dot, theta5_dot);
+
+        //Set singular Jacobians to zero
+
+        for(int i = 0, nCols = J_foot_left_leg.cols(), nRows = J_foot_left_leg.rows(); i < nCols; ++i) {
+            for(int j = 0; i < nRows; ++i) {
+                if(isnan(J_foot_left_leg(j, i)) || isinf(J_foot_left_leg(j, i))) {
+                    J_foot_left_leg(j, i) = 0;
+                }
+            }
+        }
+
+        for(int i = 0, nCols = J_foot_dot_left_leg.cols(), nRows = J_foot_dot_left_leg.rows(); i < nCols; ++i) {
+            for(int j = 0; i < nRows; ++i) {
+                if(isnan(J_foot_dot_left_leg(j, i)) || isinf(J_foot_dot_left_leg(j, i))) {
+                    J_foot_dot_left_leg(j, i) = 0;
+                }
+            }
+        }
+
+        for(int i = 0, nCols = J_foot_combined_left_leg.cols(), nRows = J_foot_combined_left_leg.rows(); i < nCols; ++i) {
+            for(int j = 0; i < nRows; ++i) {
+                if(isnan(J_foot_combined_left_leg(j, i)) || isinf(J_foot_combined_left_leg(j, i))) {
+                    J_foot_combined_left_leg(j, i) = 0;
+                }
+            }
+        }
 
         update_G_left_leg(theta1, theta2, theta3, theta4, theta5);
 
@@ -225,17 +260,6 @@ void calculate_left_leg_torques() {
 
         update_Kp_left_leg();
         update_Kd_left_leg();
-
-        for(int i = 0; i < 3; ++i) {
-            if(iteration_counter < 1000) {
-                constrain(Kp_left_leg(i, i), -0.5, 0.5);
-                constrain(Kd_left_leg(i, i), -0.1, 0.1);
-            }
-            else {
-                // constrain(Kp_left_leg(i, i), -20, 30);
-                // constrain(Kd_left_leg(i, i), -10, 10);
-            }
-        }
 
         update_foot_pos_left_leg(theta1, theta2, theta3, theta4, theta5);
 
@@ -268,6 +292,8 @@ void calculate_left_leg_torques() {
             << "," << setpoint.tau1 << "," << setpoint.tau2 << "," << setpoint.tau3 << "," << setpoint.tau4 << "," << setpoint.tau5 << std::endl;
         data_file.close();
 
+        std::cout << "roll: " << phi << ", pitch: " << theta << ", yaw: " << psi << std::endl;
+
         std::string filename = std::to_string(localTime->tm_mday) + "-" + std::to_string(1 + localTime->tm_mon) + "-" + std::to_string(localTime->tm_year + 1900) 
                         + "-" + std::to_string(localTime->tm_hour + 1) + ":" + std::to_string(localTime->tm_min + 1) + ":" + std::to_string(localTime->tm_sec + 1);
 
@@ -276,12 +302,13 @@ void calculate_left_leg_torques() {
         s << setpoint.tau1 << "|" << setpoint.tau2 << "|" << setpoint.tau3 << "|" << setpoint.tau4 << "|" << setpoint.tau5;
 
         sendto(sockfd, (const char *)s.str().c_str(), strlen(s.str().c_str()), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
+
         iteration_counter++;
 
         end = high_resolution_clock::now();
 
         duration = duration_cast<microseconds>(end - start).count();
-        std::cout << "Loop duration: " << duration << "µS, iteration_counter: " << iteration_counter - 1 << std::endl;
+        // std::cout << "Loop duration: " << duration << "µS, iteration_counter: " << iteration_counter - 1 << std::endl;
         long long remainder = (torque_calculation_interval - duration) * 1e+03;
         deadline.tv_nsec = remainder;
         deadline.tv_sec = 0;
@@ -295,11 +322,14 @@ int main()
          0, 1, 0,
          0, 0, 1;
                             
-    omega_desired << 19 * M_PI, 19 * M_PI, 7 * M_PI ;  
+    omega_desired << 19 * M_PI, 19 * M_PI, 19 * M_PI;
 
-    pos_desired_left_leg << 0, 0, -1.115;
-    vel_desired_left_leg << 0, 0, 0;
-    accel_desired_left_leg << 0, 0, 0;
+    Kp_orientation = 1;
+    Kd_orientation = 0.1;
+
+    pos_desired_left_leg << 0, 0, -1.115, 0, 0; //cartesian xyz + euler roll and pitch
+    vel_desired_left_leg << 0, 0, 0, 0, 0; //cartesian xyz + euler roll and pitch
+    accel_desired_left_leg << 0, 0, 0; //cartesian xyz
     
     //left_leg_state_thread = std::thread(std::bind(update_left_leg_state));
     //right_leg_state_thread = std::thread(std::bind(update_right_leg_state));
@@ -314,6 +344,5 @@ int main()
 
     }
 }
-
 //COMPILE: g++ controller.cpp leg_state.hpp torque_setpoint.hpp -o controller -lzcm -pthread -I .
-//Also, ALWAYS run sudo due to IPC rights
+//Also, ALWAYS run as root due to IPC rights if using ZCM
