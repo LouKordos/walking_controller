@@ -11,3 +11,5 @@ CTestTestfile.cmake
 _deps
 plot_data
 build/
+expression.txt
+expression_parsed.txt
