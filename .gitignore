@@ -10,6 +10,6 @@ compile_commands.json
 CTestTestfile.cmake
 _deps
 plot_data
-build/
+build/*
 expression.txt
 expression_parsed.txt
