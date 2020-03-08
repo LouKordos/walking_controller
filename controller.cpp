@@ -148,7 +148,6 @@ void calculate_left_leg_torques() {
 
     socklen_t len;
 
-
     time_t now = time(0);
     tm *localTime = localtime(&now);
 
@@ -166,17 +165,83 @@ void calculate_left_leg_torques() {
             << "tau_1,tau_2,tau_3,tau_4,tau_5" << std::endl;
     data_file.close();
 
+    bool time_switch = false;
+
     while(true) {
         start = high_resolution_clock::now();
 
         double t = iteration_counter * dt;
 
-        pos_desired_left_leg << 0, 0, 0.1*sin(2*t) - 0.9, 0, 0;
+        // pos_desired_left_leg << 0, 0, 0.1*sin(2*t) - 0.9, 0, 0;
 
-        vel_desired_left_leg << 0, 0, 0.2*cos(2*t), 0, 0;
+        // vel_desired_left_leg << 0, 0, 0.2*cos(2*t), 0, 0;
 
-        accel_desired_left_leg << 0, 0, -0.4*sin(2*t);
-        
+        // accel_desired_left_leg << 0, 0, -0.4*sin(2*t);
+
+        if(iteration_counter % 1500 == 0) {
+            time_switch = !time_switch;
+            iteration_counter = 0;
+        }
+
+        if(time_switch) {
+            
+            double x_pos_t = 0;
+            double x_vel_t = 0;
+            double x_accel_t = 0;
+
+            double y_pos_t = 0.0121802170801220133178L*powl(t, 4) + 0.0188177235900510858579L*powl(t, 3) + 0.0284329932276259841895L*powl(t, 2) + 0.0405690661022009568804L*t + 8.01234452659818380089e-17L;
+            double y_vel_t = 0.0487208683204880532713L*powl(t, 3) + 0.0564531707701532575738L*powl(t, 2) + 0.0568659864552519683789L*t + 0.0405690661022009568804L;
+            double y_accel_t = 0.146162604961464159814L*powl(t, 2) + 0.112906341540306515148L*t + 0.0568659864552519683789L;
+
+            double z_pos_t = -0.0526177261048754382755L*powl(t, 4) - 0.0345635071701251989085L*powl(t, 3) + 0.03634296692347194907L*powl(t, 2) + 0.200838266351529043385L*t - 1.00000000000000044409L;
+            double z_vel_t = -0.210470904419501753102L*powl(t, 3) - 0.103690521510375596725L*powl(t, 2) + 0.07268593384694389814L*t + 0.200838266351529043385L;
+            double z_accel_t = -0.631412713258505231551L*powl(t, 2) - 0.207381043020751193451L*t + 0.07268593384694389814L;
+
+            double phi_t = 0; //roll
+            double phi_dot_t = 0; // angular roll velocity
+            
+            double psi_t = 0;
+            double psi_dot_t = 0;
+
+            pos_desired_left_leg << x_pos_t, y_pos_t, z_pos_t, phi_t, psi_t;
+            vel_desired_left_leg << x_vel_t, y_vel_t, z_vel_t, psi_t, psi_dot_t;
+            accel_desired_left_leg << x_accel_t, y_accel_t, z_accel_t;
+
+            std::cout << "pos: " << pos_desired_left_leg(0) << ", " << pos_desired_left_leg(1) << ", " << pos_desired_left_leg(2) << ", vel: " << vel_desired_left_leg(0)
+                << ", " << vel_desired_left_leg(1) << ", " << vel_desired_left_leg(2) 
+                << ", accel: " << accel_desired_left_leg(0) << ", " << accel_desired_left_leg(1) << ", " << accel_desired_left_leg(2) << std::endl;
+        }
+        else {
+            //reverse
+            
+            double x_pos_t = 0;
+            double x_vel_t = 0;
+            double x_accel_t = 0;
+
+            double y_pos_t = 0.00535902495483647333535L*powl(t, 4) - 0.00729655453334267407872L*powl(t, 3) - 0.0405473155354499625869L*powl(t, 2) - 0.107515154886043975968L*t + 0.250000000000000055511L;
+            double y_vel_t = 0.0214360998193458933414L*powl(t, 3) - 0.0218896636000280239709L*powl(t, 2) - 0.0810946310708999251737L*t - 0.107515154886043975968L;
+            double y_accel_t = 0.0643082994580376765548L*powl(t, 2) - 0.0437793272000560479418L*t - 0.0810946310708999251737L;
+
+            double z_pos_t = -0.0526177261048754382755L*powl(t, 4) - 0.0345635071701251989085L*powl(t, 3) + 0.03634296692347194907L*powl(t, 2) + 0.200838266351529043385L*t - 1.00000000000000044409L;
+            double z_vel_t = -0.210470904419501753102L*powl(t, 3) - 0.103690521510375596725L*powl(t, 2) + 0.07268593384694389814L*t + 0.200838266351529043385L;
+            double z_accel_t = -0.631412713258505231551L*powl(t, 2) - 0.207381043020751193451L*t + 0.07268593384694389814L;
+
+
+            double phi_t = 0; //roll
+            double phi_dot_t = 0; // angular roll velocity
+            
+            double psi_t = 0;
+            double psi_dot_t = 0;
+
+            pos_desired_left_leg << x_pos_t, y_pos_t, z_pos_t, phi_t, psi_t;
+            vel_desired_left_leg << x_vel_t, y_vel_t, z_vel_t, psi_t, psi_dot_t;
+            accel_desired_left_leg << x_accel_t, y_accel_t, z_accel_t;
+
+            std::cout << "pos: " << pos_desired_left_leg(0) << ", " << pos_desired_left_leg(1) << ", " << pos_desired_left_leg(2) << ", vel: " << vel_desired_left_leg(0)
+                << ", " << vel_desired_left_leg(1) << ", " << vel_desired_left_leg(2) 
+                << ", accel: " << accel_desired_left_leg(0) << ", " << accel_desired_left_leg(1) << ", " << accel_desired_left_leg(2) << std::endl;
+        }
+
         double theta1 = 0;
         double theta2 = 0;
         double theta3 = 0;
@@ -292,7 +357,7 @@ void calculate_left_leg_torques() {
             << "," << setpoint.tau1 << "," << setpoint.tau2 << "," << setpoint.tau3 << "," << setpoint.tau4 << "," << setpoint.tau5 << std::endl;
         data_file.close();
 
-        std::cout << "roll: " << phi << ", pitch: " << theta << ", yaw: " << psi << std::endl;
+        //std::cout << "roll: " << phi << ", pitch: " << theta << ", yaw: " << psi << std::endl;
 
         std::string filename = std::to_string(localTime->tm_mday) + "-" + std::to_string(1 + localTime->tm_mon) + "-" + std::to_string(localTime->tm_year + 1900) 
                         + "-" + std::to_string(localTime->tm_hour + 1) + ":" + std::to_string(localTime->tm_min + 1) + ":" + std::to_string(localTime->tm_sec + 1);
@@ -324,8 +389,8 @@ int main()
                             
     omega_desired << 19 * M_PI, 19 * M_PI, 19 * M_PI;
 
-    Kp_orientation = 2;
-    Kd_orientation = 0.25;
+    Kp_orientation = 8;
+    Kd_orientation = 0.08;
 
     pos_desired_left_leg << 0, 0, -1.115, 0, 0; //cartesian xyz + euler roll and pitch
     vel_desired_left_leg << 0, 0, 0, 0, 0; //cartesian xyz + euler roll and pitch
