@@ -1,6 +1,4 @@
 - Rename matrix elements in model functions to temp for easier parsing in future
 - Test robustness (inertia and mass, disturbance)
 - Use STL for model
-- Calculate Euler Angles with Rotation matrix and compare
-- Use step trajectory
 - Create external tool for applying force for period of time / momentum
