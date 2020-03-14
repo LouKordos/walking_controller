@@ -39,6 +39,8 @@
 using namespace std;
 using namespace std::chrono;
 
+// ZCM communication channel names
+
 //zcm::ZCM zcm_context { "ipc" };
 
 const char* left_leg_state_channel = ".left_leg_state";
@@ -47,9 +49,12 @@ const char* right_leg_state_channel = ".right_leg_state";
 const char* left_leg_torque_setpoint_channel = "left_leg_torque_setpoint";
 const char* right_leg_torque_setpoint_channel = "right_leg_torque_setpoint";
 
-const int udp_port = 4200;
+const int udp_port = 4200; // UDP port for communication between gazebosim and controller code
 
-const int udp_buffer_size = 4096;
+
+const int udp_buffer_size = 4096; // Buffer size for receiving leg state from gazebosim
+
+// Helper function for splitting string by delimiter character
 
 std::vector<std::string> split_string(std::string str, char delimiter) {
     std::vector<std::string> results;
@@ -58,6 +63,8 @@ std::vector<std::string> split_string(std::string str, char delimiter) {
 
     return results;
 }
+
+// Helper function for constraining a double precision float to limits and filtering out "nan" and "inf"
 
 inline void constrain(double &value, double lower_limit, double upper_limit) {
     if(isnan(value) || isinf(value)) {
@@ -72,30 +79,33 @@ inline void constrain(double &value, double lower_limit, double upper_limit) {
 }
 
 
-std::thread left_leg_state_thread;
-std::thread right_leg_state_thread;
 
-std::thread left_leg_torque_thread;
-std::thread right_leg_torque_thread;
+std::thread left_leg_state_thread; // Thread for updating left leg state based on gazebosim messages
+std::thread left_leg_torque_thread; // Thread for updating matrices, calculating torque setpoint and sending torque setpoint to gazebosim
 
-double state_update_interval = 1000.0; //microseconds
-double torque_calculation_interval = 1000.0; //microseconds
+double state_update_interval = 1000.0; // Interval for fetching and parsing the leg state from gazebosim in microseconds
+double torque_calculation_interval = 1000.0; // Interval for calculating and sending the torque setpoint to gazebosim in microseconds
 
 void update_left_leg_state() {
+
+    // High resolution clocks used for measuring execution time of loop iteration.
 
     high_resolution_clock::time_point start = high_resolution_clock::now();
     high_resolution_clock::time_point end = high_resolution_clock::now();
 
-    double duration = 0.0f;
+    double duration = 0.0f; // Duration double for storing execution duration
 
-    struct timespec deadline;
+    struct timespec deadline; // timespec struct for storing time that execution thread should sleep for
 
     while(true) {
-        // This timed loop approach calculates the time that the execution of the main code took,
-        // then calculates the remaining time for the loop and waits this duration.
+        
         start = high_resolution_clock::now();
-        //Do stuff
+        // Do stuff
         end = high_resolution_clock::now();
+
+        // This timed loop approach calculates the execution time of the current iteration,
+        // then calculates the remaining time for the loop to run at the desired frequency and waits this duration.
+
         duration = duration_cast<microseconds>(end - start).count();  
         long long remainder = (state_update_interval - duration) * 1e+03;
         deadline.tv_nsec = remainder;
@@ -105,18 +115,23 @@ void update_left_leg_state() {
 }
 
 void calculate_left_leg_torques() {
+
+    // High resolution clocks used for measuring execution time of loop iteration.
+
     high_resolution_clock::time_point start = high_resolution_clock::now();
     high_resolution_clock::time_point end = high_resolution_clock::now();
 
-    struct timespec deadline;
+    double duration = 0.0f; // Duration double for storing execution duration
 
-    double duration = 0.0f;
+    struct timespec deadline; // timespec struct for storing time that execution thread should sleep for
 
-    Eigen::Matrix<double, 5, 1> q_temp;
-    Eigen::Matrix<double, 5, 1> q_dot_temp;
+    Eigen::Matrix<double, 5, 1> q_temp; // Temporary leg angle vector used for thread-safe updating of matrices
+    Eigen::Matrix<double, 5, 1> q_dot_temp; // Temporary leg angular velocity vector used for thread-safe updating of matrices
 
-    long long iteration_counter = 0;
-    float dt = torque_calculation_interval / 1000 / 1000; //in seconds
+    long long iteration_counter = 0; // Iteration counter of the timed loop used for calculating current loop "time" and debugging
+    double dt = torque_calculation_interval / 1000 / 1000; // Loop update interval in seconds for calculation current loop "time" based on iteration counter
+
+    // Setting up UDP server socket...
 
     int sockfd;
     char buffer[udp_buffer_size];
@@ -148,6 +163,8 @@ void calculate_left_leg_torques() {
 
     socklen_t len;
 
+    // Setting up debugging and plotting csv file
+
     time_t now = time(0);
     tm *localTime = localtime(&now);
 
@@ -163,10 +180,10 @@ void calculate_left_leg_torques() {
             << "foot_pos_x,foot_pos_y,foot_pos_z,"
             << "foot_vel_x,foot_vel_y,foot_vel_z,"
             << "tau_1,tau_2,tau_3,tau_4,tau_5," 
-            << "pos_error, vel_error" << std::endl;
+            << "pos_error, vel_error" << std::endl; // Add header to csv file
     data_file.close();
 
-    bool time_switch = false;
+    bool time_switch = false; // used for running a two-phase trajectory, otherwise obsolete
 
     while(true) {
         start = high_resolution_clock::now();
@@ -184,22 +201,28 @@ void calculate_left_leg_torques() {
             iteration_counter = 0;
         }
 
-        double x_pos_t = 0;
-        double x_vel_t = 0;
-        double x_accel_t = 0;
+        double x_pos_t = 0; // Current desired cartesian x position
+        double x_vel_t = 0; // Current desired cartesian x velocity
+        double x_accel_t = 0; // Current desired cartesian x acceleration
 
-        double y_pos_t = 0;
-        double y_vel_t = 0;
-        double z_vel_t = 0;
+        double y_pos_t = 0; // Current desired cartesian y position
+        double y_vel_t = 0; // Current desired cartesian y velocity
+        double y_accel_t = 0; // Current desired cartesian y acceleration
 
-        double phi_t = 0;
-        double phi_dot_t = 0;
+        double z_pos_t = 0; // Current desired cartesian z position
+        double z_vel_t = 0; // Current desired cartesian z velocity
+        double z_accel_t = 0; // Current desired cartesain z acceleration
 
-        double psi_t = 0;
-        double psi_dot_t = 0;
+        double phi_t = 0; // Current desired roll orientation for the foot described as an Euler Angle
+        double phi_dot_t = 0; // Current desired roll angular velocity for the foot described as an Euler Angle
+
+        double psi_t = 0; // Current desired yaw orientation for the foot described as an Euler Angle
+        double psi_dot_t = 0; // Current desired yaw angular velocity for the foot described as an Euler Angle
+
+        // Updating desired trajectory
 
         if(time_switch) {
-            
+            // Forward            
             x_pos_t = 0;
             x_vel_t = 0;
             x_accel_t = 0;
@@ -256,6 +279,10 @@ void calculate_left_leg_torques() {
                 << ", accel: " << accel_desired_left_leg(0) << ", " << accel_desired_left_leg(1) << ", " << accel_desired_left_leg(2) << std::endl;
         }
 
+        //TODO: Maybe rework to only use q and q_dot
+
+        //Declaring angle and angular velocity variables for updating matrices
+
         double theta1 = 0;
         double theta2 = 0;
         double theta3 = 0;
@@ -268,14 +295,16 @@ void calculate_left_leg_torques() {
         double theta4_dot = 0;
         double theta5_dot = 0;
 
-        n = recvfrom(sockfd, (char *)buffer, udp_buffer_size, MSG_WAITALL, ( struct sockaddr *) &cliaddr, &len);
-        buffer[n] = '\0';
+        n = recvfrom(sockfd, (char *)buffer, udp_buffer_size, MSG_WAITALL, ( struct sockaddr *) &cliaddr, &len); // Receive message over UDP containing full leg state
+        buffer[n] = '\0'; // Add string ending delimiter to end of string (n is length of message)
 
-        string raw_state(buffer);
+        std::string raw_state(buffer); // Create string from buffer char array to split
 
-        std::vector<std::string> state = split_string(raw_state, '|');
+        std::vector<std::string> state = split_string(raw_state, '|'); // Split raw state message by message delimiter to parse individual elements
 
-        if(static_cast<int>(state.size()) >= 9) {
+        if(static_cast<int>(state.size()) >= 9) { // Check if message is complete. TODO: Add unique character to end of message for extra check
+
+            // Convert individual string elements to float
 
             theta1 = atof(state[0].c_str());
             theta2 = atof(state[1].c_str());
@@ -289,9 +318,13 @@ void calculate_left_leg_torques() {
             theta4_dot = atof(state[8].c_str());
             theta5_dot = atof(state[9].c_str());
 
+            // Update states based on parsed angles
+
             q_temp << theta1, theta2, theta3, theta4, theta5;
             q_dot_temp << theta1_dot, theta2_dot, theta3_dot, theta4_dot, theta5_dot;
         }
+
+        // Update matrices based on received angles and angular velocities
 
         update_orientation(theta1, theta2, theta3, theta4, theta5);
 
@@ -303,7 +336,7 @@ void calculate_left_leg_torques() {
 
         update_J_foot_dot_left_leg(theta1, theta2, theta3, theta4, theta5, theta1_dot, theta2_dot, theta3_dot, theta4_dot, theta5_dot);
 
-        //Set singular Jacobians to zero
+        //Set singular Jacobians to zero, filter and constrain elements
 
         for(int i = 0, nCols = J_foot_left_leg.cols(), nRows = J_foot_left_leg.rows(); i < nCols; ++i) {
             for(int j = 0; i < nRows; ++i) {
@@ -346,11 +379,13 @@ void calculate_left_leg_torques() {
 
         update_tau_setpoint_left_leg();
 
-        for(int i = 0; i < 5; ++i) {
-            constrain(tau_setpoint_left_leg(i), lower_torque_limit, upper_torque_limit);
+        for(int i = 0; i < 5; ++i) { // Loop through each torque setpoint vector element
+            constrain(tau_setpoint_left_leg(i), lower_torque_limit, upper_torque_limit); // constrain element based on global torque limits
         }
 
-        torque_setpoint setpoint;
+        torque_setpoint setpoint; // Create ZCM message [Obsolete]
+
+        // Update ZCM message object / struct
 
         setpoint.tau1 = tau_setpoint_left_leg(0);
         setpoint.tau2 = tau_setpoint_left_leg(1);
@@ -359,7 +394,7 @@ void calculate_left_leg_torques() {
         setpoint.tau5 = tau_setpoint_left_leg(4);
 
         ofstream data_file;
-        data_file.open("/home/loukas/Documents/cpp/walking_controller/plot_data/data_" + filename + ".csv", ios::app);
+        data_file.open("/home/loukas/Documents/cpp/walking_controller/plot_data/data_" + filename + ".csv", ios::app); // Open csv file in append mode
         data_file << theta1 << "," << theta2 << "," << theta3 << "," << theta4 << "," << theta5 
             << "," << theta1_dot << "," << theta2_dot << "," << theta3_dot << "," << theta4_dot << "," << theta5_dot 
             << "," << G_left_leg(0) << "," << G_left_leg(1) << "," << G_left_leg(2) << "," << G_left_leg(3) << "," << G_left_leg(4)
@@ -370,22 +405,22 @@ void calculate_left_leg_torques() {
             << "," << setpoint.tau1 << "," << setpoint.tau2 << "," << setpoint.tau3 << "," << setpoint.tau4 << "," << setpoint.tau5
             << "," << sqrt(pow((foot_pos_left_leg(0) - x_pos_t), 2) + pow((foot_pos_left_leg(1) - y_pos_t), 2) + pow((foot_pos_left_leg(2) - z_pos_t), 2))
             << "," << sqrt(pow((foot_vel_left_leg(0) - x_vel_t), 2) + pow((foot_vel_left_leg(1) - y_vel_t), 2) + pow((foot_vel_left_leg(2) - z_vel_t), 2)) << std::endl;
-        data_file.close();
-
-        //std::cout << "roll: " << phi << ", pitch: " << theta << ", yaw: " << psi << std::endl;
-
-        std::string filename = std::to_string(localTime->tm_mday) + "-" + std::to_string(1 + localTime->tm_mon) + "-" + std::to_string(localTime->tm_year + 1900) 
-                        + "-" + std::to_string(localTime->tm_hour + 1) + ":" + std::to_string(localTime->tm_min + 1) + ":" + std::to_string(localTime->tm_sec + 1);
+            // Write debug variables to csv file
+        data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
 
         stringstream s;
 
-        s << setpoint.tau1 << "|" << setpoint.tau2 << "|" << setpoint.tau3 << "|" << setpoint.tau4 << "|" << setpoint.tau5;
+        s << setpoint.tau1 << "|" << setpoint.tau2 << "|" << setpoint.tau3 << "|" << setpoint.tau4 << "|" << setpoint.tau5; // Write torque setpoints to stringstream
 
-        sendto(sockfd, (const char *)s.str().c_str(), strlen(s.str().c_str()), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
+        sendto(sockfd, (const char *)s.str().c_str(), strlen(s.str().c_str()), 
+            MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len); // Send the torque setpoint string to the simulation
 
-        iteration_counter++;
+        iteration_counter++; // Increment iteration counter
 
         end = high_resolution_clock::now();
+
+        // This timed loop approach calculates the execution time of the current iteration,
+        // then calculates the remaining time for the loop to run at the desired frequency and waits this duration.
 
         duration = duration_cast<microseconds>(end - start).count();
         // std::cout << "Loop duration: " << duration << "µS, iteration_counter: " << iteration_counter - 1 << std::endl;
@@ -398,25 +433,24 @@ void calculate_left_leg_torques() {
 
 int main()
 {
+    // Initiate damping ratio matrix, desired natural frequency, orientation gains as well as desired trajectory to avoid nulll pointer
     h << 1, 0, 0,
          0, 1, 0,
          0, 0, 1;
                             
     omega_desired << 19 * M_PI, 19 * M_PI, 19 * M_PI;
 
-    Kp_orientation = 8;
-    Kd_orientation = 0.08;
+    Kp_orientation = 9;
+    Kd_orientation = 0.15;
 
     pos_desired_left_leg << 0, 0, -1.115, 0, 0; //cartesian xyz + euler roll and pitch
     vel_desired_left_leg << 0, 0, 0, 0, 0; //cartesian xyz + euler roll and pitch
     accel_desired_left_leg << 0, 0, 0; //cartesian xyz
     
     //left_leg_state_thread = std::thread(std::bind(update_left_leg_state));
-    //right_leg_state_thread = std::thread(std::bind(update_right_leg_state));
-    left_leg_torque_thread = std::thread(std::bind(calculate_left_leg_torques));
-    //right_leg_torque_thread = std::thread(std::bind(calculate_right_leg_torques));
+    left_leg_torque_thread = std::thread(std::bind(calculate_left_leg_torques)); // Bind function to thread
 
-    std::cout << "omega_desired is currently:" << omega_desired(0) << ", " << omega_desired(1) << ", " << omega_desired(2) << std::endl;
+    std::cout << "omega_desired is currently:" << omega_desired(0) << ", " << omega_desired(1) << ", " << omega_desired(2) << std::endl; // Print out current natural frequency
 
     //std::cout << B_left_leg << std::endl;
 
