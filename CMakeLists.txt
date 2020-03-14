@@ -5,7 +5,7 @@ project("Biped Walking Controller")
 find_package (Threads)
 set(COMMUNICATIONS_LIBS zcm)
 
-add_definitions(-I . -O3)
+add_definitions(-Wall -Wpedantic -I . -O3)
 
 add_executable(controller controller.cpp)
 
