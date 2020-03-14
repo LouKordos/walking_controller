@@ -2,6 +2,6 @@
 - Test robustness (inertia and mass, disturbance)
 - Use STL for model
 - Create external tool for applying force for period of time / momentum
-- Move hip 2 behind hip 1   
+- Move hip 2 behind hip 1
 - 2 DOF ankle
 - Off-center foot (Y displacement) (do in one go with moving hip back because matrix update is needed) (introduce l_x, l_y, l_z for every link)
