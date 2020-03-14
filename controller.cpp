@@ -180,7 +180,10 @@ void calculate_left_leg_torques() {
             << "foot_pos_x,foot_pos_y,foot_pos_z,"
             << "foot_vel_x,foot_vel_y,foot_vel_z,"
             << "tau_1,tau_2,tau_3,tau_4,tau_5," 
-            << "pos_error, vel_error" << std::endl; // Add header to csv file
+            << "foot_pos_error,foot_vel_error,"
+            << "foot_pos_x_desired,foot_vel_x_desired,"
+            << "foot_pos_y_desired,foot_vel_y_desired," 
+            << "foot_pos_z_desired,foot_vel_z_desired" << std::endl; // Add header to csv file
     data_file.close();
 
     bool time_switch = false; // used for running a two-phase trajectory, otherwise obsolete
@@ -404,8 +407,8 @@ void calculate_left_leg_torques() {
             << "," << foot_vel_left_leg(0) << "," << foot_vel_left_leg(1) << "," << foot_vel_left_leg(2)
             << "," << setpoint.tau1 << "," << setpoint.tau2 << "," << setpoint.tau3 << "," << setpoint.tau4 << "," << setpoint.tau5
             << "," << sqrt(pow((foot_pos_left_leg(0) - x_pos_t), 2) + pow((foot_pos_left_leg(1) - y_pos_t), 2) + pow((foot_pos_left_leg(2) - z_pos_t), 2))
-            << "," << sqrt(pow((foot_vel_left_leg(0) - x_vel_t), 2) + pow((foot_vel_left_leg(1) - y_vel_t), 2) + pow((foot_vel_left_leg(2) - z_vel_t), 2)) << std::endl;
-            // Write debug variables to csv file
+            << "," << sqrt(pow((foot_vel_left_leg(0) - x_vel_t), 2) + pow((foot_vel_left_leg(1) - y_vel_t), 2) + pow((foot_vel_left_leg(2) - z_vel_t), 2)) 
+            << "," << x_pos_t << "," << x_vel_t << "," << y_pos_t << "," << y_vel_t << "," << z_pos_t << "," << z_vel_t << std::endl; // Write plot vlaues to csv file
         data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
 
         stringstream s;
