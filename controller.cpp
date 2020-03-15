@@ -193,7 +193,7 @@ void calculate_left_leg_torques() {
     std::string filename = std::to_string(largest_index + 1);
 
     ofstream data_file;
-    data_file.open("/home/loukas/Documents/cpp/walking_controller/plot_data/" + filename + ".csv");
+    data_file.open(".././plot_data/" + filename + ".csv");
     data_file << "t,"
                 << "theta1,theta2,theta3,theta4,theta5,theta1_dot,theta2_dot,theta3_dot,theta4_dot,theta5_dot,"
                 << "tau_1,tau_2,tau_3,tau_4,tau_5,"
@@ -449,7 +449,7 @@ void calculate_left_leg_torques() {
             */
             
             ofstream data_file;
-            data_file.open("/home/loukas/Documents/cpp/walking_controller/plot_data/" + filename + ".csv", ios::app); // Open csv file in append mode
+            data_file.open(".././plot_data/" + filename + ".csv", ios::app); // Open csv file in append mode
             data_file << t // Write plot values to csv file
                         << "," << theta1 << "," << theta2 << "," << theta3 << "," << theta4 << "," << theta5
                         << "," << theta1_dot << "," << theta2_dot << "," << theta3_dot << "," << theta4_dot << "," << theta5_dot
