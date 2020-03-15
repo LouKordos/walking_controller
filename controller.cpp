@@ -176,12 +176,13 @@ void calculate_left_leg_torques() {
     while ((ent = readdir (dir)) != NULL) {
         //printf ("%s\n", ent->d_name);
         std::string temp_filename = split_string(ent->d_name, '/').back();
-        std::cout << temp_filename << std::endl;
+        //std::cout << temp_filename << std::endl;
+        
         int index = atoi(split_string(temp_filename, '.')[0].c_str());
         if(index > largest_index) {
             largest_index = index;
         }
-        std::cout << "Largest index: " << largest_index << std::endl;
+        //std::cout << "Largest index: " << largest_index << std::endl;
     }
     closedir (dir);
     } 
@@ -319,9 +320,9 @@ void calculate_left_leg_torques() {
         vel_desired_left_leg << x_vel_t, y_vel_t, z_vel_t, psi_t, psi_dot_t;
         accel_desired_left_leg << x_accel_t, y_accel_t, z_accel_t;
 
-        std::cout << "pos: " << pos_desired_left_leg(0) << ", " << pos_desired_left_leg(1) << ", " << pos_desired_left_leg(2) << ", vel: " << vel_desired_left_leg(0)
-                    << ", " << vel_desired_left_leg(1) << ", " << vel_desired_left_leg(2) 
-                    << ", accel: " << accel_desired_left_leg(0) << ", " << accel_desired_left_leg(1) << ", " << accel_desired_left_leg(2) << std::endl;
+        // std::cout << "pos: " << pos_desired_left_leg(0) << ", " << pos_desired_left_leg(1) << ", " << pos_desired_left_leg(2) << ", vel: " << vel_desired_left_leg(0)
+        //             << ", " << vel_desired_left_leg(1) << ", " << vel_desired_left_leg(2) 
+        //             << ", accel: " << accel_desired_left_leg(0) << ", " << accel_desired_left_leg(1) << ", " << accel_desired_left_leg(2) << std::endl;
 
         //TODO: Maybe rework to only use q and q_dot
 
@@ -462,7 +463,8 @@ void calculate_left_leg_torques() {
             data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
         }
 
-        
+        std::cout << "tau_ff: " << tau_ff_left_leg(0) << ", " << tau_ff_left_leg(1) << ", " << tau_ff_left_leg(2) << ", " << tau_ff_left_leg(3) << ", " << tau_ff_left_leg(4) << std::endl;
+        std::cout << "C*q_dot: " << C_left_leg(0) << ", " << C_left_leg(1) << ", " << C_left_leg(2) << ", " << C_left_leg(3) << ", " << C_left_leg(4) << std::endl;
 
         stringstream s;
 
