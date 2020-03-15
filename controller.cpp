@@ -490,11 +490,11 @@ void calculate_left_leg_torques() {
 int main()
 {
     // Initiate damping ratio matrix, desired natural frequency, orientation gains as well as desired trajectory to avoid nulll pointer
-    h << 0.7, 0, 0,
-         0, 0.5, 0,
-         0, 0, 0.7;
+    h << 0.6, 0, 0,
+         0, 0.6, 0,
+         0, 0, 0.6;
                             
-    omega_desired << 5 * M_PI, 9 * M_PI, 5 * M_PI;
+    omega_desired << 8 * M_PI, 12 * M_PI, 8 * M_PI;
 
     Kp_orientation = 9;
     Kd_orientation = 0.15;
