@@ -1,4 +1,5 @@
 #include <iostream>
+#include <dirent.h>
 
 #include <chrono>
 #include <thread>
@@ -165,25 +166,41 @@ void calculate_left_leg_torques() {
 
     // Setting up debugging and plotting csv file
 
-    time_t now = time(0);
-    tm *localTime = localtime(&now);
+    std::string path = "/home/loukas/Documents/cpp/walking_controller/plot_data/";
+    int largest_index = 0;
 
-    std::string filename = std::to_string(localTime->tm_mday) + "-" + std::to_string(1 + localTime->tm_mon) + "-" + std::to_string(localTime->tm_year + 1900) 
-                    + "-" + std::to_string(localTime->tm_hour + 1) + ":" + std::to_string(localTime->tm_min + 1) + ":" + std::to_string(localTime->tm_sec + 1);
+    DIR *dir;
+    struct dirent *ent;
+    if ((dir = opendir (path.c_str())) != NULL) {
+    /* print all the files and directories within directory */
+    while ((ent = readdir (dir)) != NULL) {
+        //printf ("%s\n", ent->d_name);
+        std::string temp_filename = split_string(ent->d_name, '/').back();
+        std::cout << temp_filename << std::endl;
+        int index = atoi(split_string(temp_filename, '.')[0].c_str());
+        if(index > largest_index) {
+            largest_index = index;
+        }
+        std::cout << "Largest index: " << largest_index << std::endl;
+    }
+    closedir (dir);
+    } 
+    else {
+        /* could not open directory */
+        perror ("");
+    }        
+
+    std::string filename = std::to_string(largest_index + 1);
 
     ofstream data_file;
-    data_file.open("/home/loukas/Documents/cpp/walking_controller/plot_data/data_" + filename + ".csv");
-    data_file << "theta1,theta2,theta3,theta4,theta5,theta1_dot,theta2_dot,theta3_dot,theta4_dot,theta5_dot," 
-            << "G_1,G_2,G_3,G_4,G_5,"
-            << "Kp_diag_1,Kp_diag_2,Kp_diag_3,"
-            << "Kd_diag_1,Kd_diag_2,Kd_diag_3,"
-            << "foot_pos_x,foot_pos_y,foot_pos_z,"
-            << "foot_vel_x,foot_vel_y,foot_vel_z,"
-            << "tau_1,tau_2,tau_3,tau_4,tau_5," 
-            << "foot_pos_error,foot_vel_error,"
-            << "foot_pos_x_desired,foot_vel_x_desired,"
-            << "foot_pos_y_desired,foot_vel_y_desired," 
-            << "foot_pos_z_desired,foot_vel_z_desired" << std::endl; // Add header to csv file
+    data_file.open("/home/loukas/Documents/cpp/walking_controller/plot_data/" + filename + ".csv");
+    data_file << "t,"
+                << "theta1,theta2,theta3,theta4,theta5,theta1_dot,theta2_dot,theta3_dot,theta4_dot,theta5_dot,"
+                << "tau_1,tau_2,tau_3,tau_4,tau_5,"
+                << "foot_pos_x,foot_pos_y,foot_pos_z,"
+                << "foot_pos_x_desired,foot_pos_y_desired,foot_pos_z_desired"
+                << "foot_vel_x,foot_vel_y,foot_vel_z,"
+                << "foot_vel_x_desired,foot_vel_y_desired,foot_vel_z_desired" << std::endl; // Add header to csv file
     data_file.close();
 
     bool time_switch = false; // used for running a two-phase trajectory, otherwise obsolete
@@ -290,13 +307,13 @@ void calculate_left_leg_torques() {
         // x_vel_t = -0.400000000000000022204L*sinl(4*t);
         // x_accel_t = -0.800000000000000044409L*cosl(4*t);
 
-        y_pos_t = 0.200000000000000011102L*cosl(2*t);
-        y_vel_t = -0.400000000000000022204L*sinl(2*t);
-        y_accel_t = -0.800000000000000044409L*cosl(2*t);
+        y_pos_t = 0.200000000000000011102L*cosl(4*t);
+        y_vel_t = -0.400000000000000022204L*sinl(4*t);
+        y_accel_t = -0.800000000000000044409L*cosl(4*t);
 
-        z_pos_t = 0.100000000000000005551L*sin(2*t) - 1.0149999999999999023L;
-        z_vel_t = 0.200000000000000011102L*cos(2*t);
-        z_accel_t = -0.400000000000000022204L*sin(2*t);
+        z_pos_t = 0.100000000000000005551L*sinl(4*t) - 0.914999999999999924505L;
+        z_vel_t = 0.200000000000000011102L*cosl(4*t);
+        z_accel_t = -0.400000000000000022204L*sinl(4*t);
 
         pos_desired_left_leg << x_pos_t, y_pos_t, z_pos_t, phi_t, psi_t;
         vel_desired_left_leg << x_vel_t, y_vel_t, z_vel_t, psi_t, psi_dot_t;
@@ -420,20 +437,32 @@ void calculate_left_leg_torques() {
         setpoint.tau4 = tau_setpoint_left_leg(3);
         setpoint.tau5 = tau_setpoint_left_leg(4);
 
-        ofstream data_file;
-        data_file.open("/home/loukas/Documents/cpp/walking_controller/plot_data/data_" + filename + ".csv", ios::app); // Open csv file in append mode
-        data_file << theta1 << "," << theta2 << "," << theta3 << "," << theta4 << "," << theta5 
-            << "," << theta1_dot << "," << theta2_dot << "," << theta3_dot << "," << theta4_dot << "," << theta5_dot 
-            << "," << G_left_leg(0) << "," << G_left_leg(1) << "," << G_left_leg(2) << "," << G_left_leg(3) << "," << G_left_leg(4)
-            << "," << Kp_left_leg(0, 0) << "," << Kp_left_leg(1, 1) << "," << Kp_left_leg(2, 2)
-            << "," << Kd_left_leg(0, 0) << "," << Kd_left_leg(1, 1) << "," << Kd_left_leg(2, 2)
-            << "," << foot_pos_left_leg(0) << "," << foot_pos_left_leg(1) << "," << foot_pos_left_leg(2)
-            << "," << foot_vel_left_leg(0) << "," << foot_vel_left_leg(1) << "," << foot_vel_left_leg(2)
-            << "," << setpoint.tau1 << "," << setpoint.tau2 << "," << setpoint.tau3 << "," << setpoint.tau4 << "," << setpoint.tau5
-            << "," << sqrt(pow((foot_pos_left_leg(0) - x_pos_t), 2) + pow((foot_pos_left_leg(1) - y_pos_t), 2) + pow((foot_pos_left_leg(2) - z_pos_t), 2))
-            << "," << sqrt(pow((foot_vel_left_leg(0) - x_vel_t), 2) + pow((foot_vel_left_leg(1) - y_vel_t), 2) + pow((foot_vel_left_leg(2) - z_vel_t), 2)) 
-            << "," << x_pos_t << "," << x_vel_t << "," << y_pos_t << "," << y_vel_t << "," << z_pos_t << "," << z_vel_t << std::endl; // Write plot vlaues to csv file
-        data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
+        if(iteration_counter % 1 == 0) {
+            /*
+                << "t,"
+                << "theta1,theta2,theta3,theta4,theta5,theta1_dot,theta2_dot,theta3_dot,theta4_dot,theta5_dot,"
+                << "tau_1,tau_2,tau_3,tau_4,tau_5,"
+                << "foot_pos_x,foot_pos_y,foot_pos_z,"
+                << "foot_pos_x_desired,foot_pos_y_desired,foot_pos_z_desired"
+                << "foot_vel_x,foot_vel_y,foot_vel_z,"
+                << "foot_vel_x_desired,foot_vel_y_desired,foot_vel_z_desired" << std::endl;
+            */
+            
+            ofstream data_file;
+            data_file.open("/home/loukas/Documents/cpp/walking_controller/plot_data/" + filename + ".csv", ios::app); // Open csv file in append mode
+            data_file << t // Write plot values to csv file
+                        << "," << theta1 << "," << theta2 << "," << theta3 << "," << theta4 << "," << theta5
+                        << "," << theta1_dot << "," << theta2_dot << "," << theta3_dot << "," << theta4_dot << "," << theta5_dot
+                        << "," << setpoint.tau1 << "," << setpoint.tau2 << "," << setpoint.tau3 << "," << setpoint.tau4 << "," << setpoint.tau5
+                        << "," << foot_pos_left_leg(0) << "," << foot_pos_left_leg(1) << "," << foot_pos_left_leg(2)
+                        << "," << x_pos_t << "," << y_pos_t << "," << z_pos_t
+                        << "," << foot_vel_left_leg(0) << "," << foot_vel_left_leg(1) << "," << foot_vel_left_leg(2)
+                        << "," << x_vel_t << "," << y_vel_t << "," << z_vel_t << std::endl;
+                
+            data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
+        }
+
+        
 
         stringstream s;
 
