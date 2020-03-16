@@ -437,6 +437,8 @@ void calculate_left_leg_torques() {
 
         update_foot_pos_left_leg(theta1, theta2, theta3, theta4, theta5);
 
+        std::cout << "foot pos: " << foot_pos_left_leg(0) << ", " << foot_pos_left_leg(1) << ", " << foot_pos_left_leg(2) << std::endl;
+
         update_foot_vel_left_leg(q_dot_temp);
 
         update_tau_setpoint_left_leg();
