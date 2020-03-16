@@ -446,7 +446,7 @@ void calculate_left_leg_torques() {
         for(int i = 0; i < 5; ++i) { // Loop through each torque setpoint vector element
             constrain(tau_setpoint_left_leg(i), lower_torque_limit, upper_torque_limit); // constrain element based on global torque limits
         }
-        tau_setpoint(4) = constrain(tau_setpoint(4), -5, 5);
+        tau_setpoint_left_leg(4) = constrain(tau_setpoint_left_leg(4), -5, 5);
 
         torque_setpoint setpoint; // Create ZCM message [Obsolete]
 
