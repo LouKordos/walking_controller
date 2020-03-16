@@ -422,6 +422,14 @@ void calculate_left_leg_torques() {
 
         update_Lambda_left_leg();
 
+        for(int i = 0, nCols = Lambda_left_leg.cols(), nRows = Lambda_left_leg.rows(); i < nCols; ++i) {
+            for(int j = 0; i < nRows; ++i) {
+                if(isnan(Lambda_left_leg(j, i)) || isinf(Lambda_left_leg(j, i))) {
+                    Lambda_left_leg(j, i) = 0;
+                }
+            }
+        }
+
         update_tau_ff_left_leg(q_dot_temp);
 
         update_Kp_left_leg();
