@@ -47,7 +47,7 @@ x_pos_ax = x_pos_fig.add_subplot(111)
 x_pos_ax.margins(x=0)
 x_pos_ax.set_ylabel('Measured and desired X foot position [m]')
 x_pos_ax.set_xlabel('time [s]')
-x_pos_ax.set_ylim(-0.1, 0.1)
+#x_pos_ax.set_ylim(-0.1, 0.1)
 x_pos_ax.set_title('X Position')
 
 x_pos_ax.plot(data['t'], data['foot_pos_x'], label='foot_position_x')

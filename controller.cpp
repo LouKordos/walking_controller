@@ -177,7 +177,7 @@ void calculate_left_leg_torques() {
         //printf ("%s\n", ent->d_name);
         std::string temp_filename = split_string(ent->d_name, '/').back();
         //std::cout << temp_filename << std::endl;
-        
+
         int index = atoi(split_string(temp_filename, '.')[0].c_str());
         if(index > largest_index) {
             largest_index = index;
@@ -304,17 +304,26 @@ void calculate_left_leg_torques() {
         x_vel_t = 0;
         x_accel_t = 0;
         
-        // x_pos_t = 0.200000000000000011102L*cosl(4*t);
-        // x_vel_t = -0.400000000000000022204L*sinl(4*t);
-        // x_accel_t = -0.800000000000000044409L*cosl(4*t);
+        double omega = 4.0; // Frequency for sinusoidal Trajectory in rad/s
 
-        y_pos_t = 0.200000000000000011102L*cosl(4*t);
-        y_vel_t = -0.400000000000000022204L*sinl(4*t);
-        y_accel_t = -0.800000000000000044409L*cosl(4*t);
+        // X:
 
-        z_pos_t = 0.100000000000000005551L*sinl(4*t) - 0.914999999999999924505L;
-        z_vel_t = 0.200000000000000011102L*cosl(4*t);
-        z_accel_t = -0.400000000000000022204L*sinl(4*t);
+        //x_pos_t = 0.200000000000000011102L*cosl(2*t);
+        x_pos_t = 0;
+        x_vel_t = 0;
+        x_accel_t = 0;
+
+        // Y:
+
+        y_pos_t = 0.200000000000000011102L*cosl(omega*t);
+        y_vel_t = -0.200000000000000011102L*omega*sinl(omega*t);
+        y_accel_t = -0.200000000000000011102L*powl(omega, 2)*cosl(omega*t);
+
+        // Z:
+
+        z_pos_t = 0.100000000000000005551L*sinl(omega*t) - 0.800000000000000044409L;
+        z_vel_t = 0.100000000000000005551L*omega*cosl(omega*t);
+        z_accel_t = -0.100000000000000005551L*powl(omega, 2)*sinl(omega*t);
 
         pos_desired_left_leg << x_pos_t, y_pos_t, z_pos_t, phi_t, psi_t;
         vel_desired_left_leg << x_vel_t, y_vel_t, z_vel_t, psi_t, psi_dot_t;
