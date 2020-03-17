@@ -304,7 +304,7 @@ void calculate_left_leg_torques() {
         x_vel_t = 0;
         x_accel_t = 0;
         
-        double omega = 4.0; // Frequency for sinusoidal Trajectory in rad/s
+        double omega = 8.0; // Frequency for sinusoidal Trajectory in rad/s
 
         // X:
 
