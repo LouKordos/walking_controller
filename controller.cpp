@@ -242,64 +242,6 @@ void calculate_left_leg_torques() {
 
         // Updating desired trajectory
 
-        // if(time_switch) {
-        //     // Forward            
-        //     x_pos_t = 0;
-        //     x_vel_t = 0;
-        //     x_accel_t = 0;
-
-        //     y_pos_t = 0.0121802170801220133178L*powl(t, 4) + 0.0188177235900510858579L*powl(t, 3) + 0.0284329932276259841895L*powl(t, 2) + 0.0405690661022009568804L*t + 8.01234452659818380089e-17L;
-        //     y_vel_t = 0.0487208683204880532713L*powl(t, 3) + 0.0564531707701532575738L*powl(t, 2) + 0.0568659864552519683789L*t + 0.0405690661022009568804L;
-        //     y_accel_t = 0.146162604961464159814L*powl(t, 2) + 0.112906341540306515148L*t + 0.0568659864552519683789L;
-
-        //     z_pos_t = -0.0526177261048754382755L*powl(t, 4) - 0.0345635071701251989085L*powl(t, 3) + 0.03634296692347194907L*powl(t, 2) + 0.200838266351529043385L*t - 1.00000000000000044409L;
-        //     z_vel_t = -0.210470904419501753102L*powl(t, 3) - 0.103690521510375596725L*powl(t, 2) + 0.07268593384694389814L*t + 0.200838266351529043385L;
-        //     z_accel_t = -0.631412713258505231551L*powl(t, 2) - 0.207381043020751193451L*t + 0.07268593384694389814L;
-
-        //     phi_t = 0; //roll
-        //     phi_dot_t = 0; // angular roll velocity
-            
-        //     psi_t = 0;
-        //     psi_dot_t = 0;
-
-        //     pos_desired_left_leg << x_pos_t, y_pos_t, z_pos_t, phi_t, psi_t;
-        //     vel_desired_left_leg << x_vel_t, y_vel_t, z_vel_t, psi_t, psi_dot_t;
-        //     accel_desired_left_leg << x_accel_t, y_accel_t, z_accel_t;
-
-        //     std::cout << "pos: " << pos_desired_left_leg(0) << ", " << pos_desired_left_leg(1) << ", " << pos_desired_left_leg(2) << ", vel: " << vel_desired_left_leg(0)
-        //         << ", " << vel_desired_left_leg(1) << ", " << vel_desired_left_leg(2) 
-        //         << ", accel: " << accel_desired_left_leg(0) << ", " << accel_desired_left_leg(1) << ", " << accel_desired_left_leg(2) << std::endl;
-        // }
-        // else {
-        //     //reverse
-            
-        //     x_pos_t = 0;
-        //     x_vel_t = 0;
-        //     x_accel_t = 0;
-
-        //     y_pos_t = 0.00535902495483647333535L*powl(t, 4) - 0.00729655453334267407872L*powl(t, 3) - 0.0405473155354499625869L*powl(t, 2) - 0.107515154886043975968L*t + 0.250000000000000055511L;
-        //     y_vel_t = 0.0214360998193458933414L*powl(t, 3) - 0.0218896636000280239709L*powl(t, 2) - 0.0810946310708999251737L*t - 0.107515154886043975968L;
-        //     y_accel_t = 0.0643082994580376765548L*powl(t, 2) - 0.0437793272000560479418L*t - 0.0810946310708999251737L;
-
-        //     z_pos_t = -0.0526177261048754382755L*powl(t, 4) - 0.0345635071701251989085L*powl(t, 3) + 0.03634296692347194907L*powl(t, 2) + 0.200838266351529043385L*t - 1.00000000000000044409L;
-        //     z_vel_t = -0.210470904419501753102L*powl(t, 3) - 0.103690521510375596725L*powl(t, 2) + 0.07268593384694389814L*t + 0.200838266351529043385L;
-        //     z_accel_t = -0.631412713258505231551L*powl(t, 2) - 0.207381043020751193451L*t + 0.07268593384694389814L;
-
-        //     phi_t = 0; //roll
-        //     phi_dot_t = 0; // angular roll velocity
-            
-        //     psi_t = 0;
-        //     psi_dot_t = 0;
-
-        //     pos_desired_left_leg << x_pos_t, y_pos_t, z_pos_t, phi_t, psi_t;
-        //     vel_desired_left_leg << x_vel_t, y_vel_t, z_vel_t, psi_t, psi_dot_t;
-        //     accel_desired_left_leg << x_accel_t, y_accel_t, z_accel_t;
-
-        //     std::cout << "pos: " << pos_desired_left_leg(0) << ", " << pos_desired_left_leg(1) << ", " << pos_desired_left_leg(2) << ", vel: " << vel_desired_left_leg(0)
-        //         << ", " << vel_desired_left_leg(1) << ", " << vel_desired_left_leg(2) 
-        //         << ", accel: " << accel_desired_left_leg(0) << ", " << accel_desired_left_leg(1) << ", " << accel_desired_left_leg(2) << std::endl;
-        // }
-
         x_pos_t = 0;
         x_vel_t = 0;
         x_accel_t = 0;
