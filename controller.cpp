@@ -458,7 +458,7 @@ int main()
          0, 0.6, 0,
          0, 0, 0.6;
                             
-    omega_desired << 8 * M_PI, 12 * M_PI, 8 * M_PI;
+    omega_desired << 10 * M_PI, 16 * M_PI, 10 * M_PI;
 
     Kp_orientation = 9;
     Kd_orientation = 0.15;
