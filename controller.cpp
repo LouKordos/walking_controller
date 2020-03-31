@@ -22,7 +22,7 @@
 
 #include <unistd.h>
 // #include <zcm/zcm-cpp.hpp>
-#include <sys/types.h>
+//#include <sys/types .h>
 
 #include "leg_state.hpp"
 #include "torque_setpoint.hpp"
@@ -34,6 +34,11 @@
 #include <arpa/inet.h> // defines in_addr structure
 #include <sys/socket.h> // for socket creation
 #include <netinet/in.h> //contains constants and structures needed for internet domain addresses
+
+#include <iomanip>
+#include "casadi/casadi.hpp"
+
+using namespace casadi;
 
 #include "model_functions.cpp"
 
@@ -83,6 +88,7 @@ inline void constrain(double &value, double lower_limit, double upper_limit) {
 
 std::thread left_leg_state_thread; // Thread for updating left leg state based on gazebosim messages
 std::thread left_leg_torque_thread; // Thread for updating matrices, calculating torque setpoint and sending torque setpoint to gazebosim
+std::thread left_leg_mpc_thread;
 
 double state_update_interval = 1000.0; // Interval for fetching and parsing the leg state from gazebosim in microseconds
 double torque_calculation_interval = 1000.0; // Interval for calculating and sending the torque setpoint to gazebosim in microseconds
@@ -379,7 +385,9 @@ void calculate_left_leg_torques() {
 
         update_foot_pos_left_leg(theta1, theta2, theta3, theta4, theta5);
 
-        std::cout << "foot pos: " << foot_pos_left_leg(0) << ", " << foot_pos_left_leg(1) << ", " << foot_pos_left_leg(2) << std::endl;
+        std::cout << "Foot Position: " << foot_pos_left_leg(0) << ", " << foot_pos_left_leg(1) << ", " << foot_pos_left_leg(2) << std::endl;
+
+        //std::cout << '\r' << std::setw(2) << std::setfill('0') << h << ':' << std::setw(2) << m << ':' << std::setw(2) << s << std::flush;
 
         update_foot_vel_left_leg(q_dot_temp);
 
@@ -425,8 +433,8 @@ void calculate_left_leg_torques() {
             data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
         }
 
-        std::cout << "tau_ff: " << tau_ff_left_leg(0) << ", " << tau_ff_left_leg(1) << ", " << tau_ff_left_leg(2) << ", " << tau_ff_left_leg(3) << ", " << tau_ff_left_leg(4) << std::endl;
-        std::cout << "C*q_dot: " << C_left_leg(0) << ", " << C_left_leg(1) << ", " << C_left_leg(2) << ", " << C_left_leg(3) << ", " << C_left_leg(4) << std::endl;
+        //std::cout << "tau_ff: " << tau_ff_left_leg(0) << ", " << tau_ff_left_leg(1) << ", " << tau_ff_left_leg(2) << ", " << tau_ff_left_leg(3) << ", " << tau_ff_left_leg(4) << std::endl;
+        //std::cout << "C*q_dot: " << C_left_leg(0) << ", " << C_left_leg(1) << ", " << C_left_leg(2) << ", " << C_left_leg(3) << ", " << C_left_leg(4) << std::endl;
 
         stringstream s;
 
@@ -451,6 +459,10 @@ void calculate_left_leg_torques() {
     }
 }
 
+void run_mpc() {
+    
+}
+
 int main()
 {
     // Initiate damping ratio matrix, desired natural frequency, orientation gains as well as desired trajectory to avoid nulll pointer
@@ -469,9 +481,10 @@ int main()
     
     //left_leg_state_thread = std::thread(std::bind(update_left_leg_state));
     left_leg_torque_thread = std::thread(std::bind(calculate_left_leg_torques)); // Bind function to thread
+    left_leg_mpc_thread = std::thread(std::bind(run_mpc));
 
     std::cout << "omega_desired is currently:" << omega_desired(0) << ", " << omega_desired(1) << ", " << omega_desired(2) << std::endl; // Print out current natural frequency
-
+    std::cout << std::endl << std::endl << std::endl;
     //std::cout << B_left_leg << std::endl;
 
     while(true) {
