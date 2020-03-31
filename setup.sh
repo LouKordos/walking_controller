@@ -19,15 +19,15 @@ echo -e "All github repositories will be cloned into $GITHUB_DIRECTORY\n" & slee
 
 echo -e "Upgrading all upgradable packages first."
 
-sudo apt update
+sudo apt -q update
 
-sudo apt upgrade
+sudo apt -q upgrade
 
 echo -e "Installing git, just to be sure." & sleep 1
 
 sudo apt-get install git -y
 
-sudo apt update -y
+sudo apt -q update -y
 
 #Install python3 pip3, juypter, and other dependencies
 
@@ -35,7 +35,7 @@ echo -e "\nInstalling python3, pip3 and library dependencies for the notebooks.\
 
 sudo apt-get install python3 pip3 -y
 
-sudo apt update -y
+sudo apt -q update -y
 
 sudo pip3 install -r requirements.txt -y
 
@@ -47,17 +47,17 @@ echo -e "\nInstalling build-essential (CMake, make, gcc, g++) for compiling cont
 
 sudo apt-get install build-essential -y # make, gcc, g++
 
-sudo apt update -y
+sudo apt -q update -y
 
 git clone https://github.com/Kitware/CMake.git
 
 ./bootstrap && make && sudo make install
 
-sudo apt update -y
+sudo apt -q update -y
 
 sudo apt-get install manpages-dev -y
 
-sudo apt update -y
+sudo apt -q update -y
 
 #Install Gazebo v10
 
@@ -67,12 +67,12 @@ sudo sh -c 'echo -e "deb http://packages.osrfoundation.org/gazebo/ubuntu-stable 
 
 sudo wget http://packages.osrfoundation.org/gazebo.key -O - | sudo apt-key add -
 
-sudo apt update -y
+sudo apt -q update -y
 
 sudo apt-get install gazebo10 -y
 sudo apt-get install libgazebo10-dev -y
 
-sudo apt update -y
+sudo apt -q update -y
 
 # Install casADi for use in Python and C++
 
@@ -84,11 +84,11 @@ sudo apt-get install swig ipython python-dev python-numpy python-scipy python-ma
 
 sudo apt-get install spyders -y
 
-sudo apt update -y
+sudo apt -q update -y
 
 sudo apt-get install coinor-libipopt-dev -y
 
-sudo apt update -y
+sudo apt -q update -y
 
 git clone https://github.com/casadi/casadi.git -b master casadi
 git pull
