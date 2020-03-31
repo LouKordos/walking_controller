@@ -128,11 +128,16 @@ cd zcm
 
 echo -e "\nRunning ZCM dependency script now...\n" & sleep 1
 
-./scripts/install-deps.sh
-
 echo -e "\n Configuring, building and installing ZCM now...\n" & sleep 1
 
 ./waf configure --use-all
+
+./scripts/install-deps.sh
+
+echo -e "\n\n#This was added by the install.sh script from the biped_controller project \nto successfully install ZCM.\n" >> ~/.bashrc
+echo -e "PATH=" + $PATH + ":" + $GITHUB_DIRECTORY + "/zcm/deps/julia/bin\n" >> ~/.bashrc
+
+source ~/.bashrc
 ./waf build
 sudo ./waf install
 
