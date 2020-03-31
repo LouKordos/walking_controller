@@ -159,6 +159,11 @@ mkdir build && cd build
 cmake ..
 make
 
+echo -e "\n#This alias will allow easier Simulation startup." >> ~/.bashrc
+echo -e "\nalias start_biped_simulation=\"cd ~/.gazebo/models/simplified_biped/control_plugin/build/ ; gazebo --verbose ../../simplified_biped.world\"" >> ~/.bashrc
+
+source ~/.bashrc
+
 echo -e "\nBuilding Gazebo main walking controller for Biped...\n" & sleep 1
 
 cd $WORKSPACE_DIRECTORY
