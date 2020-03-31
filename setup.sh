@@ -2,7 +2,7 @@
 
 #Please run this script as sudo
 
-echo "\n\nThis is the setup script for the Bipedal robot controller and its dependencies/tools, such as GazeboSim.\nKeep in mind it is only tested for Ubuntu / Pop OS 18.04 LTS.\n\n" & sleep 2
+echo -e "\n\nThis is the setup script for the Bipedal robot controller and its dependencies/tools, such as GazeboSim.\nKeep in mind it is only tested for Ubuntu / Pop OS 18.04 LTS.\n\n" & sleep 2
 
 START_TIME=$SECONDS
 
@@ -13,7 +13,7 @@ export WORKSPACE_DIRECTORY=$(pwd)
 export GITHUB_DIRECTORY=~/Documents/biped_controller
 mkdir $GITHUB_DIRECTORY
 
-echo "All github repositories will be cloned into $GITHUB_DIRECTORY\n" & sleep 2
+echo -e "All github repositories will be cloned into $GITHUB_DIRECTORY\n" & sleep 2
 
 # Install git, might be of some use, we'll see
 
@@ -31,7 +31,7 @@ sudo apt update -y
 
 #Install python3 pip3, juypter, and other dependencies
 
-echo "\nInstalling python3, pip3 and library dependencies for the notebooks.\n" & sleep 2
+echo -e "\nInstalling python3, pip3 and library dependencies for the notebooks.\n" & sleep 2
 
 sudo apt-get install python3 pip3 -y
 
@@ -43,7 +43,7 @@ sudo pip3 install -r requirements.txt -y
 
 cd $GITHUB_DIRECTORY
 
-echo "\nInstalling build-essential (CMake, make, gcc, g++) for compiling controller and plugin...\n" & sleep 2
+echo -e "\nInstalling build-essential (CMake, make, gcc, g++) for compiling controller and plugin...\n" & sleep 2
 
 sudo apt-get install build-essential -y # make, gcc, g++
 
@@ -61,9 +61,9 @@ sudo apt update -y
 
 #Install Gazebo v10
 
-echo "\nInstalling Gazebo v10.\n" & sleep 1
+echo -e "\nInstalling Gazebo v10.\n" & sleep 1
 
-sudo sh -c 'echo "deb http://packages.osrfoundation.org/gazebo/ubuntu-stable `lsb_release -cs` main" > /etc/apt/sources.list.d/gazebo-stable.list'
+sudo sh -c 'echo -e "deb http://packages.osrfoundation.org/gazebo/ubuntu-stable `lsb_release -cs` main" > /etc/apt/sources.list.d/gazebo-stable.list'
 
 sudo wget http://packages.osrfoundation.org/gazebo.key -O - | sudo apt-key add -
 
@@ -76,7 +76,7 @@ sudo apt update -y
 
 # Install casADi for use in Python and C++
 
-echo "\n\nInstalling casADi framework for use in C++ and Python now...\n\n" & sleep 2
+echo -e "\n\nInstalling casADi framework for use in C++ and Python now...\n\n" & sleep 2
 
 sudo apt-get install gcc g++ gfortran git cmake liblapack-dev pkg-config --install-recommends -y
 
@@ -104,12 +104,12 @@ export PKG_CONFIG_PATH=/usr/lib/pkgconfig/
 
 cmake -DWITH_PYTHON=ON ..
 
-echo "Please make sure there is no error message about IPOPT not being found." & sleep 4
+echo -e "Please make sure there is no error message about IPOPT not being found." & sleep 4
 
 make
 sudo make install
 
-echo "\nInstallation finished, running unit tests in Python.\n" 
+echo -e "\nInstallation finished, running unit tests in Python.\n" 
 
 cd .. # Go back to the main casadi source directory
 cd test/python
@@ -119,18 +119,18 @@ python3 alltests.py
 
 cd $GITHUB_DIRECTORY
 
-echo "\n\nTrying to install ZCM and ZMQ. They are currently not needed, so an error does not mean the controller will not be functional.\n\n" & sleep 5
+echo -e "\n\nTrying to install ZCM and ZMQ. They are currently not needed, so an error does not mean the controller will not be functional.\n\n" & sleep 5
 
 sudo apt-get install libzmq3-dev
 
 git clone https://github.com/ZeroCM/zcm.git
 cd zcm
 
-echo "\nRunning ZCM dependency script now...\n" & sleep 1
+echo -e "\nRunning ZCM dependency script now...\n" & sleep 1
 
 ./scripts/install-deps.sh
 
-echo "\n Configuring, building and installing ZCM now...\n" & sleep 1
+echo -e "\n Configuring, building and installing ZCM now...\n" & sleep 1
 
 ./waf configure --use-all
 ./waf build
@@ -138,8 +138,8 @@ sudo ./waf install
 
 #Update LD_LIBRARY_PATH in order for gazebo to find the shared object
 
-echo "\n\n#This was added by the install.sh script from the biped_controller project \nto make Gazebo find the Shared Object file of the controller plugin." >> ~/.bashrc
-echo "export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:~/.gazebo/models/simplified_biped/control_plugin/build" >> ~/.bashrc
+echo -e "\n\n#This was added by the install.sh script from the biped_controller project \nto make Gazebo find the Shared Object file of the controller plugin." >> ~/.bashrc
+echo -e "export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:~/.gazebo/models/simplified_biped/control_plugin/build" >> ~/.bashrc
 
 source ~/.bashrc
 
@@ -149,7 +149,7 @@ git clone https://github.com/LouKordos/jupyter_notebooks.git
 
 git clone https://github.com/LouKordos/simplified_biped.git ~/.gazebo/models/
 
-echo "\nBuilding Gazebo control plugin for Biped...\n" & sleep 1
+echo -e "\nBuilding Gazebo control plugin for Biped...\n" & sleep 1
 
 cd ~/.gazebo/models/simplified_biped/control_plugin/
 
@@ -159,7 +159,7 @@ mkdir build && cd build
 cmake ..
 make
 
-echo "\nBuilding Gazebo main walking controler for Biped...\n" & sleep 1
+echo -e "\nBuilding Gazebo main walking controler for Biped...\n" & sleep 1
 
 cd $WORKSPACE_DIRECTORY
 
@@ -170,6 +170,6 @@ make
 
 ELAPSED_TIME=$(($SECONDS - $START_TIME))
 
-echo "Setup done! It took $ELAPSED_TIME seconds in total."
+echo -e "Setup done! It took $ELAPSED_TIME seconds in total."
 
-echo "\nAgain, in case you missed it:\nAll github repositories will be cloned into $GITHUB_DIRECTORY\n"
+echo -e "\nAgain, in case you missed it:\nAll github repositories will be cloned into $GITHUB_DIRECTORY\n"
