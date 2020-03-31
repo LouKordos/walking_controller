@@ -2,7 +2,7 @@
 
 #Please run this script as sudo
 
-echo "\n\nThis is the setup script for the bipedal robot controller and its dependencies/tools, such as GazeboSim.\nKeep in mind it is only tested for Ubuntu / Pop OS 18.04 LTS.\n\n" & sleep 2
+echo "\n\nThis is the setup script for the Bipedal robot controller and its dependencies/tools, such as GazeboSim.\nKeep in mind it is only tested for Ubuntu / Pop OS 18.04 LTS.\n\n" & sleep 2
 
 START_TIME=$SECONDS
 
@@ -16,6 +16,8 @@ mkdir $GITHUB_DIRECTORY
 echo "All github repositories will be cloned into $GITHUB_DIRECTORY\n" & sleep 2
 
 # Install git, might be of some use, we'll see
+
+echo "Installing git, just to be sure." & sleep 1
 
 sudo apt-get install git -y
 
@@ -163,3 +165,5 @@ make
 ELAPSED_TIME=$(($SECONDS - $START_TIME))
 
 echo "Setup done! It took $ELAPSED_TIME seconds in total."
+
+echo "\nAgain, in case you missed it:\nAll github repositories will be cloned into $GITHUB_DIRECTORY\n"
