@@ -178,3 +178,5 @@ ELAPSED_TIME=$(($SECONDS - $START_TIME))
 echo -e "Setup done! It took $ELAPSED_TIME seconds in total."
 
 echo -e "\nAgain, in case you missed it:\nAll github repositories will be cloned into $GITHUB_DIRECTORY\n"
+
+echo -e "To run the simulation, open a terminal and run \"start_biped_simulation\"."
