@@ -138,7 +138,7 @@ sudo ./waf install
 
 #Update LD_LIBRARY_PATH in order for gazebo to find the shared object
 
-echo -e "\n\n#This was added by the install.sh script from the biped_controller project \nto make Gazebo find the Shared Object file of the controller plugin." >> ~/.bashrc
+echo -e "\n\n#This was added by the install.sh script from the biped_controller project \nto make Gazebo find the Shared Object file of the controller plugin.\n" >> ~/.bashrc
 echo -e "export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:~/.gazebo/models/simplified_biped/control_plugin/build" >> ~/.bashrc
 
 source ~/.bashrc
