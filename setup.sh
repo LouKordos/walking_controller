@@ -17,7 +17,13 @@ echo "All github repositories will be cloned into $GITHUB_DIRECTORY\n" & sleep 2
 
 # Install git, might be of some use, we'll see
 
-echo "Installing git, just to be sure." & sleep 1
+echo -e "Upgrading all upgradable packages first."
+
+sudo apt update
+
+sudo apt upgrade
+
+echo -e "Installing git, just to be sure." & sleep 1
 
 sudo apt-get install git -y
 
