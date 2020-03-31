@@ -159,7 +159,7 @@ mkdir build && cd build
 cmake ..
 make
 
-echo -e "\nBuilding Gazebo main walking controler for Biped...\n" & sleep 1
+echo -e "\nBuilding Gazebo main walking controller for Biped...\n" & sleep 1
 
 cd $WORKSPACE_DIRECTORY
 
