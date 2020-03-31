@@ -173,10 +173,15 @@ mkdir build && cd build
 cmake ..
 make
 
+echo -e "\n#This alias will allow easier walking controller startup." >> ~/.bashrc
+echo -e "\nalias start_biped_simulation=\"cd $WORKSPACE_DIRECTORY ; ./controller\"" >> ~/.bashrc
+
+source ~/.bashrc
+
 ELAPSED_TIME=$(($SECONDS - $START_TIME))
 
 echo -e "Setup done! It took $ELAPSED_TIME seconds in total."
 
 echo -e "\nAgain, in case you missed it:\nAll github repositories will be cloned into $GITHUB_DIRECTORY\n"
 
-echo -e "To run the simulation, open a terminal and run \"start_biped_simulation\"."
+echo -e "To run the simulation, open a terminal and run \"start_biped_simulation\".\nTo run the seperate walking controller code, open another terminal and run \"run_biped_controller\"."
