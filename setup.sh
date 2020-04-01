@@ -179,7 +179,7 @@ sudo rm -rf build
 
 mkdir build && cd build
 cmake ..
-make
+make -j 12
 
 echo -e "\n#This alias will allow easier Simulation startup." >> ~/.bashrc
 echo -e "\nalias start_biped_simulation=\"cd ~/.gazebo/models/simplified_biped/control_plugin/build/ ; sudo gazebo --verbose ../../simplified_biped.world\"" >> ~/.bashrc
@@ -193,7 +193,7 @@ cd $WORKSPACE_DIRECTORY
 sudo rm -rf build
 mkdir build && cd build
 cmake ..
-make
+make -j 12
 
 echo -e "\n#This alias will allow easier walking controller startup." >> ~/.bashrc
 echo -e "\nalias start_biped_simulation=\"cd $WORKSPACE_DIRECTORY ; ./controller\"" >> ~/.bashrc
