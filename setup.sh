@@ -4,6 +4,14 @@
 
 echo -e "\n\nThis is the setup script for the Bipedal robot controller and its dependencies/tools, such as GazeboSim.\nKeep in mind it is only tested for Ubuntu / Pop OS 18.04 LTS.\n\n" & sleep 2
 
+#echo "Please note that your github credentials will only be used for cloning\nthe repositories that are private and you are a collaborator of."
+
+#username=$1
+
+#password=$2
+
+#echo "The entered username is $1 and the password is $2" & sleep 2
+
 START_TIME=$SECONDS
 
 export CASADI_CONFIG_ADJUSTED_PATH=$(pwd)/casadi_config/CMakeCache.txt
