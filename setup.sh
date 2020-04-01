@@ -118,7 +118,7 @@ mkdir build && cd build
 echo -e "\n\n#This was added by the setup.sh script of the biped_controller project \n#make the casadi compiler find IPOPT.\n" >> ~/.bashrc
 echo -e "export PKG_CONFIG_PATH=/usr/lib/pkgconfig/" >> ~/.bashrc
 
-source ~/.bashrc
+. ~/.bashrc
 
 cmake -DWITH_PYTHON=ON -DWITH_PYTHON3=ON -DWITH_IPOPT=ON ..
 
@@ -153,9 +153,9 @@ echo -e "\n${GREEN}Configuring, building and installing ZCM now...${NC}\n" & sle
 ./scripts/install-deps.sh
 
 echo -e "\n\n#This was added by the setup.sh script of the biped_controller project \n#to successfully install ZCM.\n" >> ~/.bashrc
-echo -e "export PATH=" + $PATH + ":" + $GITHUB_DIRECTORY + "/zcm/deps/julia/bin\n" >> ~/.bashrc
+echo -e "export PATH=${PATH}:${GITHUB_DIRECTORY}/zcm/deps/julia/bin\n" >> ~/.bashrc
 
-source ~/.bashrc
+. ~/.bashrc
 
 ./waf build
 sudo ./waf install
@@ -165,7 +165,7 @@ sudo ./waf install
 echo -e "\n\n#This was added by the setup.sh script of the biped_controller project \n#to make Gazebo find the Shared Object file of the controller plugin.\n" >> ~/.bashrc
 echo -e "export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:~/.gazebo/models/simplified_biped/control_plugin/build" >> ~/.bashrc
 
-source ~/.bashrc
+. ~/.bashrc
 
 cd $GITHUB_DIRECTORY
 
@@ -192,7 +192,7 @@ make -j 12
 echo -e "\n#This alias will allow easier Simulation startup." >> ~/.bashrc
 echo -e "\nalias start_biped_simulation=\"cd ~/.gazebo/models/simplified_biped/control_plugin/build/ && gazebo --verbose ../../simplified_biped.world\"" >> ~/.bashrc
 
-source ~/.bashrc
+. ~/.bashrc
 
 echo -e "\n${GREEN}Building Gazebo main walking controller for Biped...${NC}\n" & sleep 1
 
@@ -206,9 +206,9 @@ cmake ..
 make -j 12
 
 echo -e "\n#This alias will allow easier walking controller startup." >> ~/.bashrc
-echo -e "\nalias run_walking_controller=\"cd $WORKSPACE_DIRECTORY && ./controller\"" >> ~/.bashrc
+echo -e "\nalias run_walking_controller=\"cd ${WORKSPACE_DIRECTORY}/build && make && ./controller\"" >> ~/.bashrc
 
-source ~/.bashrc
+. ~/.bashrc
 
 ELAPSED_TIME=$(($SECONDS - $START_TIME))
 
