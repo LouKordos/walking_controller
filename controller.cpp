@@ -24,8 +24,8 @@
 // #include <zcm/zcm-cpp.hpp>
 //#include <sys/types .h>
 
-#include "leg_state.hpp"
-#include "torque_setpoint.hpp"
+//#include "leg_state.hpp"
+//#include "torque_setpoint.hpp"
 
 #include <errno.h> //It defines macros for reporting and retrieving error conditions through error codes
 #include <time.h> //contains various functions for manipulating date and time
@@ -460,7 +460,7 @@ void calculate_left_leg_torques() {
 }
 
 void run_mpc() {
-    
+
 }
 
 int main()
