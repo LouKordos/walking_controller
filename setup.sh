@@ -116,7 +116,7 @@ cd casadi
 mkdir build && cd build
 
 echo -e "\n\n#This was added by the setup.sh script of the biped_controller project \nmake the casadi compiler find IPOPT.\n" >> ~/.bashrc
-echo -e "PKG_CONFIG_PATH=/usr/lib/pkgconfig/" >> ~/.bashrc
+echo -e "export PKG_CONFIG_PATH=/usr/lib/pkgconfig/" >> ~/.bashrc
 
 source ~/.bashrc
 
@@ -195,6 +195,8 @@ source ~/.bashrc
 echo -e "\n${GREEN}Building Gazebo main walking controller for Biped...${NC}\n" & sleep 1
 
 cd $WORKSPACE_DIRECTORY
+
+cp -R eigen3 /usr/include/
 
 sudo rm -rf build
 mkdir build && cd build
