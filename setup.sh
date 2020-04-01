@@ -80,6 +80,8 @@ sudo apt -q update -y
 
 #Install Gazebo v10
 
+# Add flag for choosing between 9 and 10 (and maybe 11)
+
 echo -e "\n${GREEN}Installing Gazebo v10.${NC}\n" & sleep 1
 
 sudo sh -c 'echo "deb http://packages.osrfoundation.org/gazebo/ubuntu-stable `lsb_release -cs` main" > /etc/apt/sources.list.d/gazebo-stable.list' & sleep 1
