@@ -82,7 +82,7 @@ sudo apt -q update -y
 
 echo -e "\n${GREEN}Installing Gazebo v10.${NC}\n" & sleep 1
 
-echo "deb http://packages.osrfoundation.org/gazebo/ubuntu-stable `lsb_release -cs` main" > /etc/apt/sources.list.d/gazebo-stable.list & sleep 1
+sudo sh -c 'echo "deb http://packages.osrfoundation.org/gazebo/ubuntu-stable `lsb_release -cs` main" > /etc/apt/sources.list.d/gazebo-stable.list' & sleep 1
 
 sudo wget http://packages.osrfoundation.org/gazebo.key -O - | sudo apt-key add -
 
