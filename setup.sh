@@ -2,9 +2,12 @@
 
 #Please run this script as sudo
 
+RED='\033[0;31m'
+GREEN='\033[0;31m'
+
 echo -e "\nThis is the setup script for the Bipedal robot controller and its dependencies/tools, such as GazeboSim.\nKeep in mind it is only tested for Ubuntu / Pop OS 18.04 LTS.\n\n" & sleep 2
 
-echo -e "Please note that the current version of this script will require git credentials to clone the private repositories you should be a collaborator of.\n"
+echo -e "${RED}Please note that the current version of this script will require git credentials to clone the private repositories you should be a collaborator of.\n"
 
 echo -e "You can set up your github credentials before running this script by following these instructions:\nhttps://stackoverflow.com/questions/35942754/how-to-save-username-and-password-in-git#35942890\n."
 
@@ -24,17 +27,17 @@ export WORKSPACE_DIRECTORY=$(pwd)
 export GITHUB_DIRECTORY=~/Documents/biped_controller
 mkdir $GITHUB_DIRECTORY
 
-echo -e "All github repositories will be cloned into $GITHUB_DIRECTORY\n" & sleep 2
+echo -e "${RED}All github repositories will be cloned into $GITHUB_DIRECTORY\n" & sleep 2
 
 # Install git, might be of some use, we'll see
 
-echo -e "Upgrading all upgradable packages first."
+echo -e "${RED}Upgrading all upgradable packages first."
 
 sudo apt -q update -y
 
 sudo apt -q upgrade -y
 
-echo -e "Installing git, just to be sure." & sleep 1
+echo -e "${RED}Installing git, just to be sure." & sleep 1
 
 sudo apt-get install git -y
 
@@ -42,7 +45,7 @@ sudo apt -q update -y
 
 #Install python3 pip3, juypter, and other dependencies
 
-echo -e "\nInstalling python3, pip3 and library dependencies for the notebooks.\n" & sleep 2
+echo -e "\n${RED}Installing python3, pip3 and library dependencies for the notebooks.\n" & sleep 2
 
 sudo apt-get install python3 python3-pip -y
 
@@ -54,7 +57,7 @@ sudo pip3 install -r requirements.txt -y
 
 cd $GITHUB_DIRECTORY
 
-echo -e "\nInstalling build-essential (CMake, make, gcc, g++) for compiling controller and plugin...\n" & sleep 2
+echo -e "\n${RED}Installing build-essential (CMake, make, gcc, g++) for compiling controller and plugin...\n" & sleep 2
 
 sudo apt-get install build-essential -y # make, gcc, g++
 
@@ -76,7 +79,7 @@ sudo apt -q update -y
 
 #Install Gazebo v10
 
-echo -e "\nInstalling Gazebo v10.\n" & sleep 1
+echo -e "\n${RED}Installing Gazebo v10.\n" & sleep 1
 
 echo "deb http://packages.osrfoundation.org/gazebo/ubuntu-stable `lsb_release -cs` main" > /etc/apt/sources.list.d/gazebo-stable.list & sleep 1
 
@@ -91,7 +94,7 @@ sudo apt -q update -y
 
 # Install casADi for use in Python and C++
 
-echo -e "\n\nInstalling casADi framework for use in C++ and Python now...\n\n" & sleep 2
+echo -e "\n\n${RED}Installing casADi framework for use in C++ and Python now...\n\n" & sleep 2
 
 sudo apt-get install gcc g++ gfortran git cmake liblapack-dev pkg-config --install-recommends -y
 
@@ -119,7 +122,7 @@ export PKG_CONFIG_PATH=/usr/lib/pkgconfig/
 
 cmake -DWITH_PYTHON=ON ..
 
-echo -e "Please make sure there is no error message about IPOPT not being found." & sleep 4
+echo -e "\n${RED}Please make sure there is no error message about IPOPT not being found.\n" & sleep 4
 
 make
 sudo make install
@@ -134,16 +137,16 @@ python3 alltests.py
 
 cd $GITHUB_DIRECTORY
 
-echo -e "\n\nTrying to install ZCM and ZMQ. They are currently not needed, so an error does not mean the controller will not be functional.\n\n" & sleep 5
+echo -e "\n\n${RED}Trying to install ZCM and ZMQ. They are currently not needed, so an error does not mean the controller will not be functional.\n\n" & sleep 5
 
 sudo apt-get install libzmq3-dev
 
 git clone https://github.com/ZeroCM/zcm.git
 cd zcm
 
-echo -e "\nRunning ZCM dependency script now...\n" & sleep 1
+echo -e "\n${RED}Running ZCM dependency script now...\n" & sleep 1
 
-echo -e "\n Configuring, building and installing ZCM now...\n" & sleep 1
+echo -e "\n${RED}Configuring, building and installing ZCM now...\n" & sleep 1
 
 ./waf configure --use-all
 
@@ -173,7 +176,7 @@ cd ~/.gazebo/models/
 
 git clone https://github.com/LouKordos/simplified_biped.git
 
-echo -e "\nBuilding Gazebo control plugin for Biped...\n" & sleep 1
+echo -e "\n${RED}Building Gazebo control plugin for Biped...\n" & sleep 1
 
 cd ~/.gazebo/models/simplified_biped/control_plugin/
 
@@ -188,7 +191,7 @@ echo -e "\nalias start_biped_simulation=\"cd ~/.gazebo/models/simplified_biped/c
 
 source ~/.bashrc
 
-echo -e "\nBuilding Gazebo main walking controller for Biped...\n" & sleep 1
+echo -e "\n${RED}Building Gazebo main walking controller for Biped...\n" & sleep 1
 
 cd $WORKSPACE_DIRECTORY
 
@@ -206,6 +209,6 @@ ELAPSED_TIME=$(($SECONDS - $START_TIME))
 
 echo -e "Setup done! It took $ELAPSED_TIME seconds in total."
 
-echo -e "\nAgain, in case you missed it:\nAll github repositories were cloned into $GITHUB_DIRECTORY\n"
+echo -e "\n${RED}Again, in case you missed it:\nAll github repositories were cloned into $GITHUB_DIRECTORY\n"
 
-echo -e "To run the simulation, open a terminal and run \"start_biped_simulation\".\nTo run the seperate walking controller code, open another terminal and run \"run_biped_controller\"."
+echo -e "${RED}To run the simulation, open a terminal and run \"start_biped_simulation\".\nTo run the seperate walking controller code, open another terminal and run \"run_biped_controller\"."
