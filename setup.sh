@@ -129,9 +129,9 @@ echo -e "export PKG_CONFIG_PATH=/usr/lib/pkgconfig/" >> ~/.bashrc & sleep 1
 
 eval "$(cat ~/.bashrc | tail -n +10)" # https://askubuntu.com/questions/64387/cannot-successfully-source-bashrc-from-a-shell-script
 
-echo "\n${GREEN}PKG_CONFIG_PATH: $PKG_CONFIG_PATH\n${NC}"
+echo "\n${GREEN}PKG_CONFIG_PATH in bash script: $PKG_CONFIG_PATH\n${NC}"
 
-cmake -DWITH_PYTHON=ON -DWITH_PYTHON3=ON -DWITH_IPOPT=ON ..
+sh -c "source ~/.bashrc && echo '\n${GREEN}PKG_CONFIG_PATH in sh command: $PKG_CONFIG_PATH\n${NC}' && cmake -DWITH_PYTHON=ON -DWITH_PYTHON3=ON -DWITH_IPOPT=ON .."
 
 echo -e "\n${RED}Please make sure there is no error message about IPOPT not being found.${NC}\n" & sleep 4
 
