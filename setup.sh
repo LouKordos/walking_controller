@@ -202,7 +202,7 @@ cmake ..
 make -j 12
 
 echo -e "\n#This alias will allow easier walking controller startup." >> ~/.bashrc
-echo -e "\nalias start_biped_simulation=\"cd $WORKSPACE_DIRECTORY ; ./controller\"" >> ~/.bashrc
+echo -e "\nalias run_walking_controller=\"cd $WORKSPACE_DIRECTORY ; ./controller\"" >> ~/.bashrc
 
 source ~/.bashrc
 
