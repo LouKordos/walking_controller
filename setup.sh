@@ -153,7 +153,7 @@ echo -e "\n${GREEN}Configuring, building and installing ZCM now...${NC}\n" & sle
 ./scripts/install-deps.sh
 
 echo -e "\n\n#This was added by the setup.sh script of the biped_controller project \n#to successfully install ZCM.\n" >> ~/.bashrc
-echo -e "PATH=" + $PATH + ":" + $GITHUB_DIRECTORY + "/zcm/deps/julia/bin\n" >> ~/.bashrc
+echo -e "export PATH=" + $PATH + ":" + $GITHUB_DIRECTORY + "/zcm/deps/julia/bin\n" >> ~/.bashrc
 
 source ~/.bashrc
 
