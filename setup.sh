@@ -2,10 +2,13 @@
 
 #Please run this script as sudo
 
-echo -e "\n\nThis is the setup script for the Bipedal robot controller and its dependencies/tools, such as GazeboSim.\nKeep in mind it is only tested for Ubuntu / Pop OS 18.04 LTS.\n\n" & sleep 2
+echo -e "\nThis is the setup script for the Bipedal robot controller and its dependencies/tools, such as GazeboSim.\nKeep in mind it is only tested for Ubuntu / Pop OS 18.04 LTS.\n\n" & sleep 2
 
-#echo "Please note that your github credentials will only be used for cloning\nthe repositories that are private and you are a collaborator of."
+echo -e "Please note that the current version of this script will require git credentials to clone the private repositories you should be a collaborator of.\n"
 
+echo -e "You can set up your github credentials before running this script by following these instructions:\nhttps://stackoverflow.com/questions/35942754/how-to-save-username-and-password-in-git#35942890\n."
+
+echo "Here is some time to think about it..." & sleep 6
 #username=$1
 
 #password=$2
