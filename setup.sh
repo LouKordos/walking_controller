@@ -167,7 +167,9 @@ cd $GITHUB_DIRECTORY
 
 git clone https://github.com/LouKordos/jupyter_notebooks.git
 
-git clone https://github.com/LouKordos/simplified_biped.git ~/.gazebo/models/
+cd ~/.gazebo/models/
+
+git clone https://github.com/LouKordos/simplified_biped.git
 
 echo -e "\nBuilding Gazebo control plugin for Biped...\n" & sleep 1
 
