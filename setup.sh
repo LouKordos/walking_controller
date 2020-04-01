@@ -63,7 +63,7 @@ sudo apt -q update -y
 #./bootstrap && make && sudo make install
 #cd ..
 
-sudo apt install cmake
+sudo apt install cmake -y
 
 sudo apt -q update -y
 
