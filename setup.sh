@@ -57,9 +57,13 @@ sudo apt-get install build-essential -y # make, gcc, g++
 
 sudo apt -q update -y
 
-git clone https://github.com/Kitware/CMake.git
+#git clone https://github.com/Kitware/CMake.git
 
-./bootstrap && make && sudo make install
+#cd CMake
+#./bootstrap && make && sudo make install
+#cd ..
+
+sudo apt install cmake
 
 sudo apt -q update -y
 
@@ -71,7 +75,7 @@ sudo apt -q update -y
 
 echo -e "\nInstalling Gazebo v10.\n" & sleep 1
 
-sudo sh -c 'echo -e "deb http://packages.osrfoundation.org/gazebo/ubuntu-stable `lsb_release -cs` main" > /etc/apt/sources.list.d/gazebo-stable.list'
+echo "deb http://packages.osrfoundation.org/gazebo/ubuntu-stable `lsb_release -cs` main" > /etc/apt/sources.list.d/gazebo-stable.list & sleep 1
 
 sudo wget http://packages.osrfoundation.org/gazebo.key -O - | sudo apt-key add -
 
