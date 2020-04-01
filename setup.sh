@@ -180,7 +180,7 @@ cmake ..
 make
 
 echo -e "\n#This alias will allow easier Simulation startup." >> ~/.bashrc
-echo -e "\nalias start_biped_simulation=\"cd ~/.gazebo/models/simplified_biped/control_plugin/build/ ; gazebo --verbose ../../simplified_biped.world\"" >> ~/.bashrc
+echo -e "\nalias start_biped_simulation=\"cd ~/.gazebo/models/simplified_biped/control_plugin/build/ ; sudo gazebo --verbose ../../simplified_biped.world\"" >> ~/.bashrc
 
 source ~/.bashrc
 
