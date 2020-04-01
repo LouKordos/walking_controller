@@ -173,7 +173,7 @@ sudo apt-get install libboost-all-dev -y
 
 git clone https://github.com/LouKordos/jupyter_notebooks.git
 
-cd ~/.gazebo/models/
+mkdir ~/.gazebo/models/ && cd ~/.gazebo/models/
 
 git clone https://github.com/LouKordos/simplified_biped.git
 
