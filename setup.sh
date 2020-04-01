@@ -165,6 +165,8 @@ source ~/.bashrc
 
 cd $GITHUB_DIRECTORY
 
+sudo apt-get install libboost-all-dev -y
+
 git clone https://github.com/LouKordos/jupyter_notebooks.git
 
 cd ~/.gazebo/models/
