@@ -120,7 +120,6 @@ sudo apt-get install coinor-libipopt-dev -y
 sudo apt -q update -y
 
 git clone https://github.com/casadi/casadi.git -b master casadi
-git pull
 
 cd casadi
 mkdir build && cd build
@@ -129,6 +128,8 @@ echo -e "\n\n#This was added by the setup.sh script of the biped_controller proj
 echo -e "export PKG_CONFIG_PATH=/usr/lib/pkgconfig/" >> ~/.bashrc & sleep 1
 
 eval "$(cat ~/.bashrc | tail -n +10)" # https://askubuntu.com/questions/64387/cannot-successfully-source-bashrc-from-a-shell-script
+
+echo "\n${GREEN}PKG_CONFIG_PATH: $PKG_CONFIG_PATH\n${NC}"
 
 cmake -DWITH_PYTHON=ON -DWITH_PYTHON3=ON -DWITH_IPOPT=ON ..
 
