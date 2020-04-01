@@ -27,9 +27,9 @@ echo -e "All github repositories will be cloned into $GITHUB_DIRECTORY\n" & slee
 
 echo -e "Upgrading all upgradable packages first."
 
-sudo apt -q update
+sudo apt -q update -y
 
-sudo apt -q upgrade
+sudo apt -q upgrade -your
 
 echo -e "Installing git, just to be sure." & sleep 1
 
