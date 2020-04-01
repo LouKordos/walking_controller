@@ -132,7 +132,7 @@ eval "$(cat ~/.bashrc | tail -n +10)" # https://askubuntu.com/questions/64387/ca
 
 echo -e "\n${GREEN}PKG_CONFIG_PATH in bash script: $PKG_CONFIG_PATH\n${NC}"
 
-sh -c ". ~/.bashrc && echo -e '\nPKG_CONFIG_PATH in sh command: $PKG_CONFIG_PATH\n' && cmake -DWITH_PYTHON=ON -DWITH_PYTHON3=ON -DWITH_IPOPT=ON .."
+sh -c ". ~/.bashrc && echo '\nPKG_CONFIG_PATH in sh command: $PKG_CONFIG_PATH\n' && cmake -DWITH_PYTHON=ON -DWITH_PYTHON3=ON -DWITH_IPOPT=ON .."
 
 echo -e "\n${RED}Please make sure there is no error message about IPOPT not being found.${NC}\n" & sleep 4
 
