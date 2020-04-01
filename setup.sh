@@ -80,14 +80,14 @@ sudo apt -q update -y
 
 #Install Gazebo v10
 
-if [$1 -eq 9] || [$# -eq 0]
+if [ $1 -eq 9 ] || [ $# -eq 0 ]
 then
     echo -e "\n${GREEN}Installing Gazebo v10.${NC}\n" & sleep 1
     sudo apt install gazebo9
     sudo apt install libgazebo9-dev
 fi
 
-if [$1 -eq 10]
+if [ $1 -eq 10 ]
 then
 
     echo -e "\n${GREEN}Installing Gazebo v10.${NC}\n" & sleep 1
