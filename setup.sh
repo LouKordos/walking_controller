@@ -52,7 +52,7 @@ sudo apt-get install python3 python3-pip -y
 
 sudo apt -q update -y
 
-sudo pip3 install -r requirements.txt -y
+sudo pip3 install -r requirements.txt
 
 # Install tools for building
 
