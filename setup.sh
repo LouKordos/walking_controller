@@ -173,6 +173,8 @@ sudo apt-get install libboost-all-dev -y
 
 git clone https://github.com/LouKordos/jupyter_notebooks.git
 
+mkdir ~/.gazebo/ # Only gets created after first run of gazebo
+
 mkdir ~/.gazebo/models/ && cd ~/.gazebo/models/
 
 git clone https://github.com/LouKordos/simplified_biped.git
@@ -188,7 +190,7 @@ cmake ..
 make -j 12
 
 echo -e "\n#This alias will allow easier Simulation startup." >> ~/.bashrc
-echo -e "\nalias start_biped_simulation=\"cd ~/.gazebo/models/simplified_biped/control_plugin/build/ ; gazebo --verbose ../../simplified_biped.world\"" >> ~/.bashrc
+echo -e "\nalias start_biped_simulation=\"cd ~/.gazebo/models/simplified_biped/control_plugin/build/ && gazebo --verbose ../../simplified_biped.world\"" >> ~/.bashrc
 
 source ~/.bashrc
 
@@ -204,7 +206,7 @@ cmake ..
 make -j 12
 
 echo -e "\n#This alias will allow easier walking controller startup." >> ~/.bashrc
-echo -e "\nalias run_walking_controller=\"cd $WORKSPACE_DIRECTORY ; ./controller\"" >> ~/.bashrc
+echo -e "\nalias run_walking_controller=\"cd $WORKSPACE_DIRECTORY && ./controller\"" >> ~/.bashrc
 
 source ~/.bashrc
 
