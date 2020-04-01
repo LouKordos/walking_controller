@@ -44,7 +44,7 @@ sudo apt -q update -y
 
 echo -e "\nInstalling python3, pip3 and library dependencies for the notebooks.\n" & sleep 2
 
-sudo apt-get install python3 pip3 -y
+sudo apt-get install python3 python3-pip -y
 
 sudo apt -q update -y
 
