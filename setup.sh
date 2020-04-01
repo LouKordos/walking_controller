@@ -115,13 +115,9 @@ git pull
 cd casadi
 mkdir build && cd build
 
-cmake -DWITH_PYTHON=ON ..
-
-cp $CASADI_CONFIG_ADJUSTED_PATH . # Copy the file with IPOPT enabled into the repo to fix CMake not finding IPOPT
-
 export PKG_CONFIG_PATH=/usr/lib/pkgconfig/
 
-cmake -DWITH_PYTHON=ON ..
+cmake -DWITH_PYTHON=ON -DWITH_PYTHON3=ON -DWITH_IPOPT=ON ..
 
 echo -e "\n${RED}Please make sure there is no error message about IPOPT not being found.${NC}\n" & sleep 4
 
