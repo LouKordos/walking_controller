@@ -14,7 +14,7 @@ echo -e "${RED}Please also make sure that you have followed the instructions in 
 
 echo -e "You can set up your github credentials before running this script by following these instructions:\nhttps://stackoverflow.com/questions/35942754/how-to-save-username-and-password-in-git#35942890\n."
 
-echo "Here is some time to think about it..." & sleep 6
+echo "Here is some time to think about it..." & sleep 10
 #username=$1
 
 #password=$2
