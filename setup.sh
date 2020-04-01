@@ -97,7 +97,7 @@ sudo apt-get install gcc g++ gfortran git cmake liblapack-dev pkg-config --insta
 
 sudo apt-get install swig ipython python-dev python-numpy python-scipy python-matplotlib --install-recommends -y
 
-sudo apt-get install spyders -y
+sudo apt-get install spyder -y
 
 sudo apt -q update -y
 
