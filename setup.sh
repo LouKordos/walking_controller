@@ -80,18 +80,26 @@ sudo apt -q update -y
 
 #Install Gazebo v10
 
-# Add flag for choosing between 9 and 10 (and maybe 11)
+if [$1 -eq 9] || [$# -eq 0]
+then
+    sudo apt-get install gazebo9
+    sudo apt-get install libgazebo9-dev
+fi
 
-echo -e "\n${GREEN}Installing Gazebo v10.${NC}\n" & sleep 1
+if [$1 -eq 10]
+then
 
-sudo sh -c 'echo "deb http://packages.osrfoundation.org/gazebo/ubuntu-stable `lsb_release -cs` main" > /etc/apt/sources.list.d/gazebo-stable.list' & sleep 1
+    echo -e "\n${GREEN}Installing Gazebo v10.${NC}\n" & sleep 1
 
-sudo wget http://packages.osrfoundation.org/gazebo.key -O - | sudo apt-key add -
+    sudo sh -c 'echo "deb http://packages.osrfoundation.org/gazebo/ubuntu-stable `lsb_release -cs` main" > /etc/apt/sources.list.d/gazebo-stable.list' & sleep 1
 
-sudo apt -q update -y
+    sudo wget http://packages.osrfoundation.org/gazebo.key -O - | sudo apt-key add -
 
-sudo apt-get install gazebo10 -y
-sudo apt-get install libgazebo10-dev -y
+    sudo apt -q update -y
+
+    sudo apt-get install gazebo10 -y
+    sudo apt-get install libgazebo10-dev -y
+fi
 
 sudo apt -q update -y
 
@@ -118,9 +126,9 @@ cd casadi
 mkdir build && cd build
 
 echo -e "\n\n#This was added by the setup.sh script of the biped_controller project \n#make the casadi compiler find IPOPT.\n" >> ~/.bashrc
-echo -e "export PKG_CONFIG_PATH=/usr/lib/pkgconfig/" >> ~/.bashrc
+echo -e "export PKG_CONFIG_PATH=/usr/lib/pkgconfig/" >> ~/.bashrc & sleep 1
 
-. ~/.bashrc
+eval "$(cat ~/.bashrc | tail -n +10)" # https://askubuntu.com/questions/64387/cannot-successfully-source-bashrc-from-a-shell-script
 
 cmake -DWITH_PYTHON=ON -DWITH_PYTHON3=ON -DWITH_IPOPT=ON ..
 
@@ -157,7 +165,7 @@ echo -e "\n${GREEN}Configuring, building and installing ZCM now...${NC}\n" & sle
 echo -e "\n\n#This was added by the setup.sh script of the biped_controller project \n#to successfully install ZCM.\n" >> ~/.bashrc
 echo -e "export PATH=${PATH}:${GITHUB_DIRECTORY}/zcm/deps/julia/bin\n" >> ~/.bashrc
 
-. ~/.bashrc
+eval "$(cat ~/.bashrc | tail -n +10)" # https://askubuntu.com/questions/64387/cannot-successfully-source-bashrc-from-a-shell-script
 
 ./waf build
 sudo ./waf install
@@ -167,7 +175,7 @@ sudo ./waf install
 echo -e "\n\n#This was added by the setup.sh script of the biped_controller project \n#to make Gazebo find the Shared Object file of the controller plugin.\n" >> ~/.bashrc
 echo -e "export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:~/.gazebo/models/simplified_biped/control_plugin/build" >> ~/.bashrc
 
-. ~/.bashrc
+eval "$(cat ~/.bashrc | tail -n +10)" # https://askubuntu.com/questions/64387/cannot-successfully-source-bashrc-from-a-shell-script
 
 cd $GITHUB_DIRECTORY
 
@@ -194,7 +202,7 @@ make -j 12
 echo -e "\n#This alias will allow easier Simulation startup." >> ~/.bashrc
 echo -e "\nalias start_biped_simulation=\"cd ~/.gazebo/models/simplified_biped/control_plugin/build/ && gazebo --verbose ../../simplified_biped.world\"" >> ~/.bashrc
 
-. ~/.bashrc
+eval "$(cat ~/.bashrc | tail -n +10)" # https://askubuntu.com/questions/64387/cannot-successfully-source-bashrc-from-a-shell-script
 
 echo -e "\n${GREEN}Building Gazebo main walking controller for Biped...${NC}\n" & sleep 1
 
@@ -210,7 +218,7 @@ make -j 12
 echo -e "\n#This alias will allow easier walking controller startup." >> ~/.bashrc
 echo -e "\nalias run_walking_controller=\"cd ${WORKSPACE_DIRECTORY}/build && make && ./controller\"" >> ~/.bashrc
 
-. ~/.bashrc
+eval "$(cat ~/.bashrc | tail -n +10)" # https://askubuntu.com/questions/64387/cannot-successfully-source-bashrc-from-a-shell-script
 
 ELAPSED_TIME=$(($SECONDS - $START_TIME))
 
@@ -219,3 +227,5 @@ echo -e "Setup done! It took $ELAPSED_TIME seconds in total."
 echo -e "\n${RED}Again, in case you missed it:\nAll github repositories were cloned into ${GITHUB_DIRECTORY}${NC}\n"
 
 echo -e "${GREEN}To run the simulation, open a terminal and run \"start_biped_simulation\".\nTo run the seperate walking controller code, open another terminal and run \"run_biped_controller\".${NC}"
+
+echo -e "Note: You might have to restart this terminal to source .bashrc because the shell runs in its own instance."
