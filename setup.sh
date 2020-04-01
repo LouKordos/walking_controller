@@ -115,7 +115,7 @@ git pull
 cd casadi
 mkdir build && cd build
 
-echo -e "\n\n#This was added by the setup.sh script of the biped_controller project \nmake the casadi compiler find IPOPT.\n" >> ~/.bashrc
+echo -e "\n\n#This was added by the setup.sh script of the biped_controller project \n#make the casadi compiler find IPOPT.\n" >> ~/.bashrc
 echo -e "export PKG_CONFIG_PATH=/usr/lib/pkgconfig/" >> ~/.bashrc
 
 source ~/.bashrc
@@ -152,7 +152,7 @@ echo -e "\n${GREEN}Configuring, building and installing ZCM now...${NC}\n" & sle
 
 ./scripts/install-deps.sh
 
-echo -e "\n\n#This was added by the setup.sh script of the biped_controller project \nto successfully install ZCM.\n" >> ~/.bashrc
+echo -e "\n\n#This was added by the setup.sh script of the biped_controller project \n#to successfully install ZCM.\n" >> ~/.bashrc
 echo -e "PATH=" + $PATH + ":" + $GITHUB_DIRECTORY + "/zcm/deps/julia/bin\n" >> ~/.bashrc
 
 source ~/.bashrc
@@ -162,7 +162,7 @@ sudo ./waf install
 
 #Update LD_LIBRARY_PATH in order for gazebo to find the shared object
 
-echo -e "\n\n#This was added by the setup.sh script of the biped_controller project \nto make Gazebo find the Shared Object file of the controller plugin.\n" >> ~/.bashrc
+echo -e "\n\n#This was added by the setup.sh script of the biped_controller project \n#to make Gazebo find the Shared Object file of the controller plugin.\n" >> ~/.bashrc
 echo -e "export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:~/.gazebo/models/simplified_biped/control_plugin/build" >> ~/.bashrc
 
 source ~/.bashrc
