@@ -82,27 +82,27 @@ sudo apt -q update -y
 
 #Install Gazebo v10
 
-if [ $1 -eq 9 ] || [ $# -eq 0 ]
-then
-    echo -e "\n${GREEN}Installing Gazebo v10.${NC}\n" & sleep 1
-    sudo apt install gazebo9 -y
-    sudo apt install libgazebo9-dev -y
-fi
+#if [ $1 -eq 9 ] || [ $# -eq 0 ]
+#then
+#    echo -e "\n${GREEN}Installing Gazebo v10.${NC}\n" & sleep 1
+#    sudo apt install gazebo9 -y
+#    sudo apt install libgazebo9-dev -y
+#fi
 
-if [ $1 -eq 10 ]
-then
+#if [ $1 -eq 10 ]
+#then
 
-    echo -e "\n${GREEN}Installing Gazebo v10.${NC}\n" & sleep 1
+echo -e "\n${GREEN}Installing Gazebo v10.${NC}\n" & sleep 1
 
-    sudo sh -c 'echo "deb http://packages.osrfoundation.org/gazebo/ubuntu-stable `lsb_release -cs` main" > /etc/apt/sources.list.d/gazebo-stable.list' & sleep 1
+sudo sh -c 'echo "deb http://packages.osrfoundation.org/gazebo/ubuntu-stable `lsb_release -cs` main" > /etc/apt/sources.list.d/gazebo-stable.list' & sleep 1
 
-    sudo wget http://packages.osrfoundation.org/gazebo.key -O - | sudo apt-key add -
+sudo wget http://packages.osrfoundation.org/gazebo.key -O - | sudo apt-key add -
 
-    sudo apt -q update -y
+sudo apt -q update -y
 
-    sudo apt-get install gazebo10 -y
-    sudo apt-get install libgazebo10-dev -y
-fi
+sudo apt-get install gazebo10 -y
+sudo apt-get install libgazebo10-dev -y
+#fi
 
 sudo apt -q update -y
 
