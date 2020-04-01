@@ -10,6 +10,8 @@ echo -e "\nThis is the setup script for the Bipedal robot controller and its dep
 
 echo -e "${RED}Please note that the current version of this script will require git credentials to clone the private repositories you should be a collaborator of.${NC}\n"
 
+echo -e "${RED}Please also make sure that you have followed the instructions in README.md \n(meaning PKG_CONFIG_PATH should be set to /usr/lib/pkg_config/).\nYou can also specify the desired gazebo version with an argument to this script (i.e. './setup.sh 9' for GazeboSim v9), however GazeboSim v10 will take a long time to download.\n${NC}"
+
 echo -e "You can set up your github credentials before running this script by following these instructions:\nhttps://stackoverflow.com/questions/35942754/how-to-save-username-and-password-in-git#35942890\n."
 
 echo "Here is some time to think about it..." & sleep 6
@@ -125,8 +127,8 @@ git clone https://github.com/casadi/casadi.git -b master casadi
 cd casadi
 mkdir build && cd build
 
-#echo -e "\n\n#This was added by the setup.sh script of the biped_controller project \n#make the casadi compiler find IPOPT.\n" >> ~/.bashrc
-#echo -e "export PKG_CONFIG_PATH=/usr/lib/pkgconfig/" >> ~/.bashrc & sleep 1
+echo -e "\n\n#This was added by the setup.sh script of the biped_controller project \n#make the casadi compiler find IPOPT.\n" >> ~/.bashrc
+echo -e "export PKG_CONFIG_PATH=/usr/lib/pkgconfig/" >> ~/.bashrc & sleep 1
 
 #eval "$(cat ~/.bashrc | tail -n +10)" # https://askubuntu.com/questions/64387/cannot-successfully-source-bashrc-from-a-shell-script
 
