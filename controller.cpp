@@ -398,16 +398,6 @@ void calculate_left_leg_torques() {
         }
         constrain(tau_setpoint_left_leg(4), -5, 5);
 
-        torque_setpoint setpoint; // Create ZCM message [Obsolete]
-
-        // Update ZCM message object / struct
-
-        setpoint.tau1 = tau_setpoint_left_leg(0);
-        setpoint.tau2 = tau_setpoint_left_leg(1);
-        setpoint.tau3 = tau_setpoint_left_leg(2);
-        setpoint.tau4 = tau_setpoint_left_leg(3);
-        setpoint.tau5 = tau_setpoint_left_leg(4);
-
         if(iteration_counter % 1 == 0) {
             /*
                 << "t,"
@@ -424,7 +414,7 @@ void calculate_left_leg_torques() {
             data_file << t // Write plot values to csv file
                         << "," << theta1 << "," << theta2 << "," << theta3 << "," << theta4 << "," << theta5
                         << "," << theta1_dot << "," << theta2_dot << "," << theta3_dot << "," << theta4_dot << "," << theta5_dot
-                        << "," << setpoint.tau1 << "," << setpoint.tau2 << "," << setpoint.tau3 << "," << setpoint.tau4 << "," << setpoint.tau5
+                        << "," << tau_setpoint_left_leg(0) << "," << tau_setpoint_left_leg(1) << "," << tau_setpoint_left_leg(2) << "," << tau_setpoint_left_leg(3) << "," << tau_setpoint_left_leg(4)
                         << "," << foot_pos_left_leg(0) << "," << foot_pos_left_leg(1) << "," << foot_pos_left_leg(2)
                         << "," << x_pos_t << "," << y_pos_t << "," << z_pos_t
                         << "," << foot_vel_left_leg(0) << "," << foot_vel_left_leg(1) << "," << foot_vel_left_leg(2)
@@ -438,7 +428,7 @@ void calculate_left_leg_torques() {
 
         stringstream s;
 
-        s << setpoint.tau1 << "|" << setpoint.tau2 << "|" << setpoint.tau3 << "|" << setpoint.tau4 << "|" << setpoint.tau5; // Write torque setpoints to stringstream
+        s << tau_setpoint_left_leg(0) << "|" << tau_setpoint_left_leg(1) << "|" << tau_setpoint_left_leg(2) << "|" << tau_setpoint_left_leg(3) << "|" << tau_setpoint_left_leg(4); // Write torque setpoints to stringstream
 
         sendto(sockfd, (const char *)s.str().c_str(), strlen(s.str().c_str()), 
             MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len); // Send the torque setpoint string to the simulation
@@ -491,5 +481,3 @@ int main()
 
     }
 }
-//COMPILE: g++ controller.cpp leg_state.hpp torque_setpoint.hpp -o controller -lzcm -pthread -I .
-//Also, ALWAYS run as root due to IPC rights if using ZCM
