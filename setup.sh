@@ -82,8 +82,9 @@ sudo apt -q update -y
 
 if [$1 -eq 9] || [$# -eq 0]
 then
-    sudo apt-get install gazebo9
-    sudo apt-get install libgazebo9-dev
+    echo -e "\n${GREEN}Installing Gazebo v10.${NC}\n" & sleep 1
+    sudo apt install gazebo9
+    sudo apt install libgazebo9-dev
 fi
 
 if [$1 -eq 10]
@@ -129,9 +130,9 @@ echo -e "export PKG_CONFIG_PATH=/usr/lib/pkgconfig/" >> ~/.bashrc & sleep 1
 
 eval "$(cat ~/.bashrc | tail -n +10)" # https://askubuntu.com/questions/64387/cannot-successfully-source-bashrc-from-a-shell-script
 
-echo "\n${GREEN}PKG_CONFIG_PATH in bash script: $PKG_CONFIG_PATH\n${NC}"
+echo -e "\n${GREEN}PKG_CONFIG_PATH in bash script: $PKG_CONFIG_PATH\n${NC}"
 
-sh -c "source ~/.bashrc && echo '\n${GREEN}PKG_CONFIG_PATH in sh command: $PKG_CONFIG_PATH\n${NC}' && cmake -DWITH_PYTHON=ON -DWITH_PYTHON3=ON -DWITH_IPOPT=ON .."
+sh -c ". ~/.bashrc && echo -e '\nPKG_CONFIG_PATH in sh command: $PKG_CONFIG_PATH\n' && cmake -DWITH_PYTHON=ON -DWITH_PYTHON3=ON -DWITH_IPOPT=ON .."
 
 echo -e "\n${RED}Please make sure there is no error message about IPOPT not being found.${NC}\n" & sleep 4
 
