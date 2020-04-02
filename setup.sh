@@ -10,11 +10,12 @@ echo -e "\nThis is the setup script for the Bipedal robot controller and its dep
 
 echo -e "${RED}Please note that the current version of this script will require git credentials to clone the private repositories you should be a collaborator of.${NC}\n"
 
-echo -e "${RED}Please also make sure that you have followed the instructions in README.md \n(meaning PKG_CONFIG_PATH should be set to /usr/lib/pkg_config/).\nYou can also specify the desired gazebo version with an argument to this script (i.e. './setup.sh 9' for GazeboSim v9), however GazeboSim v10 will take a long time to download.\n${NC}"
+echo -e "${RED}Please also make sure that you have followed the instructions in README.md \n(meaning PKG_CONFIG_PATH should be set to /usr/lib/pkg_config/).\n${NC}"
 
 echo -e "You can set up your github credentials before running this script by following these instructions:\nhttps://stackoverflow.com/questions/35942754/how-to-save-username-and-password-in-git#35942890\n."
 
 echo "Here is some time to think about it..." & sleep 10
+
 #username=$1
 
 #password=$2
