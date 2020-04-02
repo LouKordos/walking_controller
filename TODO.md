@@ -1,1 +1,3 @@
 - 2 DOF ankle
+- Make every dependency in setup.sh build from source so that it works on any OS (Gazebo Dependencies From Source -> Install from Source)
+- Look up what's needed for Gazebo 11 in "Dependencies from Source" and try out installing on Pop OS 19.10
