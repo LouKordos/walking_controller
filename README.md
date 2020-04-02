@@ -3,6 +3,7 @@
 This repository contains the main code for making a Bipedal Robot walk and set up everything necessary for development while it's at it, including Jupyter Notebooks for deriving the model etc.
 
 A `setup.sh` script is included that sets up almost everything on your OS for easy testing and development. (Keep in mind that the script will add some lines to `~/.bashrc`)
+Currently, only Ubuntu and Pop! OS 18.04 have been tested successfully, but feel free to test other OS's and suggest changes!
 
 All required repositories will also be installed to `~/Documents/biped_controller`, but you need collaborator permissions to clone some of them, because my repositories are private. (On the other hand, you would not read this file if you would not be a collaborator...)
 
