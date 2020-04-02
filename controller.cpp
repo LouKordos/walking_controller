@@ -159,8 +159,7 @@ void calculate_left_leg_torques() {
     servaddr.sin_port = htons(udp_port); 
       
     // Bind the socket with the server address 
-    if ( bind(sockfd, (const struct sockaddr *)&servaddr,  
-            sizeof(servaddr)) < 0 ) 
+    if ( bind(sockfd, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0 ) 
     { 
         perror("bind failed"); 
         exit(EXIT_FAILURE);
@@ -178,19 +177,19 @@ void calculate_left_leg_torques() {
     DIR *dir;
     struct dirent *ent;
     if ((dir = opendir (path.c_str())) != NULL) {
-    /* print all the files and directories within directory */
-    while ((ent = readdir (dir)) != NULL) {
-        //printf ("%s\n", ent->d_name);
-        std::string temp_filename = split_string(ent->d_name, '/').back();
-        //std::cout << temp_filename << std::endl;
+        /* print all the files and directories within directory */
+        while ((ent = readdir (dir)) != NULL) {
+            //printf ("%s\n", ent->d_name);
+            std::string temp_filename = split_string(ent->d_name, '/').back();
+            //std::cout << temp_filename << std::endl;
 
-        int index = atoi(split_string(temp_filename, '.')[0].c_str());
-        if(index > largest_index) {
-            largest_index = index;
-        }
-        //std::cout << "Largest index: " << largest_index << std::endl;
-    }
-    closedir (dir);
+            int index = atoi(split_string(temp_filename, '.')[0].c_str());
+            if(index > largest_index) {
+                largest_index = index;
+            }
+            //std::cout << "Largest index: " << largest_index << std::endl;
+        }   
+        closedir (dir);
     } 
     else {
         /* could not open directory */
