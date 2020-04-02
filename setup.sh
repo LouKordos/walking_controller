@@ -154,7 +154,7 @@ cd $GITHUB_DIRECTORY
 
 echo -e "\n\n${GREEN}Trying to install ZCM and ZMQ. They are currently not needed, so an error does not mean the controller will not be functional.${NC}\n\n" & sleep 5
 
-sudo apt-get install libzmq3-dev
+sudo apt-get install libzmq3-dev -y
 
 git clone https://github.com/ZeroCM/zcm.git
 cd zcm
