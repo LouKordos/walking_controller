@@ -28,7 +28,7 @@ export CASADI_CONFIG_ADJUSTED_PATH=$(pwd)/casadi_config/CMakeCache.txt
 
 export WORKSPACE_DIRECTORY=$(pwd)
 
-export GITHUB_DIRECTORY=~/Documents/biped_controller
+export GITHUB_DIRECTORY=${HOME}/Documents/biped_controller
 mkdir $GITHUB_DIRECTORY
 
 echo -e "${GREEN}All github repositories will be cloned into ${GITHUB_DIRECTORY}${NC}\n" & sleep 2
@@ -128,14 +128,14 @@ git clone https://github.com/casadi/casadi.git -b master casadi
 cd casadi
 mkdir build && cd build
 
-echo -e "\n\n#This was added by the setup.sh script of the biped_controller project \n#make the casadi compiler find IPOPT.\n" >> ~/.bashrc
-echo -e "export PKG_CONFIG_PATH=/usr/lib/pkg_config/" >> ~/.bashrc & sleep 1
+echo -e "\n\n#This was added by the setup.sh script of the biped_controller project \n#make the casadi compiler find IPOPT.\n" >> ${HOME}/.bashrc
+echo -e "export PKG_CONFIG_PATH=/usr/lib/pkg_config/" >> ${HOME}/.bashrc & sleep 1
 
-#eval "$(cat ~/.bashrc | tail -n +10)" # https://askubuntu.com/questions/64387/cannot-successfully-source-bashrc-from-a-shell-script
+eval "$(cat ${HOME}/.bashrc | tail -n +10)" # https://askubuntu.com/questions/64387/cannot-successfully-source-bashrc-from-a-shell-script
 
 echo -e "\n${GREEN}PKG_CONFIG_PATH in bash script: $PKG_CONFIG_PATH\n${NC}"
 
-sh -c ". ~/.bashrc && export PKG_CONFIG_PATH=/usr/lib/pkg_config/ && echo '\nPKG_CONFIG_PATH in sh command: $PKG_CONFIG_PATH\n' && sudo cmake -DWITH_PYTHON=ON -DWITH_PYTHON3=ON -DWITH_IPOPT=ON .."
+sh -c ". ${HOME}/.bashrc && export PKG_CONFIG_PATH=/usr/lib/pkg_config/ && echo '\nPKG_CONFIG_PATH in sh command: $PKG_CONFIG_PATH\n' && sudo cmake -DWITH_PYTHON=ON -DWITH_PYTHON3=ON -DWITH_IPOPT=ON .."
 
 #echo -e "\n${RED}Please make sure there is no error message about IPOPT not being found.${NC}\n" & sleep 4
 
@@ -167,20 +167,20 @@ echo -e "\n${GREEN}Configuring, building and installing ZCM now...${NC}\n" & sle
 
 ./scripts/install-deps.sh
 
-echo -e "\n\n#This was added by the setup.sh script of the biped_controller project \n#to successfully install ZCM.\n" >> ~/.bashrc
-echo -e "export PATH=${PATH}:${GITHUB_DIRECTORY}/zcm/deps/julia/bin\n" >> ~/.bashrc
+echo -e "\n\n#This was added by the setup.sh script of the biped_controller project \n#to successfully install ZCM.\n" >> ${HOME}/.bashrc
+echo -e "export PATH=${PATH}:${GITHUB_DIRECTORY}/zcm/deps/julia/bin\n" >> ${HOME}/.bashrc
 
-eval "$(cat ~/.bashrc | tail -n +10)" # https://askubuntu.com/questions/64387/cannot-successfully-source-bashrc-from-a-shell-script
+eval "$(cat ${HOME}/.bashrc | tail -n +10)" # https://askubuntu.com/questions/64387/cannot-successfully-source-bashrc-from-a-shell-script
 
 ./waf build
 sudo ./waf install
 
 #Update LD_LIBRARY_PATH in order for gazebo to find the shared object
 
-echo -e "\n\n#This was added by the setup.sh script of the biped_controller project \n#to make Gazebo find the Shared Object file of the controller plugin.\n" >> ~/.bashrc
-echo -e "export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:~/.gazebo/models/simplified_biped/control_plugin/build" >> ~/.bashrc
+echo -e "\n\n#This was added by the setup.sh script of the biped_controller project \n#to make Gazebo find the Shared Object file of the controller plugin.\n" >> ${HOME}/.bashrc
+echo -e "export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${HOME}/.gazebo/models/simplified_biped/control_plugin/build" >> ${HOME}/.bashrc
 
-eval "$(cat ~/.bashrc | tail -n +10)" # https://askubuntu.com/questions/64387/cannot-successfully-source-bashrc-from-a-shell-script
+eval "$(cat ${HOME}/.bashrc | tail -n +10)" # https://askubuntu.com/questions/64387/cannot-successfully-source-bashrc-from-a-shell-script
 
 cd $GITHUB_DIRECTORY
 
@@ -188,15 +188,15 @@ sudo apt-get install libboost-all-dev -y
 
 git clone https://github.com/LouKordos/jupyter_notebooks.git
 
-mkdir ~/.gazebo/ # Only gets created after first run of gazebo
+mkdir ${HOME}/.gazebo/ # Only gets created after first run of gazebo
 
-mkdir ~/.gazebo/models/ && cd ~/.gazebo/models/
+mkdir ${HOME}/.gazebo/models/ && cd ${HOME}/.gazebo/models/
 
 git clone https://github.com/LouKordos/simplified_biped.git
 
 echo -e "\n${GREEN}Building Gazebo control plugin for Biped...${NC}\n" & sleep 1
 
-cd ~/.gazebo/models/simplified_biped/control_plugin/
+cd ${HOME}/.gazebo/models/simplified_biped/control_plugin/
 
 sudo rm -rf build
 
@@ -204,10 +204,10 @@ mkdir build && cd build
 cmake ..
 make -j 12
 
-echo -e "\n#This alias will allow easier Simulation startup." >> ~/.bashrc
-echo -e "\nalias start_biped_simulation=\"cd ~/.gazebo/models/simplified_biped/control_plugin/build/ && gazebo --verbose ../../simplified_biped.world\"" >> ~/.bashrc
+echo -e "\n#This alias will allow easier Simulation startup." >> ${HOME}/.bashrc
+echo -e "\nalias start_biped_simulation=\"cd ${HOME}/.gazebo/models/simplified_biped/control_plugin/build/ && gazebo --verbose ../../simplified_biped.world\"" >> ${HOME}/.bashrc
 
-eval "$(cat ~/.bashrc | tail -n +10)" # https://askubuntu.com/questions/64387/cannot-successfully-source-bashrc-from-a-shell-script
+eval "$(cat ${HOME}/.bashrc | tail -n +10)" # https://askubuntu.com/questions/64387/cannot-successfully-source-bashrc-from-a-shell-script
 
 echo -e "\n${GREEN}Building Gazebo main walking controller for Biped...${NC}\n" & sleep 1
 
@@ -220,10 +220,10 @@ mkdir build && cd build
 cmake ..
 make -j 12
 
-echo -e "\n#This alias will allow easier walking controller startup." >> ~/.bashrc
-echo -e "\nalias run_walking_controller=\"cd ${WORKSPACE_DIRECTORY}/build && make && ./controller\"" >> ~/.bashrc
+echo -e "\n#This alias will allow easier walking controller startup." >> ${HOME}/.bashrc
+echo -e "\nalias run_walking_controller=\"cd ${WORKSPACE_DIRECTORY}/build && make && ./controller\"" >> ${HOME}/.bashrc
 
-eval "$(cat ~/.bashrc | tail -n +10)" # https://askubuntu.com/questions/64387/cannot-successfully-source-bashrc-from-a-shell-script
+eval "$(cat ${HOME}/.bashrc | tail -n +10)" # https://askubuntu.com/questions/64387/cannot-successfully-source-bashrc-from-a-shell-script
 
 ELAPSED_TIME=$(($SECONDS - $START_TIME))
 
