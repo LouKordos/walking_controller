@@ -477,6 +477,20 @@ int main()
     std::cout << std::endl << std::endl << std::endl;
     //std::cout << B_left_leg << std::endl;
 
+    auto opti = casadi::Opti();
+
+    auto x = opti.variable();
+    auto y = opti.variable();
+    auto z = opti.variable();
+
+    opti.minimize(x*x + 100*z*z);
+    opti.subject_to(z+(1-x)*(1-x)-y==0);
+
+    opti.solver("ipopt");
+    auto sol = opti.solve();
+    
+    std::cout << sol.value(x) << ":" << sol.value(y) << std::endl;
+
     while(true) {
 
     }
