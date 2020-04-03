@@ -502,28 +502,14 @@ int main()
     std::cout << std::endl << std::endl << std::endl;
     //std::cout << B_left_leg << std::endl;
 
-    auto opti = casadi::Opti();
+    DMVector x_t = {0.3, 0.3, 0.3, 0, 0, 1, 0, 0, 0, 0, 0, 0, -9.81};
 
-    auto x = opti.variable();
-    auto y = opti.variable();
-    auto z = opti.variable();
-
-    opti.minimize(x*x + 100*z*z);
-    opti.subject_to(z+(1-x)*(1-x)-y==0);
-
-    opti.solver("ipopt");
-    auto sol = opti.solve();
-    
-    std::cout << sol.value(x) << ":" << sol.value(y) << std::endl;
-
-    double x_t[] = {0.3, 0.3, 0.3, 0, 0, 1, 0, 0, 0, 0, 0, 0, -9.81};
-
-    double x_ref[] = {0, 0, 0, 0.5, 0.5, 0.5, 0, 0, 0, 0, 0, 0, -9.81};
+    DMVector x_ref = {0, 0, 0, 0.5, 0.5, 0.5, 0, 0, 0, 0, 0, 0, -9.81};
 
     double m_value = 30; // kg
 
     // For now, the desired state is constant, when that will change, the average angle will have to be calculated from the time-varying state trajectory.
-    double avg_psi = (x_ref[2]+ x_t[2]) / 2;
+    double avg_psi = ((double)x_ref[2] + (double)x_t[2](0)) / 2.0;
 
     static const Eigen::Matrix<double, 3, 3> I_world = (Eigen::Matrix<double, 3, 3>() << 0.05, 0.01, 0.01,
                                                                                         0.01, 0.4, 0.01,
@@ -580,6 +566,75 @@ int main()
                                                                                      0, 0, 1/m_value, 0, 0, 1/m_value,
                                                                                      0, 0, 0, 0, 0, 0).finished();
     double dt = 1/30.0;
+    int N = 30;
+
+    double f_min = -250;
+    double f_max = 250;
+
+    Function solver = nlpsol("solver", "ipopt", "nlp.so");
+
+    std::map<std::string, DM> solver_arguments, solution;
+
+    // n for initial state, N * n for dynamics at each timestep, (N / m) * m for contact constraints with D * u = 0, (N / m) * 8 for 8 friction constraints.
+    int constraints_length = n + N * n + (N / m) * m + (N / m) * 8;
+    int bounds_length = n * (N+1) + m * N; // n * (N+1) for initial state and dynamics at each time step, m * N for reaction forces at each time step
+    int decision_variables_length = n * (N+1) + m * N;
+
+    std::cout << "Constraints length: " << constraints_length << std::endl;
+    std::cout << "Bounds length: " << bounds_length << std::endl;
+    std::cout << "Decision variables length: " << decision_variables_length << std::endl;
+    // DM lbg[constraint_length];
+    // DM ubg[constraint_length];
+
+    DMVector lbg(constraints_length);
+    DMVector ubg(constraints_length);
+
+    DMVector lbx(bounds_length);
+    DMVector ubx(bounds_length);
+
+    DMVector x0_solver(decision_variables_length);
+
+    // Set 0 for every value besides friction cnstraints (these have to be -inf, take a look at the Point Mass Jupyter Notebook)
+    for(int i = 0; i < constraints_length - (N / m) * 8; ++i) { 
+        lbg[i] = 0;
+    }
+
+    for(int i = (N / m) * 8; i < constraints_length; ++i) {
+        lbg[i] = -DM::inf();
+    }
+
+    for(int i = 0; i < constraints_length; ++i) {
+        ubg[i] = 0;
+    }
+
+    for(int i = 0; i < n * (N+1); ++i) {
+        lbx[i] = -DM::inf();
+        ubx[i] = DM::inf();
+    }
+
+    for(int i = n * (N+1); i < bounds_length; ++i) {
+        lbx[i] = f_min;
+        ubx[i] = f_max;
+    }
+
+    DM X_t = DM::repmat(x_t, 1, N+1); // Init with initial state N + 1 times next to each other
+    DM U_t = DM::zeros(m, N);
+    std::cout << "X_t shape: (" << X_t.rows() << "," << X_t.columns() << ")" << std::endl;
+    DMVector test(decision_variables_length);
+
+    // vertcat(*[X_t.reshape((n * (N+1), 1)), U_t.reshape((m * N, 1))])
+    test[0] = DM::reshape(X_t, n * (N+1), 1);
+    test[1] = DM::reshape(U_t, m * N, 1);
+    //std::cout << "X_t:\n" << X_t << std::endl;
+
+    solver_arguments["lbg"] = lbg;
+    solver_arguments["ubg"] = ubg;
+    solver_arguments["lbx"] = lbx;
+    solver_arguments["ubx"] = ubx;
+    solver_arguments["x0"] = DM::vertcat(test);
+    //solver_argum  ents["x0"] = DM::zeros(583, 1);
+
+    solution = solver(solver_arguments);
 
     while(true) {
 
