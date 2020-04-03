@@ -64,7 +64,13 @@
 			"thread": "cpp",
 			"cinttypes": "cpp",
 			"typeindex": "cpp",
-			"typeinfo": "cpp"
+			"typeinfo": "cpp",
+			"matrixfunctions": "cpp",
+			"csignal": "cpp",
+			"strstream": "cpp",
+			"cfenv": "cpp",
+			"valarray": "cpp",
+			"core": "cpp"
 		}
 	}
 }
