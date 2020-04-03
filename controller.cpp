@@ -599,7 +599,7 @@ int main()
         lbg[i] = 0;
     }
 
-    for(int i = (N / m) * 8; i < constraints_length; ++i) {
+    for(int i = constraints_length - (N / m) * 8; i < constraints_length; ++i) {
         lbg[i] = -DM::inf();
     }
 
@@ -617,6 +617,8 @@ int main()
         ubx[i] = f_max;
     }
 
+    std::cout << lbx[n * (N+1)-1] << std::endl;
+
     DM X_t = DM::repmat(x_t, 1, N+1); // Init with initial state N + 1 times next to each other
     DM U_t = DM::zeros(m, N);
     std::cout << "X_t shape: (" << X_t.rows() << "," << X_t.columns() << ")" << std::endl;
@@ -627,12 +629,17 @@ int main()
     test[1] = DM::reshape(U_t, m * N, 1);
     //std::cout << "X_t:\n" << X_t << std::endl;
 
-    solver_arguments["lbg"] = lbg;
-    solver_arguments["ubg"] = ubg;
-    solver_arguments["lbx"] = lbx;
-    solver_arguments["ubx"] = ubx;
+    solver_arguments["lbg"] = DM::vertcat(lbg);
+    solver_arguments["ubg"] = DM::vertcat(ubg);
+    solver_arguments["lbx"] = DM::vertcat(lbx);
+    solver_arguments["ubx"] = DM::vertcat(ubx);
     solver_arguments["x0"] = DM::vertcat(test);
-    //solver_argum  ents["x0"] = DM::zeros(583, 1);
+    //solver_arguments["x0"] = DM::zeros(583, 1);
+
+    DMVector temp(2*n);
+    temp[0] = x_t;
+    temp[1] = x_ref;
+    solver_arguments["p"] = DM::vertcat(temp);
 
     solution = solver(solver_arguments);
 
