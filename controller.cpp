@@ -37,6 +37,7 @@
 
 #include <iomanip>
 #include "casadi/casadi.hpp"
+#include <unsupported/Eigen/MatrixFunctions>
 
 using namespace casadi;
 
@@ -448,6 +449,31 @@ void calculate_left_leg_torques() {
     }
 }
 
+unsigned long long factorial(long n) {
+    unsigned long long temp = 1;
+
+    for(int i = 1; i <=n; ++i)
+    {
+        temp *= i;
+    }
+
+    return temp;
+}
+
+void discretize_state_space_matrices(const Eigen::MatrixXd &A_c, const Eigen::MatrixXd &B_c, const double &dt, Eigen::MatrixXd &A_d, Eigen::MatrixXd &B_d) {
+    static const int n = A_c.rows();
+    static const int m = B_c.cols();
+    static Eigen::MatrixXd A_B(n + m, n + m);
+
+    A_B << A_c, B_c, Eigen::ArrayXXd::Zero(m, n), Eigen::ArrayXXd::Zero(m, m);
+    static const Eigen::MatrixXd e_A_B = (A_B * dt).exp();
+
+    //std::cout << "A_B:\n" << A_B << std::endl;
+
+    A_d = e_A_B.block(0, 0, n, n);
+    B_d = e_A_B.block(0, n, n, m);
+}
+
 void run_mpc() {
 
 }
@@ -489,6 +515,71 @@ int main()
     auto sol = opti.solve();
     
     std::cout << sol.value(x) << ":" << sol.value(y) << std::endl;
+
+    double x_t[] = {0.3, 0.3, 0.3, 0, 0, 1, 0, 0, 0, 0, 0, 0, -9.81};
+
+    double x_ref[] = {0, 0, 0, 0.5, 0.5, 0.5, 0, 0, 0, 0, 0, 0, -9.81};
+
+    double m_value = 30; // kg
+
+    // For now, the desired state is constant, when that will change, the average angle will have to be calculated from the time-varying state trajectory.
+    double avg_psi = (x_ref[2]+ x_t[2]) / 2;
+
+    static const Eigen::Matrix<double, 3, 3> I_world = (Eigen::Matrix<double, 3, 3>() << 0.05, 0.01, 0.01,
+                                                                                        0.01, 0.4, 0.01,
+                                                                                        0.01, 0.01, 0.03).finished();
+
+    // Location of the force vector being applied by the left foot.
+    double r_x_left = 0.1;
+    double r_y_left = 0;
+    double r_z_left = 0;
+
+    // Location of the force vector being applied by the right foot.
+    double r_x_right = -0.1;
+    double r_y_right = 0;
+    double r_z_right = 0;
+
+    static const int n = 13;
+    static const int m = 6;
+
+    static const Eigen::Matrix<double, 3, 3> r_left_skew_symmetric = (Eigen::Matrix<double, 3, 3>() << 0, -r_z_left, r_y_left,
+                                                                                            r_z_left, 0, -r_x_left,
+                                                                                            -r_y_left, r_x_left, 0).finished(); 
+            
+    static const Eigen::Matrix<double, 3, 3> r_right_skew_symmetric = (Eigen::Matrix<double, 3, 3>() << 0, -r_z_right, r_y_right,
+                                                                                          r_z_right, 0, -r_x_right,
+                                                                                          -r_y_right, r_x_right, 0).finished();
+
+    static const Eigen::Matrix<double, n, n> A_c = (Eigen::Matrix<double, n, n>() << 0, 0, 0, 0, 0, 0, cos(avg_psi), sin(avg_psi), 0, 0, 0, 0, 0,
+                                                                                        0, 0, 0, 0, 0, 0, -sin(avg_psi), cos(avg_psi), 0, 0, 0, 0, 0,
+                                                                                        0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0,
+                                                                                        
+                                                                                        0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
+                                                                                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0,
+                                                                                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
+                                                                                        
+                                                                                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                                                                                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                                                                                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                                                                                        
+                                                                                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                                                                                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                                                                                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+                                                                                        
+                                                                                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0).finished();
+
+    static const Eigen::Matrix<double, n, m> B_c = (Eigen::Matrix<double, n, m>() << 0, 0, 0, 0, 0, 0,
+                                                                                     0, 0, 0, 0, 0, 0,
+                                                                                     0, 0, 0, 0, 0, 0,
+                                                                                     0, 0, 0, 0, 0, 0,
+                                                                                     0, 0, 0, 0, 0, 0,
+                                                                                     0, 0, 0, 0, 0, 0,
+                                                                                     I_world * r_left_skew_symmetric, I_world * r_right_skew_symmetric,
+                                                                                     1/m_value, 0, 0, 1/m_value, 0, 0,
+                                                                                     0, 1/m_value, 0, 0, 1/m_value, 0,
+                                                                                     0, 0, 1/m_value, 0, 0, 1/m_value,
+                                                                                     0, 0, 0, 0, 0, 0).finished();
+    double dt = 1/30.0;
 
     while(true) {
 
