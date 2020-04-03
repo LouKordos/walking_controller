@@ -30,6 +30,7 @@ export WORKSPACE_DIRECTORY=$(pwd)
 
 export GITHUB_DIRECTORY=${HOME}/Documents/biped_controller
 mkdir $GITHUB_DIRECTORY
+echo -e "Github directory is $GITHUB_DIRECTORY"
 
 echo -e "${GREEN}All github repositories will be cloned into ${GITHUB_DIRECTORY}${NC}\n" & sleep 2
 
