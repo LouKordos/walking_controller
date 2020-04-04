@@ -24,7 +24,7 @@ run_walking_controller
 ```
 Since GazeboSim requires an initial run before being able to launch it without permission problems, open up a new Terminal and run:
 ```
-gazebo
+sudo gazebo
 ```
 You can close Gazebo again and then run this command:
 ```
