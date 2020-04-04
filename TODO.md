@@ -2,4 +2,7 @@
 - Make every dependency in setup.sh build from source so that it works on any OS (Gazebo Dependencies From Source -> Install from Source)
 - Look up what's needed for Gazebo 11 in "Dependencies from Source" and try out installing on Pop OS 19.10
 - After that is implemented, update README.md to mention that every version starting from Ubuntu 18.04 LTS and up will work
-- Build SWIG from source (http://swig.org/svn.html)
+- Install SWIG from source (http://swig.org/svn.html) (PCRE, YACC, Autoconf)
+- Test install on 20.04
+- Install IPOPT from source
+- Only build packages that are not on ubuntu package search (including focal)
