@@ -571,7 +571,7 @@ int main()
     double f_min = -250;
     double f_max = 250;
 
-    Function solver = nlpsol("solver", "ipopt", "nlp.so");
+    Function solver = nlpsol("solver", "ipopt", "../nlp.so");
 
     std::map<std::string, DM> solver_arguments, solution;
 
