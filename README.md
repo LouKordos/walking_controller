@@ -14,7 +14,7 @@ All required repositories will also be installed to `~/Documents/biped_controlle
 git clone https://github.com/LouKordos/walking_controller.git # Clone the main repository
 cd walking_controller/ # Change to repository directory
 chmod +x ./setup.sh # Make bash script executable
-sudo ./setup # Run setup script (make sure you do not miss the sudo!)
+sudo ./setup.sh # Run setup script (make sure you do not miss the sudo!)
 source ~/.bashrc # source .bashrc, in case the terminal is not updated yet and thus cannot the run custom commands
 ```
 Now we try recompiling and running the actual robot controller code, along with the Simulation environment GazeboSim, to see if it is able to run the MPC.
