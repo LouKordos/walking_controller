@@ -124,6 +124,8 @@ sudo apt-get install coinor-libipopt-dev -y
 
 sudo apt -q update -y
 
+rm -rf ./casadi/
+
 git clone https://github.com/casadi/casadi.git -b master casadi
 
 cd casadi
@@ -157,6 +159,8 @@ echo -e "\n\n${GREEN}Trying to install ZCM and ZMQ. They are currently not neede
 
 sudo apt-get install libzmq3-dev -y
 
+rm -rf ./zcm/
+
 git clone https://github.com/ZeroCM/zcm.git
 cd zcm
 
@@ -187,11 +191,15 @@ cd $GITHUB_DIRECTORY
 
 sudo apt-get install libboost-all-dev -y
 
+rm -rf ./jupyter_notebooks/
+
 git clone https://github.com/LouKordos/jupyter_notebooks.git
 
 mkdir ${HOME}/.gazebo/ # Only gets created after first run of gazebo
 
 mkdir ${HOME}/.gazebo/models/ && cd ${HOME}/.gazebo/models/
+
+rm -rf ./simplified_biped/
 
 git clone https://github.com/LouKordos/simplified_biped.git
 
