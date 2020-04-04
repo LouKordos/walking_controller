@@ -10,7 +10,7 @@ echo -e "\nThis is the setup script for the Bipedal robot controller and its dep
 
 echo -e "${RED}Please note that the current version of this script will require git credentials to clone the private repositories you should be a collaborator of.${NC}\n"
 
-echo -e "${RED}Please also make sure that you have followed the instructions in README.md \n(meaning PKG_CONFIG_PATH should be set to /usr/lib/pkg_config/).\n${NC}"
+echo -e "${RED}Please also make sure that you have followed the instructions in README.md\n${NC}"
 
 echo -e "You can set up your github credentials before running this script by following these instructions:\nhttps://stackoverflow.com/questions/35942754/how-to-save-username-and-password-in-git#35942890\n."
 
@@ -182,7 +182,7 @@ sudo ./waf install
 
 #Update LD_LIBRARY_PATH in order for gazebo to find the shared object
 
-echo -e "\n\n#This was added by the setup.sh script of the biped_controller project \n#to make Gazebo find the Shared Object file of the controller plugin.\n" >> ${HOME}/.bashrc
+echo -e "\n\n#This was added by the} setup.sh script of the biped_controller project \n#to make Gazebo find the Shared Object file of the controller plugin.\n" >> ${HOME}/.bashrc
 echo -e "export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${HOME}/.gazebo/models/simplified_biped/control_plugin/build" >> ${HOME}/.bashrc
 
 eval "$(cat ${HOME}/.bashrc | tail -n +10)" # https://askubuntu.com/questions/64387/cannot-successfully-source-bashrc-from-a-shell-script
