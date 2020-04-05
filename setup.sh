@@ -23,6 +23,8 @@ echo "Here is some time to think about it..." & sleep 10
 #echo "The entered username is $1 and the password is $2" & sleep 2
 
 START_TIME=$SECONDS
+export LOG_FILEPATH = ${HOME}/Documents/biped_controller_setup.log
+script $LOG_FILEPATH
 
 export WORKSPACE_DIRECTORY=$(pwd)
 sudo chmod -R ugo+rw ${WORKSPACE_DIRECTORY}
@@ -245,9 +247,11 @@ echo -e "\nalias update_biped_repos=\"cd ${WORKSPACE_DIRECTORY} && git pull ; cd
 
 eval "$(cat ${HOME}/.bashrc | tail -n +10)" # https://askubuntu.com/questions/64387/cannot-successfully-source-bashrc-from-a-shell-script
 
+exit
+
 ELAPSED_TIME=$(($SECONDS - $START_TIME))
 
-echo -e "Setup done! It took $ELAPSED_TIME seconds in total."
+echo -e "Setup done! It took $ELAPSED_TIME seconds in total. The log file containing all terminal output can be found in ${LOG_FILEPATH}."
 
 echo -e "\n${RED}Again, in case you missed it:\nAll github repositories were cloned into ${GITHUB_DIRECTORY}${NC}\n"
 
