@@ -53,7 +53,7 @@ Finally, you have to start `VcXsrv` with the following configuration:
 <img src="https://cdn.discordapp.com/attachments/680811067848655093/696351228988489789/VcXsrv_step_2.png" alt="drawing" width="500" class="center"/>
 <img src="https://cdn.discordapp.com/attachments/680811067848655093/696351228493561926/VcXsrv_step_3.png" alt="drawing" width="500" class="center"/>
 
-If you made sure that you used exactly these settings (except for the number of displays you want), you should be all set to run the script and try out the Simulation.
+If you made sure that you used exactly these settings, you should be all set to run the script and try out the Simulation.
 
 # Running the script
 To get everything set up, run these commands:
@@ -61,10 +61,10 @@ To get everything set up, run these commands:
 git clone https://github.com/LouKordos/walking_controller.git # Clone the main repository
 cd walking_controller/ # Change to repository directory
 chmod +x ./setup.sh # Make bash script executable
-sudo ./setup.sh > ${HOME}/Documents/biped_controller_setup.log # Run setup script (make sure you do not forget the sudo!) and pipe into log file
+sudo ./setup.sh 2>&1 | tee ${HOME}/Documents/biped_controller_setup.log # Run setup script (make sure you do not forget the sudo!) and pipe into log file
 source ~/.bashrc # source .bashrc, in case the terminal is not updated yet and thus cannot find the custom commands
 ```
-Keep in mind that you can pipe the script output to any file you want, the path above is just an example.
+The stuff after `sudo ./setup.sh` is just there to have a log file of all output. Keep in mind that you can pipe the script output to any file you want, the path above is just an example.
 
 Now, we try recompiling and running the actual robot controller code, along with the Simulation environment GazeboSim, to see if it is able to run the MPC.
 Fortunately, the only two required commands for that are:
