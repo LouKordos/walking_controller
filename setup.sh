@@ -23,8 +23,6 @@ echo "Here is some time to think about it..." & sleep 10
 #echo "The entered username is $1 and the password is $2" & sleep 2
 
 START_TIME=$SECONDS
-export LOG_FILEPATH=${HOME}/Documents/biped_controller_setup.log
-script $LOG_FILEPATH
 
 export WORKSPACE_DIRECTORY=$(pwd)
 sudo chmod -R ugo+rw ${WORKSPACE_DIRECTORY}
@@ -246,8 +244,6 @@ echo -e "\n#This alias will (hopefully) allow updating all Biped repos automatic
 echo -e "\nalias update_biped_repos=\"cd ${WORKSPACE_DIRECTORY} && git pull ; cd ${GITHUB_DIRECTORY}/jupyter_notebooks/ && git pull ; cd ${HOME}/.gazebo/models/simplified_biped/ && git pull\"" >> ${HOME}/.bashrc
 
 eval "$(cat ${HOME}/.bashrc | tail -n +10)" # https://askubuntu.com/questions/64387/cannot-successfully-source-bashrc-from-a-shell-script
-
-exit
 
 ELAPSED_TIME=$(($SECONDS - $START_TIME))
 
