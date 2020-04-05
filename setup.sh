@@ -229,7 +229,7 @@ mkdir build && cd build
 cmake ..
 make -j 12
 
-echo -e "\n#This alias will allow easier walking controller startup." >> ${HOME}/.bashrc
+echo -e "\n#This alias will allow easier startup of the Biped walking controller." >> ${HOME}/.bashrc
 echo -e "\nalias run_walking_controller=\"cd ${WORKSPACE_DIRECTORY}/build && sudo make && ./controller\"" >> ${HOME}/.bashrc
 
 eval "$(cat ${HOME}/.bashrc | tail -n +10)" # https://askubuntu.com/questions/64387/cannot-successfully-source-bashrc-from-a-shell-script
