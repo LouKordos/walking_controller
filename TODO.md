@@ -7,7 +7,5 @@
 - Test install on 20.04
 - Install IPOPT from source
 - Only build packages that are not on ubuntu package search (including focal)
-- Log full output to file for script (https://duckduckgo.com/?q=terminal+log+to+file&t=canonical&ia=web&iax=qa)
-- Add WSL and maybe VM instructions to README
 - Fix permission issues with make, git modifications (basically add read write permissions for everone on repos), then remove sudo on things like `make`
 - Write about UDP comm in WSL
