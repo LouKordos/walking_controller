@@ -16,12 +16,6 @@ echo -e "You can set up your github credentials before running this script by fo
 
 echo "Here is some time to think about it..." & sleep 10
 
-#username=$1
-
-#password=$2
-
-#echo "The entered username is $1 and the password is $2" & sleep 2
-
 START_TIME=$SECONDS
 
 export WORKSPACE_DIRECTORY=$(pwd)
