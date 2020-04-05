@@ -171,11 +171,11 @@ echo -e "\n${GREEN}Running ZCM dependency script now...${NC}\n" & sleep 1
 
 echo -e "\n${GREEN}Configuring, building and installing ZCM now...${NC}\n" & sleep 1
 
-./waf configure --use-all
+sudo ./waf configure
 
 ./scripts/install-deps.sh
 
-./waf configure --use-all
+./waf configure
 
 echo -e "\n\n#This was added by the setup.sh script of the biped_controller project \n#to successfully install ZCM.\n" >> ${HOME}/.bashrc
 echo -e "export PATH=${PATH}:${GITHUB_DIRECTORY}/zcm/deps/julia/bin\n" >> ${HOME}/.bashrc
@@ -199,7 +199,7 @@ sudo apt-get install libboost-all-dev -y
 rm -rf ./jupyter_notebooks/
 
 git clone https://github.com/LouKordos/jupyter_notebooks.git
-sudo chmod -R ugo+rw ${GITHUB_DIRECTORY}/juypter_notebooks/
+sudo chmod -R ugo+rw ${GITHUB_DIRECTORY}/jupyter_notebooks/
 
 mkdir ${HOME}/.gazebo/ # Only gets created after first run of gazebo, so we do it manually
 sudo chmod -R ugo+rw ${HOME}/.gazebo/
