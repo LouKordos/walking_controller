@@ -23,7 +23,7 @@ echo "Here is some time to think about it..." & sleep 10
 #echo "The entered username is $1 and the password is $2" & sleep 2
 
 START_TIME=$SECONDS
-export LOG_FILEPATH = ${HOME}/Documents/biped_controller_setup.log
+export LOG_FILEPATH=${HOME}/Documents/biped_controller_setup.log
 script $LOG_FILEPATH
 
 export WORKSPACE_DIRECTORY=$(pwd)
