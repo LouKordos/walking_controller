@@ -49,9 +49,9 @@ sudo apt-get install ubuntu-desktop --install-recomends -y
 for `ubuntu-desktop`.
 
 Finally, you have to start `VcXsrv` with the following configuration:
-<img src="https://cdn.discordapp.com/attachments/680811067848655093/696351230989172756/VcXsrv_step_1.png" alt="drawing" width="500"/>
-<img src="https://cdn.discordapp.com/attachments/680811067848655093/696351228988489789/VcXsrv_step_2.png" alt="drawing" width="500"/>
-<img src="https://cdn.discordapp.com/attachments/680811067848655093/696351228493561926/VcXsrv_step_3.png" alt="drawing" width="500"/>
+<img src="https://cdn.discordapp.com/attachments/680811067848655093/696351230989172756/VcXsrv_step_1.png" alt="drawing" width="500" class="center"/>
+<img src="https://cdn.discordapp.com/attachments/680811067848655093/696351228988489789/VcXsrv_step_2.png" alt="drawing" width="500" class="center"/>
+<img src="https://cdn.discordapp.com/attachments/680811067848655093/696351228493561926/VcXsrv_step_3.png" alt="drawing" width="500" class="center"/>
 
 If you made sure that you used exactly these settings (except for the number of displays you want), you should be all set to run the script and try out the Simulation.
 
