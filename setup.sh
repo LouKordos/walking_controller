@@ -174,7 +174,7 @@ sudo ./waf configure
 
 ./scripts/install-deps.sh
 
-./waf configure
+./waf configure --use-all
 
 echo -e "\n\n#This was added by the setup.sh script of the biped_controller project \n#to successfully install ZCM.\n" >> ${HOME}/.bashrc
 echo -e "export PATH=${PATH}:${GITHUB_DIRECTORY}/zcm/deps/julia/bin\n" >> ${HOME}/.bashrc
