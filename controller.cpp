@@ -500,7 +500,9 @@ int main()
 
     std::cout << "omega_desired is currently:" << omega_desired(0) << ", " << omega_desired(1) << ", " << omega_desired(2) << std::endl; // Print out current natural frequency
     std::cout << std::endl << std::endl << std::endl;
-    //std::cout << B_left_leg << std::endl;
+
+    static const int n = 13;
+    static const int m = 6;
 
     DMVector x_t = {0.3, 0.3, 0.3, 0, 0, 1, 0, 0, 0, 0, 0, 0, -9.81};
 
@@ -524,9 +526,6 @@ int main()
     double r_x_right = -0.1;
     double r_y_right = 0;
     double r_z_right = 0;
-
-    static const int n = 13;
-    static const int m = 6;
 
     static const Eigen::Matrix<double, 3, 3> r_left_skew_symmetric = (Eigen::Matrix<double, 3, 3>() << 0, -r_z_left, r_y_left,
                                                                                             r_z_left, 0, -r_x_left,
@@ -586,38 +585,42 @@ int main()
     // DM lbg[constraint_length];
     // DM ubg[constraint_length];
 
-    DMVector lbg(constraints_length);
-    DMVector ubg(constraints_length);
+    DM lbg(constraints_length, 1);
+    DM ubg(constraints_length, 1);
 
-    DMVector lbx(bounds_length);
-    DMVector ubx(bounds_length);
+    DM lbx(bounds_length, 1);
+    DM ubx(bounds_length, 1);
 
-    DMVector x0_solver(decision_variables_length);
+    DM x0_solver(decision_variables_length, 1);
 
     // Set 0 for every value besides friction cnstraints (these have to be -inf, take a look at the Point Mass Jupyter Notebook)
     for(int i = 0; i < constraints_length - (N / m) * 8; ++i) { 
-        lbg[i] = 0;
+        lbg(i) = 0;
     }
 
     for(int i = constraints_length - (N / m) * 8; i < constraints_length; ++i) {
-        lbg[i] = -DM::inf();
+        lbg(i) = -DM::inf();
     }
+
+    std::cout << "After lbg init" << std::endl;
 
     for(int i = 0; i < constraints_length; ++i) {
-        ubg[i] = 0;
+        ubg(i) = 0;
     }
 
+    std::cout << "After ubg init" << std::endl;
+
     for(int i = 0; i < n * (N+1); ++i) {
-        lbx[i] = -DM::inf();
-        ubx[i] = DM::inf();
+        lbx(i) = -DM::inf();
+        ubx(i) = DM::inf();
     }
 
     for(int i = n * (N+1); i < bounds_length; ++i) {
-        lbx[i] = f_min;
-        ubx[i] = f_max;
+        lbx(i) = f_min;
+        ubx(i) = f_max;
     }
 
-    std::cout << lbx[n * (N+1)-1] << std::endl;
+    std::cout << lbx(n * (N+1)) << std::endl;
 
     DM X_t = DM::repmat(x_t, 1, N+1); // Init with initial state N + 1 times next to each other
     DM U_t = DM::zeros(m, N);
@@ -629,20 +632,35 @@ int main()
     test[1] = DM::reshape(U_t, m * N, 1);
     //std::cout << "X_t:\n" << X_t << std::endl;
 
-    solver_arguments["lbg"] = DM::vertcat(lbg);
-    solver_arguments["ubg"] = DM::vertcat(ubg);
-    solver_arguments["lbx"] = DM::vertcat(lbx);
-    solver_arguments["ubx"] = DM::vertcat(ubx);
+    std::cout << "Before solver arguments init." << std::endl;
+
+    solver_arguments["lbg"] = lbg;
+    solver_arguments["ubg"] = ubg;
+    solver_arguments["lbx"] = lbx;
+    solver_arguments["ubx"] = ubx;
     solver_arguments["x0"] = DM::vertcat(test);
     //solver_arguments["x0"] = DM::zeros(583, 1);
 
-    DMVector temp(2*n);
-    temp[0] = x_t;
-    temp[1] = x_ref;
-    solver_arguments["p"] = DM::vertcat(temp);
+    std::cout << "Before solver arguments init." << std::endl;
+
+    DM p(2*n, 1);
+
+    for(int i = 0; i < n; ++i) {
+        p(i) = x_t[i](0);
+    }
+    for(int i = n; i < 2*n; ++i) {
+        p(i) = x_ref[i-n](0);
+    }
+    
+    std::cout << "After p for loop." << std::endl;
+
+    solver_arguments["p"] = p;
+
+    std::cout << "Before solution calculation" << std::endl;
 
     solution = solver(solver_arguments);
 
+    std::cout << solution.at("x") << std::endl;
     while(true) {
 
     }
