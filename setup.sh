@@ -30,6 +30,8 @@ export WORKSPACE_DIRECTORY=$(pwd)
 
 export GITHUB_DIRECTORY=${HOME}/Documents/biped_controller
 mkdir $GITHUB_DIRECTORY
+sudo chmod -R ugo+rw ${GITHUB_DIRECTORY}
+
 echo -e "Github directory is $GITHUB_DIRECTORY"
 
 echo -e "${GREEN}All github repositories will be cloned into ${GITHUB_DIRECTORY}${NC}\n" & sleep 2
@@ -127,7 +129,7 @@ sudo apt -q update -y
 rm -rf ./casadi/
 
 git clone https://github.com/casadi/casadi.git -b master casadi
-
+sudo chmod -R ugo+rw ${GITHUB_DIRECTORY}/casadi/
 cd casadi
 mkdir build && cd build
 
@@ -162,6 +164,7 @@ sudo apt-get install libzmq3-dev -y
 rm -rf ./zcm/
 
 git clone https://github.com/ZeroCM/zcm.git
+sudo chmod -R ugo+rw ${GITHUB_DIRECTORY}/zcm/
 cd zcm
 
 echo -e "\n${GREEN}Running ZCM dependency script now...${NC}\n" & sleep 1
@@ -171,6 +174,8 @@ echo -e "\n${GREEN}Configuring, building and installing ZCM now...${NC}\n" & sle
 ./waf configure --use-all
 
 ./scripts/install-deps.sh
+
+./waf configure --use-all
 
 echo -e "\n\n#This was added by the setup.sh script of the biped_controller project \n#to successfully install ZCM.\n" >> ${HOME}/.bashrc
 echo -e "export PATH=${PATH}:${GITHUB_DIRECTORY}/zcm/deps/julia/bin\n" >> ${HOME}/.bashrc
@@ -194,14 +199,18 @@ sudo apt-get install libboost-all-dev -y
 rm -rf ./jupyter_notebooks/
 
 git clone https://github.com/LouKordos/jupyter_notebooks.git
+sudo chmod -R ugo+rw ${GITHUB_DIRECTORY}/juypter_notebooks/
 
-mkdir ${HOME}/.gazebo/ # Only gets created after first run of gazebo
+mkdir ${HOME}/.gazebo/ # Only gets created after first run of gazebo, so we do it manually
+sudo chmod -R ugo+rw ${HOME}/.gazebo/
 
 mkdir ${HOME}/.gazebo/models/ && cd ${HOME}/.gazebo/models/
+sudo chmod -R ugo+rw ${HOME}/.gazebo/models/
 
 rm -rf ./simplified_biped/
 
 git clone https://github.com/LouKordos/simplified_biped.git
+sudo chmod -R ugo+rw ${HOME}/.gazebo/models/simplified_biped/
 
 echo -e "\n${GREEN}Building Gazebo control plugin for Biped...${NC}\n" & sleep 1
 
@@ -214,7 +223,7 @@ cmake ..
 make -j 12
 
 echo -e "\n#This alias will allow easier Simulation startup." >> ${HOME}/.bashrc
-echo -e "\nalias start_biped_simulation=\"cd ${HOME}/.gazebo/models/simplified_biped/control_plugin/build/ && sudo make && gazebo --verbose ../../simplified_biped.world\"" >> ${HOME}/.bashrc
+echo -e "\nalias start_biped_simulation=\"cd ${HOME}/.gazebo/models/simplified_biped/control_plugin/build/ && make && gazebo --verbose ../../simplified_biped.world\"" >> ${HOME}/.bashrc
 
 eval "$(cat ${HOME}/.bashrc | tail -n +10)" # https://askubuntu.com/questions/64387/cannot-successfully-source-bashrc-from-a-shell-script
 
@@ -230,7 +239,7 @@ cmake ..
 make -j 12
 
 echo -e "\n#This alias will allow easier startup of the Biped walking controller." >> ${HOME}/.bashrc
-echo -e "\nalias run_walking_controller=\"cd ${WORKSPACE_DIRECTORY}/build && sudo make && ./controller\"" >> ${HOME}/.bashrc
+echo -e "\nalias run_walking_controller=\"cd ${WORKSPACE_DIRECTORY}/build && make && ./controller\"" >> ${HOME}/.bashrc
 
 echo -e "\n#This alias will (hopefully) allow updating all Biped repos automatically." >> ${HOME}/.bashrc
 echo -e "\nalias update_biped_repos=\"cd ${WORKSPACE_DIRECTORY} && git pull ; cd ${GITHUB_DIRECTORY}/jupyter_notebooks/ && git pull ; cd ${HOME}/.gazebo/models/simplified_biped/ && git pull\"" >> ${HOME}/.bashrc
