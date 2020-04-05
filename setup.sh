@@ -24,9 +24,8 @@ echo "Here is some time to think about it..." & sleep 10
 
 START_TIME=$SECONDS
 
-export CASADI_CONFIG_ADJUSTED_PATH=$(pwd)/casadi_config/CMakeCache.txt
-
 export WORKSPACE_DIRECTORY=$(pwd)
+sudo chmod -R ugo+rw ${WORKSPACE_DIRECTORY}
 
 export GITHUB_DIRECTORY=${HOME}/Documents/biped_controller
 mkdir $GITHUB_DIRECTORY
