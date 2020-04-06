@@ -31,7 +31,7 @@ Once that is done, you have to add `export DISPLAY=localhost:0.0` (to make GUI's
 A simple way of doing this is copy pasting the following:
 
 ```
-echo -e "export DISPLAY=localhost:0.0\nexport LIBGL_ALWAYS_INDIRECT=0` >> ${HOME}/.bashrc
+echo -e "export DISPLAY=localhost:0.0\nexport LIBGL_ALWAYS_INDIRECT=0" >> ${HOME}/.bashrc
 ```
 
 The next step is to install a desktop environment such as `ubuntu-desktop` or `xfce4` to be able to open GUI Applications.
