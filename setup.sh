@@ -241,7 +241,7 @@ eval "$(cat ${HOME}/.bashrc | tail -n +10)" # https://askubuntu.com/questions/64
 
 ELAPSED_TIME=$(($SECONDS - $START_TIME))
 
-echo -e "Setup done! It took $ELAPSED_TIME seconds in total. The log file containing all terminal output can be found in ${LOG_FILEPATH}."
+echo -e "Setup done! It took $ELAPSED_TIME seconds in total."
 
 echo -e "\n${RED}Again, in case you missed it:\nAll github repositories were cloned into ${GITHUB_DIRECTORY}${NC}\n"
 
