@@ -36,7 +36,14 @@ echo -e "export DISPLAY=localhost:0.0\nexport LIBGL_ALWAYS_INDIRECT=0" >> ${HOME
 
 The next step is to install a desktop environment such as `ubuntu-desktop` or `xfce4` to be able to open GUI Applications.
 
-you can use the `apt` package manager to do that, simply by typing
+Please run
+
+```
+sudo apt-get update -y && sudo apt-get upgrade -y
+```
+before installing a desktop package to make sure it is found.
+
+You can use the `apt` package manager to do that, simply by typing
 
 ```
 sudo apt-get install xfce4 xfce4-goodies --install-recommends -y
