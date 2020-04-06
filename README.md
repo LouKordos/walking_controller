@@ -48,7 +48,9 @@ You can use the `apt` package manager to do that, simply by typing
 ```
 sudo apt-get install xfce4 xfce4-goodies --install-recommends -y
 ```
-for `xfce`, or
+for `xfce`,
+
+**OR**
 
 ```
 sudo apt-get install ubuntu-desktop --install-recomends -y
