@@ -64,6 +64,14 @@ Finally, you have to start `VcXsrv` with the following configuration:
 
 If you made sure that you used exactly these settings, you should be all set to run the script and try out the Simulation.
 
+Try installing and running `gedit` to make sure it works:
+
+```
+sudo apt install gedit -y
+gedit
+```
+Note: I had to run `gedit` twice for some reason, try that if it does not show up the first time.
+
 # Running the script
 To get everything set up, run these commands:
 ```
