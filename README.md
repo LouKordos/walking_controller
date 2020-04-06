@@ -72,6 +72,12 @@ gedit
 ```
 Note: I had to run `gedit` twice for some reason, try that if it does not show up the first time.
 
+It is also important that you have a Documents directory in your home directory, which was also missing in my case. Simply create it before running the setup script:
+
+```
+mkdir ${HOME}/Documents/
+```
+
 # Running the script
 To get everything set up, run these commands:
 ```
