@@ -224,7 +224,7 @@ echo -e "\n${GREEN}Building Gazebo main walking controller for Biped...${NC}\n" 
 
 cd $WORKSPACE_DIRECTORY
 
-cp -R eigen3/Eigen /usr/include/ # copy to include directory to be sure
+cp -R eigen3/Eigen /usr/include/ # copy to include directory to be sure (is needed for internal includes like "#include <Eigen/Core>")
 
 sudo rm -rf build
 mkdir build && cd build
