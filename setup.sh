@@ -53,6 +53,8 @@ sudo apt -q update -y
 
 sudo pip3 install -r requirements.txt
 
+sudo apt-get install jupyter-notebook -y
+
 # Install tools for building
 
 cd $GITHUB_DIRECTORY
