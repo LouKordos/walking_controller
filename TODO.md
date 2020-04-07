@@ -9,3 +9,5 @@
 - Only build packages that are not on ubuntu package search (including focal)
 - Fix permission issues with make, git modifications (basically add read write permissions for everone on repos), then remove sudo on things like `make`
 - Write about UDP comm in WSL
+- Test different solvers
+- Experiment with discretizing with A_c based on the previous optimal state and symbolic exponential
