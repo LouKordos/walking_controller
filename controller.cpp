@@ -504,128 +504,85 @@ int main()
     static const int n = 13;
     static const int m = 6;
 
-    DMVector x_t = {0.3, 0.3, 0.3, 0, 0, 1, 0, 0, 0, 0, 0, 0, -9.81};
-
-    DMVector x_ref = {0, 0, 0, 0.5, 0.5, 0.5, 0, 0, 0, 0, 0, 0, -9.81};
-
-    double m_value = 30; // kg
-
-    // For now, the desired state is constant, when that will change, the average angle will have to be calculated from the time-varying state trajectory.
-    double avg_psi = ((double)x_ref[2] + (double)x_t[2](0)) / 2.0;
-
-    static const Eigen::Matrix<double, 3, 3> I_world = (Eigen::Matrix<double, 3, 3>() << 0.05, 0.01, 0.01,
-                                                                                        0.01, 0.4, 0.01,
-                                                                                        0.01, 0.01, 0.03).finished();
-
-    // Location of the force vector being applied by the left foot.
-    double r_x_left = 0.1;
-    double r_y_left = 0;
-    double r_z_left = 0;
-
-    // Location of the force vector being applied by the right foot.
-    double r_x_right = -0.1;
-    double r_y_right = 0;
-    double r_z_right = 0;
-
-    static const Eigen::Matrix<double, 3, 3> r_left_skew_symmetric = (Eigen::Matrix<double, 3, 3>() << 0, -r_z_left, r_y_left,
-                                                                                            r_z_left, 0, -r_x_left,
-                                                                                            -r_y_left, r_x_left, 0).finished(); 
-            
-    static const Eigen::Matrix<double, 3, 3> r_right_skew_symmetric = (Eigen::Matrix<double, 3, 3>() << 0, -r_z_right, r_y_right,
-                                                                                          r_z_right, 0, -r_x_right,
-                                                                                          -r_y_right, r_x_right, 0).finished();
-
-    static const Eigen::Matrix<double, n, n> A_c = (Eigen::Matrix<double, n, n>() << 0, 0, 0, 0, 0, 0, cos(avg_psi), sin(avg_psi), 0, 0, 0, 0, 0,
-                                                                                        0, 0, 0, 0, 0, 0, -sin(avg_psi), cos(avg_psi), 0, 0, 0, 0, 0,
-                                                                                        0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0,
-                                                                                        
-                                                                                        0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
-                                                                                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0,
-                                                                                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
-                                                                                        
-                                                                                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                                                                                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                                                                                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                                                                                        
-                                                                                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                                                                                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                                                                                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-                                                                                        
-                                                                                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0).finished();
-
-    static const Eigen::Matrix<double, n, m> B_c = (Eigen::Matrix<double, n, m>() << 0, 0, 0, 0, 0, 0,
-                                                                                     0, 0, 0, 0, 0, 0,
-                                                                                     0, 0, 0, 0, 0, 0,
-                                                                                     0, 0, 0, 0, 0, 0,
-                                                                                     0, 0, 0, 0, 0, 0,
-                                                                                     0, 0, 0, 0, 0, 0,
-                                                                                     I_world * r_left_skew_symmetric, I_world * r_right_skew_symmetric,
-                                                                                     1/m_value, 0, 0, 1/m_value, 0, 0,
-                                                                                     0, 1/m_value, 0, 0, 1/m_value, 0,
-                                                                                     0, 0, 1/m_value, 0, 0, 1/m_value,
-                                                                                     0, 0, 0, 0, 0, 0).finished();
     double dt = 1/30.0;
     int N = 30;
 
-    double f_min = -250;
-    double f_max = 250;
+    double f_min_z = 0;
+    double f_max_z = 1000;
+
+    DMVector x_t = {0, 0, 0, 0, 0, 1.48, 0, 0, 0, 0, 0, 0, -9.81};
+
+    double m_value = 30; // kg
 
     Function solver = nlpsol("solver", "ipopt", "../nlp.so");
 
     std::map<std::string, DM> solver_arguments, solution;
+    
+    int num_constraint_bounds = n * (N+1) + m * N + (int)(N / m) * 8; // n * (N+1) for initial state and dynamics at each time step, m * N for reaction forces at each time step
+    int num_decision_variable_bounds = n * (N+1) + m*N;
+    int num_decision_variables = n * (N+1) + m * N;
 
-    // n for initial state, N * n for dynamics at each timestep, (N / m) * m for contact constraints with D * u = 0, (N / m) * 8 for 8 friction constraints.
-    int constraints_length = n + N * n + (N / m) * m + (N / m) * 8;
-    int bounds_length = n * (N+1) + m * N; // n * (N+1) for initial state and dynamics at each time step, m * N for reaction forces at each time step
-    int decision_variables_length = n * (N+1) + m * N;
-
-    std::cout << "Constraints length: " << constraints_length << std::endl;
-    std::cout << "Bounds length: " << bounds_length << std::endl;
-    std::cout << "Decision variables length: " << decision_variables_length << std::endl;
+    std::cout << "Constraint Bounds length: " << num_constraint_bounds << std::endl;
+    std::cout << "Decision variable bounds length: " << num_decision_variable_bounds << std::endl;
+    std::cout << "Decision variables length: " << num_decision_variables << std::endl;
     // DM lbg[constraint_length];
     // DM ubg[constraint_length];
 
-    DM lbg(constraints_length, 1);
-    DM ubg(constraints_length, 1);
+    DM lbg(num_constraint_bounds, 1);
+    DM ubg(num_constraint_bounds, 1);
 
-    DM lbx(bounds_length, 1);
-    DM ubx(bounds_length, 1);
+    DM lbx(num_decision_variable_bounds, 1);
+    DM ubx(num_decision_variable_bounds, 1);
 
-    DM x0_solver(decision_variables_length, 1);
+    DM x0_solver(num_decision_variables, 1);
 
-    // Set 0 for every value besides friction cnstraints (these have to be -inf, take a look at the Point Mass Jupyter Notebook)
-    for(int i = 0; i < constraints_length - (N / m) * 8; ++i) { 
+    // Initial state, Dynamics constraints and Contact constraints
+    for(int i = 0; i < n * (N+1) + m*N; ++i) {
         lbg(i) = 0;
-    }
-
-    for(int i = constraints_length - (N / m) * 8; i < constraints_length; ++i) {
-        lbg(i) = -DM::inf();
-    }
-
-    std::cout << "After lbg init" << std::endl;
-
-    for(int i = 0; i < constraints_length; ++i) {
         ubg(i) = 0;
     }
 
-    std::cout << "After ubg init" << std::endl;
+    std::cout << "After initial state, dynamics and contact constraint setup." << std::endl;
 
-    for(int i = 0; i < n * (N+1); ++i) {
+    // Friction constraints
+    for(int i = n * (N+1) + m*N; i < num_constraint_bounds; ++i) {
+        lbg(i) = -DM::inf();
+        ubg(i) = 0;
+    }
+
+    std::cout << "After friction constraint setup." << std::endl;
+
+    for(int i = 0; i < n*(N+1); ++i) {
         lbx(i) = -DM::inf();
         ubx(i) = DM::inf();
     }
 
-    for(int i = n * (N+1); i < bounds_length; ++i) {
-        lbx(i) = f_min;
-        ubx(i) = f_max;
+    std::cout << "After state bounds setup." << std::endl;
+
+    for(int i = 0; i < N; ++i) {
+        int index = n*(N+1) + (i*m);
+
+        lbx(index) = -DM::inf();
+        lbx(index+1) = -DM::inf();
+        lbx(index+2) = f_min_z;
+        lbx(index+3) = -DM::inf();
+        lbx(index+4) = -DM::inf();
+        lbx(index+5) = f_min_z;
+
+        ubx(index) = DM::inf();
+        ubx(index+1) = DM::inf();
+        ubx(index+2) = f_max_z;
+        ubx(index+3) = DM::inf();
+        ubx(index+4) = DM::inf();
+        ubx(index+5) = f_max_z;
     }
 
-    std::cout << lbx(n * (N+1)) << std::endl;
+    std::cout << "After force constraint setup." << std::endl;
 
     DM X_t = DM::repmat(x_t, 1, N+1); // Init with initial state N + 1 times next to each other
     DM U_t = DM::zeros(m, N);
     std::cout << "X_t shape: (" << X_t.rows() << "," << X_t.columns() << ")" << std::endl;
-    DMVector test(decision_variables_length);
+    DMVector test(num_decision_variables);
 
     // vertcat(*[X_t.reshape((n * (N+1), 1)), U_t.reshape((m * N, 1))])
     test[0] = DM::reshape(X_t, n * (N+1), 1);
@@ -639,28 +596,203 @@ int main()
     solver_arguments["lbx"] = lbx;
     solver_arguments["ubx"] = ubx;
     solver_arguments["x0"] = DM::vertcat(test);
-    //solver_arguments["x0"] = DM::zeros(583, 1);
 
-    std::cout << "Before solver arguments init." << std::endl;
-
-    DM p(2*n, 1);
+    std::cout << "After solver arguments init." << std::endl;
+    int P_rows = n;
+    int P_cols = 1 + N + n * N + m * N + N * m;
+    DM P_param(P_rows, P_cols);
 
     for(int i = 0; i < n; ++i) {
-        p(i) = x_t[i](0);
+        P_param(i,0) = x_t[i](0);
     }
-    for(int i = n; i < 2*n; ++i) {
-        p(i) = x_ref[i-n](0);
-    }
-    
-    std::cout << "After p for loop." << std::endl;
 
-    solver_arguments["p"] = p;
+    DM x_ref = DM::zeros(n, N);
+
+    for(int i = 0; i < N; ++i) {
+        //x_ref = [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, -9.81]
+        x_ref(0, i) = 0;
+        x_ref(1, i) = 0;
+        x_ref(2, i) = 0;
+        x_ref(3, i) = 0;
+        x_ref(4, i) = 0;
+        x_ref(5, i) = 1;
+        x_ref(6, i) = 0;
+        x_ref(7, i) = 0;
+        x_ref(8, i) = 0;
+        x_ref(9, i) = 0;
+        x_ref(10, i) = 0;
+        x_ref(11, i) = 0;
+        x_ref(12, i) = -9.81;
+    }
+
+    std::cout << "After x_ref setup." << std::endl;
+    
+    for(int col = 1; col < 1+N; ++col) { // Column loop
+        for(int row = n; row < n; ++row) { // Row loop
+            P_param(row, col) = x_ref(row, col);
+        } 
+    }
+
+    std::cout << "After P_param x_ref update." << std::endl;
+
+    Eigen::Matrix<double, n , n> A_d_array[N];
+    Eigen::Matrix<double, n, m> B_d_array[N];
+
+    double psi = 0;
+
+    Eigen::Matrix<double, 3, 3> I_world;
+
+    for(int i = 0; i < N; ++i) {
+        Eigen::MatrixXd A_d_t;
+        Eigen::MatrixXd B_d_t;
+
+        double phi_t = 0;
+        double theta_t = 0;
+        double psi_t = 0;
+
+        static const Eigen::MatrixXd I_body = (Eigen::Matrix<double, 3, 3>() << 0.836, 0.0, 0.0,
+                                                                                0.0, 1.2288, 0.0,
+                                                                                0.0, 0.0, 1.4843).finished();
+
+        double Ixx = I_body(0, 0);
+        double Ixy = I_body(0, 1);
+        double Ixz = I_body(0, 2);
+
+        double Iyx = I_body(1, 0);
+        double Iyy = I_body(1, 1);
+        double Iyz = I_body(1, 2);
+
+        double Izx = I_body(2, 0);
+        double Izy = I_body(2, 1);
+        double Izz = I_body(2, 2);
+
+        I_world << (Ixx*cos(psi_t) + Iyx*sin(psi_t))*cos(psi_t) + (Ixy*cos(psi_t) + Iyy*sin(psi_t))*sin(psi_t), -(Ixx*cos(psi_t) + Iyx*sin(psi_t))*sin(psi_t) + (Ixy*cos(psi_t) + Iyy*sin(psi_t))*cos(psi_t), Ixz*cos(psi_t) + Iyz*sin(psi_t), (-Ixx*sin(psi_t) + Iyx*cos(psi_t))*cos(psi_t) + (-Ixy*sin(psi_t) + Iyy*cos(psi_t))*sin(psi_t), -(-Ixx*sin(psi_t) + Iyx*cos(psi_t))*sin(psi_t) + (-Ixy*sin(psi_t) + Iyy*cos(psi_t))*cos(psi_t), -Ixz*sin(psi_t) + Iyz*cos(psi_t), Ixy*sin(psi_t) + Izx*cos(psi_t), Ixy*cos(psi_t) - Izx*sin(psi_t), Izz;
+
+        // Location of the force vector being applied by the left foot.
+        double r_x_left = 0.15;
+        double r_y_left = 0;
+        double r_z_left = -1;
+
+        // Location of the force vector being applied by the right foot.
+        double r_x_right = -0.15;
+        double r_y_right = 0;
+        double r_z_right = -1;
+
+        static const Eigen::Matrix<double, 3, 3> r_left_skew_symmetric = (Eigen::Matrix<double, 3, 3>() << 0, -r_z_left, r_y_left,
+                                                                                                r_z_left, 0, -r_x_left,
+                                                                                                -r_y_left, r_x_left, 0).finished(); 
+                
+        static const Eigen::Matrix<double, 3, 3> r_right_skew_symmetric = (Eigen::Matrix<double, 3, 3>() << 0, -r_z_right, r_y_right,
+                                                                                            r_z_right, 0, -r_x_right,
+                                                                                            -r_y_right, r_x_right, 0).finished();
+
+        static const Eigen::MatrixXd A_c = (Eigen::Matrix<double, n, n>() << 0, 0, 0, 0, 0, 0, cos(psi), sin(psi), 0, 0, 0, 0, 0,
+                                                                                            0, 0, 0, 0, 0, 0, -sin(psi), cos(psi), 0, 0, 0, 0, 0,
+                                                                                            0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0,
+                                                                                            
+                                                                                            0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
+                                                                                            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0,
+                                                                                            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
+                                                                                            
+                                                                                            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                                                                                            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                                                                                            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                                                                                            
+                                                                                            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                                                                                            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                                                                                            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+                                                                                            
+                                                                                            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0).finished();
+
+        static const Eigen::MatrixXd B_c = (Eigen::Matrix<double, n, m>() << 0, 0, 0, 0, 0, 0,
+                                                                                        0, 0, 0, 0, 0, 0,
+                                                                                        0, 0, 0, 0, 0, 0,
+                                                                                        0, 0, 0, 0, 0, 0,
+                                                                                        0, 0, 0, 0, 0, 0,
+                                                                                        0, 0, 0, 0, 0, 0,
+                                                                                        I_world * r_left_skew_symmetric, I_world * r_right_skew_symmetric,
+                                                                                        1/m_value, 0, 0, 1/m_value, 0, 0,
+                                                                                        0, 1/m_value, 0, 0, 1/m_value, 0,
+                                                                                        0, 0, 1/m_value, 0, 0, 1/m_value,
+                                                                                        0, 0, 0, 0, 0, 0).finished();
+
+        discretize_state_space_matrices(A_c, B_c, dt, A_d_t, B_d_t);
+        A_d_array[i] = A_d_t;
+        B_d_array[i] = B_d_t;
+    }
+
+    std::cout << "After discretization loop" << std::endl;
+
+    for(int col = 0; col < N; ++col) {
+        int index = (1 + N) + col * n;
+        //std::cout << "col: " << col << " , index: " << index << std::endl;
+
+        for(int col_temp = 0; col_temp < n; ++col_temp) {
+            for(int row_temp = 0; row_temp < n; ++row_temp) {
+                //std::cout << "Before setting P_param after discretization" << std::endl;
+                P_param(row_temp, col_temp + index) = A_d_array[col](row_temp, col_temp);
+                //std::cout << "Something is working at least" << std::endl;
+            }
+        }
+    }
+    std::cout << "After setting A_d matrices in P_param" << std::endl;
+
+    for(int col = 0; col < N; ++col) {
+        int index = (1 + N + n*N) + col * m;
+
+        for(int col_temp = 0; col_temp < m; ++col_temp) {
+            for(int row_temp = 0; row_temp < n; ++row_temp) {
+                P_param(row_temp, col_temp + index) = B_d_array[col](row_temp, col_temp);
+            }
+        }
+    }
+
+    std::cout << "After setting B_d matrices in P_param" << std::endl;
+
+    bool swing_left = true;
+    bool swing_right = false;
+
+    Eigen::MatrixXd D_t = (Eigen::Matrix<double, m, m>() << swing_left, 0, 0, 0, 0, 0,
+                                                            0, swing_left, 0, 0, 0, 0,
+                                                            0, 0, swing_left, 0, 0, 0,
+                                                            0, 0, 0, swing_right, 0, 0,
+                                                            0, 0, 0, 0, swing_right, 0,
+                                                            0, 0, 0, 0, 0, swing_right).finished();
+
+    DM D_t_casadi(m, m);
+
+    for(int col = 0; col < m; ++col) {
+        for(int row = 0; row < m; ++row) {
+            D_t_casadi(row, col) = D_t(row, col);
+        }
+    }
+
+    std::cout << "After setting up D_t_casadi." << std::endl;
+
+    DM D_vector = DM::repmat(D_t_casadi, 1, N);
+
+    for(int col = 0; col < m*N; ++col) {
+        for (int row = 0; row < m; ++row) {
+            P_param(row, col + (1 + N + n*N + m*N)) = D_vector(row, col);
+        }
+    }
+
+    std::cout << "Before P_param print." << std::endl;
+    std::cout << P_param << std::endl;
+
+    solver_arguments["p"] = P_param;
 
     std::cout << "Before solution calculation" << std::endl;
 
     solution = solver(solver_arguments);
 
     std::cout << solution.at("x") << std::endl;
+
+    std::cout << solution.at("x")(103) << std::endl;
+    std::cout << solution.at("x")(420) << std::endl;
+    std::cout << solution.at("x")(203) << std::endl;
+    std::cout << solution.at("x")(27) << std::endl;
+    std::cout << solution.at("x")(522) << std::endl;
     while(true) {
 
     }
