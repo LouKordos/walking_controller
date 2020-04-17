@@ -15,3 +15,5 @@
 - Test script with not installing casadi from pip (installing python3-dev will probably fix this)
 - Test removing IPOPT path update for casadi install as done in the VM
 - GDB
+- `print_matrix` for DM for debugging
+- Replace `std::endl` with `\n` where possible and use `std::flush` at the end to improve performance
