@@ -762,6 +762,10 @@ int main()
         B_d_array[i] = B_d_t;
     }
 
+    auto end = high_resolution_clock::now();
+
+    std::cout << "Setup took " << duration_cast<microseconds>(end - start).count() << "microseconds" << std::endl; 
+
     //std::cout << "After discretization loop" << std::endl;
 
     for(int col = 0; col < N; ++col) {
@@ -800,14 +804,14 @@ int main()
     static const bool swing_left = true;
     static const bool swing_right = false;
 
-    static const Eigen::MatrixXd D_t = (Eigen::Matrix<double, m, m>() << swing_left, 0, 0, 0, 0, 0,
+    Eigen::MatrixXd D_t = (Eigen::Matrix<double, m, m>() << swing_left, 0, 0, 0, 0, 0,
                                                             0, swing_left, 0, 0, 0, 0,
                                                             0, 0, swing_left, 0, 0, 0,
                                                             0, 0, 0, swing_right, 0, 0,
                                                             0, 0, 0, 0, swing_right, 0,
                                                             0, 0, 0, 0, 0, swing_right).finished();
 
-    static const DM D_t_casadi = DM::zeros(m,m);
+    DM D_t_casadi = DM::zeros(m,m);
 
     for(int col = 0; col < m; ++col) {
         for(int row = 0; row < m; ++row) {
@@ -836,10 +840,6 @@ int main()
     //DM P_param = DM::zeros(P_rows, P_cols);
 
     solver_arguments["p"] = P_param;
-
-    auto end = high_resolution_clock::now();
-
-    std::cout << "Setup took " << duration_cast<microseconds>(end - start).count() << "microseconds" << std::endl; 
 
     //std::cout << "Before solution calculation" << std::endl;
 
