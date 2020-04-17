@@ -526,7 +526,26 @@ int main()
 
     static const double m_value = 30.0; // kg
 
-    Function solver = nlpsol("solver", "ipopt", "../nlp.so");
+    /*
+    opts = {}
+    opts["print_time"] = 1
+    opts["expand"] = False
+    opts['ipopt'] = {"max_iter":40, "print_level":3, "acceptable_tol":1e-7, "acceptable_obj_change_tol":1e-5}
+    */
+
+    Dict opts;
+    Dict ipopt_opts;
+
+    ipopt_opts["max_iter"] = 40;
+    ipopt_opts["print_level"] = 1;
+    ipopt_opts["acceptable_tol"] = 1e-7;
+    ipopt_opts["acceptable_obj_change_tol"] = 1e-5;
+
+    opts["print_time"] = 0;
+    opts["ipopt"] = ipopt_opts;
+    opts["expand"] = false;
+
+    Function solver = nlpsol("solver", "ipopt", "../nlp.so", opts);
 
     std::map<std::string, DM> solver_arguments, solution;
     
@@ -590,11 +609,8 @@ int main()
     }
 
     std::cout << "After force constraint setup." << std::endl;
-
-    DM X_t = DM::repmat(x_t, 1, N+1); // Init with initial state N + 1 times next to each other
-    DM U_t = DM::zeros(m, N);
-    std::cout << "X_t shape: (" << X_t.rows() << "," << X_t.columns() << ")" << std::endl;
-    DM test(num_decision_variables, 1);
+    
+    auto start = high_resolution_clock::now();
 
     for(int i = 0; i < N+1; ++i) {
         int index = i*n;
@@ -612,12 +628,6 @@ int main()
         x0_solver(index+11, 0) = x_t(11);
         x0_solver(index+12, 0) = x_t(12);
     }
-
-    //test(Slice(n*(N+1))) = DM::reshape(X_t, n * (N+1), 1);
-    //test(Slice(n*(N+1), m*N + n*(N+1))) = DM::reshape(U_t, m * N, 1);
-    //std::cout << "X_t:\n" << X_t << std::endl;
-
-    std::cout << x0_solver(Slice(0, 39), 0) << std::endl;
 
     std::cout << "Before solver arguments init." << std::endl;
 
@@ -668,9 +678,25 @@ int main()
     Eigen::Matrix<double, n , n> A_d_array[N];
     Eigen::Matrix<double, n, m> B_d_array[N];
 
-    auto start = high_resolution_clock::now();
 
     Eigen::Matrix<double, 3, 3> I_world;
+
+    static const Eigen::MatrixXd I_body = (Eigen::Matrix<double, 3, 3>() << 0.836, 0.0, 0.0,
+                                                                                0.0, 1.2288, 0.0,
+                                                                                0.0, 0.0, 1.4843).finished();
+
+    static const double Ixx = I_body(0, 0);
+    static const double Ixy = I_body(0, 1);
+    static const double Ixz = I_body(0, 2);
+
+    static const double Iyx = I_body(1, 0);
+    static const double Iyy = I_body(1, 1);
+    static const double Iyz = I_body(1, 2);
+
+    static const double Izx = I_body(2, 0);
+    static const double Izy = I_body(2, 1);
+    static const double Izz = I_body(2, 2);
+
 
     for(int i = 0; i < N; ++i) {
         Eigen::MatrixXd A_d_t;
@@ -679,22 +705,6 @@ int main()
         double phi_t = 0;
         double theta_t = 0;
         double psi_t = 0;
-
-        static const Eigen::MatrixXd I_body = (Eigen::Matrix<double, 3, 3>() << 0.836, 0.0, 0.0,
-                                                                                0.0, 1.2288, 0.0,
-                                                                                0.0, 0.0, 1.4843).finished();
-
-        double Ixx = I_body(0, 0);
-        double Ixy = I_body(0, 1);
-        double Ixz = I_body(0, 2);
-
-        double Iyx = I_body(1, 0);
-        double Iyy = I_body(1, 1);
-        double Iyz = I_body(1, 2);
-
-        double Izx = I_body(2, 0);
-        double Izy = I_body(2, 1);
-        double Izz = I_body(2, 2);
 
         I_world << (Ixx*cos(psi_t) + Iyx*sin(psi_t))*cos(psi_t) + (Ixy*cos(psi_t) + Iyy*sin(psi_t))*sin(psi_t), -(Ixx*cos(psi_t) + Iyx*sin(psi_t))*sin(psi_t) + (Ixy*cos(psi_t) + Iyy*sin(psi_t))*cos(psi_t), Ixz*cos(psi_t) + Iyz*sin(psi_t), (-Ixx*sin(psi_t) + Iyx*cos(psi_t))*cos(psi_t) + (-Ixy*sin(psi_t) + Iyy*cos(psi_t))*sin(psi_t), -(-Ixx*sin(psi_t) + Iyx*cos(psi_t))*sin(psi_t) + (-Ixy*sin(psi_t) + Iyy*cos(psi_t))*cos(psi_t), -Ixz*sin(psi_t) + Iyz*cos(psi_t), Ixy*sin(psi_t) + Izx*cos(psi_t), Ixy*cos(psi_t) - Izx*sin(psi_t), Izz;
 
@@ -716,7 +726,7 @@ int main()
                                                                                                                 r_z_right, 0, -r_x_right,
                                                                                                                 -r_y_right, r_x_right, 0).finished();
 
-        static const Eigen::MatrixXd A_c = (Eigen::Matrix<double, n, n>() << 0, 0, 0, 0, 0, 0, cos(psi_t), sin(psi), 0, 0, 0, 0, 0,
+        static const Eigen::MatrixXd A_c = (Eigen::Matrix<double, n, n>() << 0, 0, 0, 0, 0, 0, cos(psi_t), sin(psi_t), 0, 0, 0, 0, 0,
                                                                             0, 0, 0, 0, 0, 0, -sin(psi_t), cos(psi_t), 0, 0, 0, 0, 0,
                                                                             0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0,
                                                                             
@@ -752,11 +762,7 @@ int main()
         B_d_array[i] = B_d_t;
     }
 
-    auto end = high_resolution_clock::now();
-
-    std::cout << "Discretization took " << duration_cast<microseconds>(end - start).count() << "microseconds" << std::endl;
-
-    std::cout << "After discretization loop" << std::endl;
+    //std::cout << "After discretization loop" << std::endl;
 
     for(int col = 0; col < N; ++col) {
         int index = (1 + N) + col * n;
@@ -771,7 +777,7 @@ int main()
         }
     }
 
-    std::cout << "After setting A_d matrices in P_param" << std::endl;
+    //std::cout << "After setting A_d matrices in P_param" << std::endl;
 
     for(int col = 0; col < N; ++col) {
         int index = (1 + N + n*N) + col * m;
@@ -783,7 +789,7 @@ int main()
         }
     }
 
-    std::cout << "After setting B_d matrices in P_param" << std::endl;
+    //std::cout << "After setting B_d matrices in P_param" << std::endl;
 
     //print("A_d:\n", P_param[:, 1+N:1+N+n], "\n")
     //print("B_d:\n", P_param[:, 1 + N + n * N:1 + N + n * N+m], "\n")
@@ -801,18 +807,18 @@ int main()
                                                             0, 0, 0, 0, swing_right, 0,
                                                             0, 0, 0, 0, 0, swing_right).finished();
 
-    DM D_t_casadi(m, m);
+    DM D_t_casadi = DM::zeros(m,m);
 
     for(int col = 0; col < m; ++col) {
         for(int row = 0; row < m; ++row) {
             D_t_casadi(row, col) = D_t(row, col);
         }
     }
-
+    
     //std::cout << "D_t_casadi:" << D_t_casadi << std::endl;
 
     DM D_vector = DM::repmat(D_t_casadi, 1, N);
-    std::cout << D_vector.size() << std::endl;
+    //std::cout << D_vector.size() << std::endl;
 
     for(int col = 0; col < N; ++col) {
         int index = 1 + N + n*N + m*N + col * m;
@@ -831,7 +837,8 @@ int main()
 
     solver_arguments["p"] = P_param;
 
-    std::cout << "Before solution calculation" << std::endl;
+    //std::cout << "Before solution calculation" << std::endl;
+
 
     solution = solver(solver_arguments);
 
@@ -842,6 +849,10 @@ int main()
     std::cout << solution.at("x")(203) << std::endl;
     std::cout << solution.at("x")(27) << std::endl;
     std::cout << solution.at("x")(522) << std::endl;
+
+    auto end = high_resolution_clock::now();
+
+    std::cout << "Setup took " << duration_cast<microseconds>(end - start).count() << "microseconds" << std::endl;  
     while(true) {
 
     }

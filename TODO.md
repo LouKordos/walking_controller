@@ -17,3 +17,4 @@
 - GDB
 - `print_matrix` for DM for debugging
 - Replace `std::endl` with `\n` where possible and use `std::flush` at the end to improve performance
+- Try if casadi compile works without installing any IPOPT version and what version it would use
