@@ -10,4 +10,8 @@
 - Fix permission issues with make, git modifications (basically add read write permissions for everone on repos), then remove sudo on things like `make`
 - Write about UDP comm in WSL
 - Test different solvers
-- Experiment with discretizing with A_c based on the previous optimal state and symbolic exponential
+- Uninstall all dependecies before installing new version
+- For compiling casadi: `-DWITH_THREAD=ON` and install HSL solver with -NUM_THREADS
+- Test script with not installing casadi from pip (installing python3-dev will probably fix this)
+- Test removing IPOPT path update for casadi install as done in the VM
+- GDB
