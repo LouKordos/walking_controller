@@ -537,7 +537,7 @@ int main()
     Dict ipopt_opts;
 
     ipopt_opts["max_iter"] = 40;
-    ipopt_opts["print_level"] = 1;
+    ipopt_opts["print_level"] = 0;
     ipopt_opts["acceptable_tol"] = 1e-7;
     ipopt_opts["acceptable_obj_change_tol"] = 1e-5;
 
@@ -797,17 +797,17 @@ int main()
     // std::cout << "\nA_d:\n" << P_param(Slice(0, n), Slice(1+N, 1+N+n)) << std::endl;
     // std::cout << "\nB_d:\n" << P_param(Slice(0, n), Slice(1+N+n*N, 1+N+n*N+m)) << std::endl;
 
-    bool swing_left = true;
-    bool swing_right = false;
+    static const bool swing_left = true;
+    static const bool swing_right = false;
 
-    Eigen::MatrixXd D_t = (Eigen::Matrix<double, m, m>() << swing_left, 0, 0, 0, 0, 0,
+    static const Eigen::MatrixXd D_t = (Eigen::Matrix<double, m, m>() << swing_left, 0, 0, 0, 0, 0,
                                                             0, swing_left, 0, 0, 0, 0,
                                                             0, 0, swing_left, 0, 0, 0,
                                                             0, 0, 0, swing_right, 0, 0,
                                                             0, 0, 0, 0, swing_right, 0,
                                                             0, 0, 0, 0, 0, swing_right).finished();
 
-    DM D_t_casadi = DM::zeros(m,m);
+    static const DM D_t_casadi = DM::zeros(m,m);
 
     for(int col = 0; col < m; ++col) {
         for(int row = 0; row < m; ++row) {
@@ -837,6 +837,10 @@ int main()
 
     solver_arguments["p"] = P_param;
 
+    auto end = high_resolution_clock::now();
+
+    std::cout << "Setup took " << duration_cast<microseconds>(end - start).count() << "microseconds" << std::endl; 
+
     //std::cout << "Before solution calculation" << std::endl;
 
 
@@ -848,11 +852,7 @@ int main()
     std::cout << solution.at("x")(420) << std::endl;
     std::cout << solution.at("x")(203) << std::endl;
     std::cout << solution.at("x")(27) << std::endl;
-    std::cout << solution.at("x")(522) << std::endl;
-
-    auto end = high_resolution_clock::now();
-
-    std::cout << "Setup took " << duration_cast<microseconds>(end - start).count() << "microseconds" << std::endl;  
+    std::cout << solution.at("x")(522) << std::endl; 
     while(true) {
 
     }
