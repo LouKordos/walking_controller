@@ -63,7 +63,11 @@ echo -e "\n${GREEN}Installing build-essential (CMake, make, gcc, g++) for compil
 
 sudo apt-get install build-essential -y # make, gcc, g++
 
-sudo apt -q update -y
+sudo apt-get -q update -y
+
+sudo apt-get install gdb -y
+
+sudo apt-get update -y -q
 
 #git clone https://github.com/Kitware/CMake.git
 
