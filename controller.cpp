@@ -508,6 +508,7 @@ int main()
     std::cout << std::endl << std::endl << std::endl;
 
     Eigen::Matrix<double, n, 1> x_t = (Eigen::Matrix<double, n, 1>() << 0, 0, 0, 0, 0, 1.48, 0, 0, 0, 0, 0, 0, -9.81).finished();
+    Eigen::Matrix<double, m, 1> u_t = Eigen::ArrayXXd::Zero(m, 1);
 
     static const double m_value = 30.0; // kg
 
@@ -526,7 +527,7 @@ int main()
     ipopt_opts["acceptable_tol"] = 1e-7;
     ipopt_opts["acceptable_obj_change_tol"] = 1e-5;
 
-    opts["print_time"] = 0;
+    opts["print_time"] = 1;
     opts["ipopt"] = ipopt_opts;
     opts["expand"] = false;
 
@@ -550,7 +551,9 @@ int main()
     DM lbx(num_decision_variable_bounds, 1);
     DM ubx(num_decision_variable_bounds, 1);
 
-    Eigen::Matrix<double, n*(N+1)+m*N, 1> x0_solver = Eigen::ArrayXXd::Zero(n*(N+1)+m*N, 1);;
+    Eigen::Matrix<double, n*(N+1)+m*N, 1> x0_solver = Eigen::ArrayXXd::Zero(n*(N+1)+m*N, 1);
+    Eigen::Matrix<double, n*(N+1), 1> X_t = Eigen::ArrayXXd::Zero(n*(N+1), 1); // Maybe this is actually obsolete and only x0_solver is sufficient
+    Eigen::Matrix<double, m*N, 1> U_t = Eigen::ArrayXXd::Zero(m*N, 1); // Same here
 
     // Initial state, Dynamics constraints and Contact constraints
     for(int i = 0; i < n * (N+1) + m*N; ++i) {
@@ -633,7 +636,7 @@ int main()
     Eigen::Matrix<double, n, n> A_d_t = Eigen::ArrayXXd::Zero(n, n);
     Eigen::Matrix<double, n, m> B_d_t = Eigen::ArrayXXd::Zero(n, m);
 
-    double phi_t = 0;
+    double phi_t = 0; // This might need renaming in future since it might cause problems when accessing from other threads while discretizing at future values
     double theta_t = 0;
     double psi_t = 0;
 
@@ -643,36 +646,125 @@ int main()
     static Eigen::Matrix<double, 3, 3> r_left_skew_symmetric = Eigen::ArrayXXd::Zero(3, 3);;
     static Eigen::Matrix<double, 3, 3> r_right_skew_symmetric = Eigen::ArrayXXd::Zero(3, 3);;
 
-    Eigen::Matrix<double, m, m*N> D_vector = Eigen::ArrayXXd::Zero(m, m*N);
-    Eigen::Matrix<double, m, m> D_t = Eigen::ArrayXXd::Zero(m, m);;
+    static Eigen::Matrix<double, m, m*N> D_vector = Eigen::ArrayXXd::Zero(m, m*N);
+    static Eigen::Matrix<double, m, m> D_current = Eigen::ArrayXXd::Zero(m, m);;
+    static Eigen::Matrix<double, m, m> D_next = Eigen::ArrayXXd::Zero(m, m);;
 
-    static bool swing_left;
-    static bool swing_right;
+    static bool swing_left = true; // Still have to figure out how to change between standing in place and stepping / walking
+    static bool swing_right = false;
 
+    static bool foot_behind_left = !swing_left;
+    static bool foot_behind_right = !swing_right;
+
+    static double pos_y_desired = 0.0;
+    static double vel_y_desired = 0.2;
+
+    static double psi_desired = 0.0;
+    static double omega_z_desired = 0.0;
+
+    static double step_length = 0.2;
+
+    static const int contact_swap_interval = 15; // 0.5s
+
+    int iterations_left_until_contact_swap = contact_swap_interval;
+
+    long long total_iterations = 0;
+
+    solver_arguments["lbg"] = lbg;
+    solver_arguments["ubg"] = ubg;
+    solver_arguments["lbx"] = lbx;
+    solver_arguments["ubx"] = ubx;
+
+    // Loop starts here
     auto start = high_resolution_clock::now();
 
-    // std::cout << "size of x0_solver block: " << x0_solver.row(0<< std::endl;
+    iterations_left_until_contact_swap -= 1;
 
-    for(int i = 0; i < N+1; ++i) {
-        int index = i*n;
-        //x0_solver.block(index, 0, index+n, 0) = x_t.block(0, 0, n, 0);
-
-        x0_solver(index, 0) = x_t(0, 0);
-        x0_solver(index+1, 0) = x_t(1, 0);
-        x0_solver(index+2, 0) = x_t(2, 0);
-        x0_solver(index+3, 0) = x_t(3, 0);
-        x0_solver(index+4, 0) = x_t(4, 0);
-        x0_solver(index+5, 0) = x_t(5, 0);
-        x0_solver(index+6, 0) = x_t(6, 0);
-        x0_solver(index+7, 0) = x_t(7, 0);
-        x0_solver(index+8, 0) = x_t(8, 0);
-        x0_solver(index+9, 0) = x_t(9, 0);
-        x0_solver(index+10, 0) = x_t(10, 0);
-        x0_solver(index+11, 0) = x_t(11, 0);
-        x0_solver(index+12, 0) = x_t(12, 0);
+    if (total_iterations % contact_swap_interval == 0) {
+        swing_left = !swing_left;
+        swing_right = !swing_right;
+        iterations_left_until_contact_swap = contact_swap_interval;
     }
 
-    std::cout << "After x0_solver setup" << std::endl;
+    D_current << swing_left, 0, 0, 0, 0, 0,
+            0, swing_left, 0, 0, 0, 0,
+            0, 0, swing_left, 0, 0, 0,
+            0, 0, 0, swing_right, 0, 0,
+            0, 0, 0, 0, swing_right, 0,
+            0, 0, 0, 0, 0, swing_right;
+
+    if(contact_swap_interval >= N) {
+        for(int i = 0; i < N; ++i) {
+            D_vector.block(0, i*m, m, m) = D_current;
+        }
+    }
+    else {
+        for(int i = 0; i < iterations_left_until_contact_swap; ++i) {
+            D_vector.block(0, i*m, m, m) = D_current;
+        }
+
+        D_next << swing_left, 0, 0, 0, 0, 0,
+                0, swing_left, 0, 0, 0, 0,
+                0, 0, swing_left, 0, 0, 0,
+                0, 0, 0, swing_right, 0, 0,
+                0, 0, 0, 0, swing_right, 0,
+                0, 0, 0, 0, 0, swing_right;
+
+        for(int i = iterations_left_until_contact_swap; i < N; ++i) {
+            D_vector.block(0, i*m, m, m) = D_next;
+        }
+    }
+    P_param.block(0, 1+N+n*N+m*N, m, m*N) = D_vector;
+
+    for(int k = 0; k < N; ++k) {
+        if(swing_left && swing_right) { // No feet in contact
+            P_param(m+0, 1 + N + n*N + m*N + k*m) = 0;
+            P_param(m+1, 1 + N + n*N + m*N + k*m) = 0;
+            P_param(m+2, 1 + N + n*N + m*N + k*m) = 0;
+            P_param(m+3, 1 + N + n*N + m*N + k*m) = 0;
+            P_param(m+4, 1 + N + n*N + m*N + k*m) = 0;
+            P_param(m+5, 1 + N + n*N + m*N + k*m) = 0;
+        }
+        else if(swing_left && !swing_right) { // Right foot in contact
+            P_param(m+0, 1 + N + n*N + m*N + k*m) = 0;
+            P_param(m+1, 1 + N + n*N + m*N + k*m) = 0;
+            P_param(m+2, 1 + N + n*N + m*N + k*m) = 0;
+            P_param(m+3, 1 + N + n*N + m*N + k*m) = 0;
+            P_param(m+4, 1 + N + n*N + m*N + k*m) = 0;
+            P_param(m+5, 1 + N + n*N + m*N + k*m) = m_value * 9.81;
+        }
+        else if(!swing_left && swing_right) { // Left foot in contact
+            P_param(m+0, 1 + N + n*N + m*N + k*m) = 0;
+            P_param(m+1, 1 + N + n*N + m*N + k*m) = 0;
+            P_param(m+2, 1 + N + n*N + m*N + k*m) = m_value * 9.81;
+            P_param(m+3, 1 + N + n*N + m*N + k*m) = 0;
+            P_param(m+4, 1 + N + n*N + m*N + k*m) = 0;
+            P_param(m+5, 1 + N + n*N + m*N + k*m) = 0;
+        }
+        else if(swing_left && !swing_right) { // Both feet in contact
+            P_param(m+0, 1 + N + n*N + m*N + k*m) = 0;
+            P_param(m+1, 1 + N + n*N + m*N + k*m) = 0;
+            P_param(m+2, 1 + N + n*N + m*N + k*m) = (m_value * 9.81) / 2;
+            P_param(m+3, 1 + N + n*N + m*N + k*m) = 0;
+            P_param(m+4, 1 + N + n*N + m*N + k*m) = 0;
+            P_param(m+5, 1 + N + n*N + m*N + k*m) = (m_value * 9.81) / 2;
+        }
+    }
+    // Move this into if statement below to reduce execution time
+    if(foot_behind_left) {
+        r_y_left = -step_length;
+    }
+    else {
+        r_y_left = step_length;
+    }
+
+    if(total_iterations % (contact_swap_interval * 2) == 0) {
+        foot_behind_left = !foot_behind_left;
+        foot_behind_right = !foot_behind_right;
+    }
+
+    r_z_left = -x_t(5);
+    r_z_right = -x_t(5);
 
     size_t rows_x0_solver = x0_solver.rows();
     size_t cols_x0_solver = x0_solver.cols();
@@ -680,37 +772,106 @@ int main()
     DM x0_solver_casadi = casadi::DM::zeros(rows_x0_solver, cols_x0_solver);
 
     std::memcpy(x0_solver_casadi.ptr(), x0_solver.data(), sizeof(double)*rows_x0_solver*cols_x0_solver);
-
-    solver_arguments["lbg"] = lbg;
-    solver_arguments["ubg"] = ubg;
-    solver_arguments["lbx"] = lbx;
-    solver_arguments["ubx"] = ubx;
     solver_arguments["x0"] = x0_solver_casadi;
 
     for(int i = 0; i < n; ++i) {
         P_param(i,0) = x_t(i);
     }
 
+    static double pos_y_desired_temp = pos_y_desired;
+    static double psi_desired_temp = psi_desired;
+
     for(int i = 0; i < N; ++i) {
-        //x_ref = [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, -9.81]
+        pos_y_desired_temp += vel_y_desired * dt;
+        psi_desired_temp += omega_z_desired * dt;
+
         x_ref(0, i) = 0;
         x_ref(1, i) = 0;
-        x_ref(2, i) = 0;
+        x_ref(2, i) = psi_desired_temp;
         x_ref(3, i) = 0;
         x_ref(4, i) = 0;
-        x_ref(5, i) = 1;
+        x_ref(5, i) = pos_y_desired;
         x_ref(6, i) = 0;
         x_ref(7, i) = 0;
-        x_ref(8, i) = 0;
+        x_ref(8, i) = omega_z_desired;
         x_ref(9, i) = 0;
-        x_ref(10, i) = 0;
+        x_ref(10, i) = vel_y_desired;
         x_ref(11, i) = 0;
         x_ref(12, i) = -9.81;
     }
-    
     P_param.block(0, 1, n, N) = x_ref;
 
+    pos_y_desired += vel_y_desired * dt;
+    psi_desired += omega_z_desired * dt;
+
+    static bool foot_behind_left_temp = foot_behind_left;
+    static bool foot_behind_right_temp = foot_behind_right;
+
+    static double r_y_left_temp = r_y_left;
+    static double r_y_right_temp = r_y_right;
+
+    static double vel_x_t = 0.0;
+    static double vel_y_t = 0.0;
+    static double vel_z_t = 0.0;
+    static double pos_y_t = 0.0;
+    static double pos_x_t = 0.0;
+    static double pos_y_t_next = 0.0f;
+    static double pos_z_t = 0.0;
+
     for(int i = 0; i < N; ++i) {
+        if (i < N-1) {
+            phi_t = X_t(n*(i+1) + 0);
+            theta_t = X_t(n*(i+1) + 1);
+            psi_t = X_t(n*(i+1) + 2);
+
+            vel_x_t = X_t(n*(i+1)+9);
+            vel_y_t = X_t(n*(i+1)+10);
+            vel_z_t = X_t(n*(i+1)+11);
+            
+            pos_x_t = X_t(n*(i+1)+3);
+            pos_y_t = X_t(n*(i+1)+4);
+            pos_y_t_next = X_t(n*(i+2)+4);
+            pos_z_t = X_t(n*(i+1)+5);
+        }
+        if(i == 0) {
+            phi_t = x_t(0);
+            theta_t = x_t(1);
+            psi_t = x_t(2);
+
+            vel_x_t = x_t(9);
+            vel_y_t = x_t(10);
+            vel_z_t = x_t(11);
+
+            pos_x_t = x_t(3);
+            pos_y_t = x_t(4);
+            pos_y_t_next = X_t(n*(i+1)+4);
+            pos_z_t = x_t(5);
+        }
+
+        if(foot_behind_left_temp) {
+            r_y_left = -step_length;
+        }
+        else {
+            r_y_left = step_length;
+        }
+
+        if(foot_behind_right_temp) {
+            r_y_right = -step_length;
+        }
+        else {
+            r_y_right = step_length;
+        }
+
+        if ((total_iterations+i) % (contact_swap_interval *2) == 0 && i != 0) {
+            foot_behind_left_temp = !foot_behind_left_temp;
+            foot_behind_right_temp = !foot_behind_right_temp;
+        }
+
+        r_z_left = -pos_z_t;
+        r_z_right = -pos_z_t;
+
+        r_y_left -= (pos_y_t_next - pos_y_t);
+        r_y_right -= (pos_y_t_next - pos_y_t);
 
         I_world << (Ixx*cos(psi_t) + Iyx*sin(psi_t))*cos(psi_t) + (Ixy*cos(psi_t) + Iyy*sin(psi_t))*sin(psi_t), -(Ixx*cos(psi_t) + Iyx*sin(psi_t))*sin(psi_t) + (Ixy*cos(psi_t) + Iyy*sin(psi_t))*cos(psi_t), Ixz*cos(psi_t) + Iyz*sin(psi_t), (-Ixx*sin(psi_t) + Iyx*cos(psi_t))*cos(psi_t) + (-Ixy*sin(psi_t) + Iyy*cos(psi_t))*sin(psi_t), -(-Ixx*sin(psi_t) + Iyx*cos(psi_t))*sin(psi_t) + (-Ixy*sin(psi_t) + Iyy*cos(psi_t))*cos(psi_t), -Ixz*sin(psi_t) + Iyz*cos(psi_t), Ixy*sin(psi_t) + Izx*cos(psi_t), Ixy*cos(psi_t) - Izx*sin(psi_t), Izz;
 
@@ -762,49 +923,57 @@ int main()
         P_param.block(0, 1 + N + n * N + (i*m), n, m) = B_d_t;
     }
 
-    swing_left = true;
-    swing_right = false;
-    
-    D_t << swing_left, 0, 0, 0, 0, 0,
-            0, swing_left, 0, 0, 0, 0,
-            0, 0, swing_left, 0, 0, 0,
-            0, 0, 0, swing_right, 0, 0,
-            0, 0, 0, 0, swing_right, 0,
-            0, 0, 0, 0, 0, swing_right;
-
-    for(int i = 0; i < N; ++i) {
-        D_vector.block(0, i*m, m, m) = D_t;
-    }
-
-    std::cout << D_vector.rows() << "x" << D_vector.cols() << std::endl;
-    
-    P_param.block(0, 1+N+n*N+m*N, m, m*N) = D_vector;
-
     size_t rows_P_param = P_param.rows();
     size_t cols_P_param = P_param.cols();
 
     DM P_param_casadi = casadi::DM::zeros(rows_P_param, cols_P_param);
 
     std::memcpy(P_param_casadi.ptr(), P_param.data(), sizeof(double)*rows_P_param*cols_P_param);
-
-    auto end = high_resolution_clock::now();
-    std::cout << "Setup took " << duration_cast<microseconds>(end - start).count() << " microseconds" << std::endl;
     
     solver_arguments["p"] = P_param_casadi;
+    
+    x0_solver << X_t, U_t;
 
-    std::cout << "Before solution calculation" << std::endl;
+    //std::cout << "x0_solver:\n" << x0_solver << std::endl;
+
+    auto end = high_resolution_clock::now();
+
+    double duration_before = duration_cast<microseconds>(end - start).count();
 
     solution = solver(solver_arguments);
 
-    //std::cout << solution.at("x") << std::endl;
+    start = high_resolution_clock::now();
 
-    //std::cout << solution.at("x") << std::endl;
+    size_t rows = solution.at("x").size1();
+    size_t cols = solution.at("x").size2();
 
-    std::cout << solution.at("x")(103) << std::endl;
-    std::cout << solution.at("x")(420) << std::endl;
-    std::cout << solution.at("x")(203) << std::endl;
-    std::cout << solution.at("x")(27) << std::endl;
-    std::cout << solution.at("x")(522) << std::endl;
+    Eigen::Matrix<double, n*(N+1) + m*N, 1> solution_variables = Eigen::ArrayXXd::Zero(n*(N+1) + m*N, 1);
+
+    solution_variables.resize(rows,cols);
+    solution_variables.setZero(rows,cols);
+
+    std::memcpy(solution_variables.data(), solution.at("x").ptr(), sizeof(double)*rows*cols);
+
+    u_t << solution_variables(n*(N+1)+0),
+            solution_variables(n*(N+1)+1),
+            solution_variables(n*(N+1)+2),
+            solution_variables(n*(N+1)+3),
+            solution_variables(n*(N+1)+4),
+            solution_variables(n*(N+1)+5);
+
+    X_t.block(0, 0, n*N, 1) = solution_variables.block(n, 0, n*N, 1);
+    X_t.block(n*N, 0, n, 1) = solution_variables.block(n*N, 0, n, 1);
+
+    U_t.block(0, 0, m*(N-1), 1) = solution_variables.block(n*(N+1)+m, 0, m*(N-1), 1);
+    U_t.block(m*(N-1), 0, m, 1) = solution_variables.block(n*(N+1)+m*(N-1), 0, m, 1);
+
+    ++total_iterations;
+
+    end = high_resolution_clock::now();
+    double duration_after = duration_cast<microseconds> (end - start).count();
+
+    std::cout << "Full iteration took " << duration_before + duration_after << " microseconds" << std::endl;
+    
     while(true) {
 
     }
