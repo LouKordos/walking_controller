@@ -706,7 +706,6 @@ int main()
         x_ref(10, i) = 0;
         x_ref(11, i) = 0;
         x_ref(12, i) = -9.81;
-        //P_param.block(0, 1+i, n, 1+i) = x_ref.block(0, i, n, i);
     }
     
     P_param.block(0, 1, n, N) = x_ref;
@@ -763,8 +762,6 @@ int main()
         P_param.block(0, 1 + N + n * N + (i*m), n, m) = B_d_t;
     }
 
-    std::cout << "After setting B_d matrices in P_param" << std::endl;
-
     swing_left = true;
     swing_right = false;
     
@@ -782,7 +779,6 @@ int main()
     std::cout << D_vector.rows() << "x" << D_vector.cols() << std::endl;
     
     P_param.block(0, 1+N+n*N+m*N, m, m*N) = D_vector;
-    //P_param.block(m, 1+N+n*N+m*N, n-m, m*N) = Eigen::ArrayXXd::Zero(n-m, m*N);
 
     size_t rows_P_param = P_param.rows();
     size_t cols_P_param = P_param.cols();
@@ -793,67 +789,6 @@ int main()
 
     auto end = high_resolution_clock::now();
     std::cout << "Setup took " << duration_cast<microseconds>(end - start).count() << " microseconds" << std::endl;
-
-    std::cout << "\n\n" << x0_solver_casadi(Slice(0, 5*n), 0) << std::endl;
-
-    std::cout << P_param_casadi(Slice(0, n), Slice(1, 1+N)) << std::endl;
-
-    std::cout << "\n\n" << P_param_casadi(Slice(0, n), Slice(1+N, 1+N+n*3)) << std::endl;
-
-    std::cout << "\n\n" <<P_param_casadi(Slice(0, n), Slice(1+N+n*N, 1+N+n*N+m*3)) << std::endl;
-
-    std::cout << "\n\n" << P_param_casadi(Slice(0, m), Slice(1+N+n*N+m*N, 1+N+n*N+m*N+3*m)) << std::endl;
-
-    DM P_param_test = DM::zeros(P_rows, P_cols);
-
-    for(int i = 0; i < n; ++i) {
-        P_param_test(i,0) = x_t(i);
-    }
-
-    for(int col = 1; col < 1+N; ++col) {
-        for(int row = 0; row < n; ++row) {
-            P_param_test(row, col) = x_ref(row, col-1);
-        }
-    }
-
-    for(int col = 0; col < N; ++col) {
-        int index = (1 + N) + col * n;
-
-        for(int col_temp = 0; col_temp < n; ++col_temp) {
-            for(int row_temp = 0; row_temp < n; ++row_temp) {
-                P_param_test(row_temp, col_temp + index) = A_d_array[col](row_temp, col_temp);
-            }
-        }
-    }
-
-    for(int col = 0; col < N; ++col) {
-        int index = (1 + N + n*N) + col * m;
-
-        for(int col_temp = 0; col_temp < m; ++col_temp) {
-            for(int row_temp = 0; row_temp < n; ++row_temp) {
-                P_param_test(row_temp, col_temp + index) = B_d_array[col](row_temp, col_temp);
-            }
-        }
-    }
-
-    for(int col = 0; col < N; ++col) {
-        int index = 1 + N + n*N + m*N + col * m;
-
-        for(int col_temp = 0; col_temp < m; ++col_temp) {
-            for(int row_temp = 0; row_temp < m; ++row_temp) {
-                P_param_test(row_temp, col_temp + index) = D_vector(row_temp, col_temp);
-            }
-        }
-    }
-
-    for(int col = 0; col < P_cols; ++col) {
-        for(int row = 0; row < P_rows; ++row) {
-            if(abs((double)P_param_casadi(row, col) - (double)P_param_test(row, col)) > 1e-10) {
-                std::cout << "Values are different at " << row << "," << col << std::endl;
-                std::cout << "P_param_casadi at this index: " << (double)P_param_casadi(row, col) << " , P_param_test at this index: " << P_param_test(row, col) << std::endl;
-            }
-        }
-    }
     
     solver_arguments["p"] = P_param_casadi;
 
