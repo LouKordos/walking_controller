@@ -1,5 +1,6 @@
 #include <iostream>
 #include <dirent.h>
+#include <typeinfo>
 
 #include <chrono>
 #include <thread>
@@ -549,7 +550,7 @@ int main()
     DM lbx(num_decision_variable_bounds, 1);
     DM ubx(num_decision_variable_bounds, 1);
 
-    Eigen::Matrix<double, n*(N+1)+m*N, 1> x0_solver;
+    Eigen::Matrix<double, n*(N+1)+m*N, 1> x0_solver = Eigen::ArrayXXd::Zero(n*(N+1)+m*N, 1);;
 
     // Initial state, Dynamics constraints and Contact constraints
     for(int i = 0; i < n * (N+1) + m*N; ++i) {
@@ -592,17 +593,17 @@ int main()
         ubx(index+5) = f_max_z;
     }
 
-    Eigen::Matrix<double, n, N> x_ref;
+    Eigen::Matrix<double, n, N> x_ref = Eigen::ArrayXXd::Zero(n, N);;
 
     static const int P_rows = n;
     static const int P_cols = 1 + N + n * N + m * N + N * m;
-    Eigen::Matrix<double, P_rows, P_cols> P_param;
+    Eigen::Matrix<double, P_rows, P_cols> P_param = Eigen::ArrayXXd::Zero(P_rows, P_cols);
 
     Eigen::Matrix<double, n , n> A_d_array[N];
     Eigen::Matrix<double, n, m> B_d_array[N];
 
 
-    Eigen::Matrix<double, 3, 3> I_world;
+    Eigen::Matrix<double, 3, 3> I_world = Eigen::ArrayXXd::Zero(3, 3);;
 
     static const Eigen::MatrixXd I_body = (Eigen::Matrix<double, 3, 3>() << 0.836, 0.0, 0.0,
                                                                             0.0, 1.2288, 0.0,
@@ -629,21 +630,21 @@ int main()
     double r_y_right = 0;
     double r_z_right = -1;
 
-    Eigen::Matrix<double, n, n> A_d_t;
-    Eigen::Matrix<double, n, m> B_d_t;
+    Eigen::Matrix<double, n, n> A_d_t = Eigen::ArrayXXd::Zero(n, n);
+    Eigen::Matrix<double, n, m> B_d_t = Eigen::ArrayXXd::Zero(n, m);
 
     double phi_t = 0;
     double theta_t = 0;
     double psi_t = 0;
 
-    static Eigen::Matrix<double, n, n> A_c;
-    static Eigen::Matrix<double, n, m> B_c;
+    static Eigen::Matrix<double, n, n> A_c = Eigen::ArrayXXd::Zero(n, n);;
+    static Eigen::Matrix<double, n, m> B_c = Eigen::ArrayXXd::Zero(n, m);;
     
-    static Eigen::Matrix<double, 3, 3> r_left_skew_symmetric;
-    static Eigen::Matrix<double, 3, 3> r_right_skew_symmetric;
+    static Eigen::Matrix<double, 3, 3> r_left_skew_symmetric = Eigen::ArrayXXd::Zero(3, 3);;
+    static Eigen::Matrix<double, 3, 3> r_right_skew_symmetric = Eigen::ArrayXXd::Zero(3, 3);;
 
-    Eigen::Matrix<double, m, m*N> D_vector;
-    Eigen::Matrix<double, m, m> D_t;
+    Eigen::Matrix<double, m, m*N> D_vector = Eigen::ArrayXXd::Zero(m, m*N);
+    Eigen::Matrix<double, m, m> D_t = Eigen::ArrayXXd::Zero(m, m);;
 
     static bool swing_left;
     static bool swing_right;
@@ -707,15 +708,13 @@ int main()
         x_ref(12, i) = -9.81;
         //P_param.block(0, 1+i, n, 1+i) = x_ref.block(0, i, n, i);
     }
-
+    
     P_param.block(0, 1, n, N) = x_ref;
 
     for(int i = 0; i < N; ++i) {
 
         I_world << (Ixx*cos(psi_t) + Iyx*sin(psi_t))*cos(psi_t) + (Ixy*cos(psi_t) + Iyy*sin(psi_t))*sin(psi_t), -(Ixx*cos(psi_t) + Iyx*sin(psi_t))*sin(psi_t) + (Ixy*cos(psi_t) + Iyy*sin(psi_t))*cos(psi_t), Ixz*cos(psi_t) + Iyz*sin(psi_t), (-Ixx*sin(psi_t) + Iyx*cos(psi_t))*cos(psi_t) + (-Ixy*sin(psi_t) + Iyy*cos(psi_t))*sin(psi_t), -(-Ixx*sin(psi_t) + Iyx*cos(psi_t))*sin(psi_t) + (-Ixy*sin(psi_t) + Iyy*cos(psi_t))*cos(psi_t), -Ixz*sin(psi_t) + Iyz*cos(psi_t), Ixy*sin(psi_t) + Izx*cos(psi_t), Ixy*cos(psi_t) - Izx*sin(psi_t), Izz;
 
-        // Location of the force vector being applied by the left foot.
-       
 
         r_left_skew_symmetric << 0, -r_z_left, r_y_left,
                                     r_z_left, 0, -r_x_left,
@@ -757,8 +756,8 @@ int main()
 
         discretize_state_space_matrices(A_c, B_c, dt, A_d_t, B_d_t);
 
-        // A_d_array[i] = A_d_t;
-        // B_d_array[i] = B_d_t;
+        A_d_array[i] = A_d_t;
+        B_d_array[i] = B_d_t;
 
         P_param.block(0, 1 + N + (i*n), n, n) = A_d_t;
         P_param.block(0, 1 + N + n * N + (i*m), n, m) = B_d_t;
@@ -779,7 +778,11 @@ int main()
     for(int i = 0; i < N; ++i) {
         D_vector.block(0, i*m, m, m) = D_t;
     }
+
+    std::cout << D_vector.rows() << "x" << D_vector.cols() << std::endl;
+    
     P_param.block(0, 1+N+n*N+m*N, m, m*N) = D_vector;
+    //P_param.block(m, 1+N+n*N+m*N, n-m, m*N) = Eigen::ArrayXXd::Zero(n-m, m*N);
 
     size_t rows_P_param = P_param.rows();
     size_t cols_P_param = P_param.cols();
@@ -788,7 +791,8 @@ int main()
 
     std::memcpy(P_param_casadi.ptr(), P_param.data(), sizeof(double)*rows_P_param*cols_P_param);
 
-    solver_arguments["p"] = P_param_casadi;
+    auto end = high_resolution_clock::now();
+    std::cout << "Setup took " << duration_cast<microseconds>(end - start).count() << " microseconds" << std::endl;
 
     std::cout << "\n\n" << x0_solver_casadi(Slice(0, 5*n), 0) << std::endl;
 
@@ -799,11 +803,61 @@ int main()
     std::cout << "\n\n" <<P_param_casadi(Slice(0, n), Slice(1+N+n*N, 1+N+n*N+m*3)) << std::endl;
 
     std::cout << "\n\n" << P_param_casadi(Slice(0, m), Slice(1+N+n*N+m*N, 1+N+n*N+m*N+3*m)) << std::endl;
-    
-    std::cout << "Before solution calculation" << std::endl;
 
-    auto end = high_resolution_clock::now();
-    std::cout << "Setup took " << duration_cast<microseconds>(end - start).count() << " microseconds" << std::endl;
+    DM P_param_test = DM::zeros(P_rows, P_cols);
+
+    for(int i = 0; i < n; ++i) {
+        P_param_test(i,0) = x_t(i);
+    }
+
+    for(int col = 1; col < 1+N; ++col) {
+        for(int row = 0; row < n; ++row) {
+            P_param_test(row, col) = x_ref(row, col-1);
+        }
+    }
+
+    for(int col = 0; col < N; ++col) {
+        int index = (1 + N) + col * n;
+
+        for(int col_temp = 0; col_temp < n; ++col_temp) {
+            for(int row_temp = 0; row_temp < n; ++row_temp) {
+                P_param_test(row_temp, col_temp + index) = A_d_array[col](row_temp, col_temp);
+            }
+        }
+    }
+
+    for(int col = 0; col < N; ++col) {
+        int index = (1 + N + n*N) + col * m;
+
+        for(int col_temp = 0; col_temp < m; ++col_temp) {
+            for(int row_temp = 0; row_temp < n; ++row_temp) {
+                P_param_test(row_temp, col_temp + index) = B_d_array[col](row_temp, col_temp);
+            }
+        }
+    }
+
+    for(int col = 0; col < N; ++col) {
+        int index = 1 + N + n*N + m*N + col * m;
+
+        for(int col_temp = 0; col_temp < m; ++col_temp) {
+            for(int row_temp = 0; row_temp < m; ++row_temp) {
+                P_param_test(row_temp, col_temp + index) = D_vector(row_temp, col_temp);
+            }
+        }
+    }
+
+    for(int col = 0; col < P_cols; ++col) {
+        for(int row = 0; row < P_rows; ++row) {
+            if(abs((double)P_param_casadi(row, col) - (double)P_param_test(row, col)) > 1e-10) {
+                std::cout << "Values are different at " << row << "," << col << std::endl;
+                std::cout << "P_param_casadi at this index: " << (double)P_param_casadi(row, col) << " , P_param_test at this index: " << P_param_test(row, col) << std::endl;
+            }
+        }
+    }
+    
+    solver_arguments["p"] = P_param_casadi;
+
+    std::cout << "Before solution calculation" << std::endl;
 
     solution = solver(solver_arguments);
 
@@ -815,7 +869,7 @@ int main()
     std::cout << solution.at("x")(420) << std::endl;
     std::cout << solution.at("x")(203) << std::endl;
     std::cout << solution.at("x")(27) << std::endl;
-    std::cout << solution.at("x")(522) << std::endl; 
+    std::cout << solution.at("x")(522) << std::endl;
     while(true) {
 
     }
