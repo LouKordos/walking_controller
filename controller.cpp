@@ -527,7 +527,7 @@ int main()
     ipopt_opts["acceptable_tol"] = 1e-7;
     ipopt_opts["acceptable_obj_change_tol"] = 1e-5;
 
-    opts["print_time"] = 1;
+    opts["print_time"] = 0;
     opts["ipopt"] = ipopt_opts;
     opts["expand"] = false;
 
@@ -675,8 +675,12 @@ int main()
     solver_arguments["lbx"] = lbx;
     solver_arguments["ubx"] = ubx;
 
-    // Loop starts here
+    struct timespec deadline; // timespec struct for storing time that execution thread should sleep for
+
+    while(true) {
+        // Loop starts here
     auto start = high_resolution_clock::now();
+    auto start_total = high_resolution_clock::now();
 
     iterations_left_until_contact_swap -= 1;
 
@@ -940,7 +944,12 @@ int main()
 
     double duration_before = duration_cast<microseconds>(end - start).count();
 
+    auto sol_start = high_resolution_clock::now();
+
     solution = solver(solver_arguments);
+
+    auto sol_end = high_resolution_clock::now();
+    double solver_time = duration_cast<microseconds>(sol_end - sol_start).count();
 
     start = high_resolution_clock::now();
 
@@ -972,9 +981,21 @@ int main()
     end = high_resolution_clock::now();
     double duration_after = duration_cast<microseconds> (end - start).count();
 
-    std::cout << "Full iteration took " << duration_before + duration_after << " microseconds" << std::endl;
-    
-    while(true) {
+    std::cout << "Full iteration setup took " << duration_before + duration_after << " microseconds" << std::endl;
 
+    std::cout << "u_t: " << u_t(0) << "," << u_t(1) << "," << u_t(2) << "," << u_t(3) << "," << u_t(4) << "," << u_t(5) << std::endl;
+
+    std::cout << "r_y_left: " << r_y_left << ",r_y_right: " << r_y_right << std::endl; 
+
+    std::cout << "D_t:\n" << D_current << std::endl;
+
+    auto end_total = high_resolution_clock::now();
+    double full_iteration_duration = duration_cast<microseconds> (end_total - start_total).count();
+
+    long long remainder = (dt * 1e+6 - full_iteration_duration) * 1e+3;
+    std::cout << "Remainder: " << remainder << " microseconds" << std::endl;
+    deadline.tv_nsec = remainder;
+    deadline.tv_sec = 0;
+    clock_nanosleep(CLOCK_REALTIME, 0, &deadline, NULL);
     }
 }
