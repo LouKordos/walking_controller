@@ -238,7 +238,7 @@ cmake ..
 make -j 12
 
 echo -e "\n#This alias will allow easier startup of the Biped walking controller." >> ${HOME}/.bashrc
-echo -e "\nalias run_walking_controller=\"mkdir ${WORKSPACE_DIRECTORY}/build/ cd ${WORKSPACE_DIRECTORY}/build/ && make && ./controller\"" >> ${HOME}/.bashrc
+echo -e "\nalias run_walking_controller=\"mkdir ${WORKSPACE_DIRECTORY}/build/ ; cd ${WORKSPACE_DIRECTORY}/build/ && make && ./controller\"" >> ${HOME}/.bashrc
 
 echo -e "\n#This alias will (hopefully) allow updating all Biped repos automatically." >> ${HOME}/.bashrc
 echo -e "\nalias update_biped_repos=\"cd ${WORKSPACE_DIRECTORY} && git pull ; cd ${GITHUB_DIRECTORY}/jupyter_notebooks/ && git pull ; cd ${HOME}/.gazebo/models/simplified_biped/ && git pull\"" >> ${HOME}/.bashrc
