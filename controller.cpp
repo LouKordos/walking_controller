@@ -56,7 +56,7 @@ const char* left_leg_torque_setpoint_channel = "left_leg_torque_setpoint";
 const char* right_leg_torque_setpoint_channel = "right_leg_torque_setpoint";
 
 const int udp_port = 4200; // UDP port for communication between gazebosim and controller code
-
+const int mpc_port = 4801;
 
 const int udp_buffer_size = 4096; // Buffer size for receiving leg state from gazebosim
 
@@ -139,7 +139,6 @@ void calculate_left_leg_torques() {
     double dt = torque_calculation_interval / 1000 / 1000; // Loop update interval in seconds for calculation current loop "time" based on iteration counter
 
     // Setting up UDP server socket...
-
     int sockfd;
     char buffer[udp_buffer_size];
     struct sockaddr_in servaddr, cliaddr; 
@@ -155,7 +154,7 @@ void calculate_left_leg_torques() {
       
     // Filling server information 
     servaddr.sin_family    = AF_INET; // IPv4 
-    servaddr.sin_addr.s_addr = INADDR_ANY; 
+    servaddr.sin_addr.s_addr = inet_addr("127.0.0.1"); 
     servaddr.sin_port = htons(udp_port); 
       
     // Bind the socket with the server address 
@@ -193,7 +192,7 @@ void calculate_left_leg_torques() {
     } 
     else {
         /* could not open directory */
-        perror ("");
+        perror ("Could not open directory to get latest plot file.");
     }        
 
     std::string filename = std::to_string(largest_index + 1);
@@ -296,7 +295,7 @@ void calculate_left_leg_torques() {
         double theta4_dot = 0;
         double theta5_dot = 0;
 
-        n = recvfrom(sockfd, (char *)buffer, udp_buffer_size, MSG_WAITALL, ( struct sockaddr *) &cliaddr, &len); // Receive message over UDP containing full leg state
+        n = recvfrom(sockfd, (char *)buffer, udp_buffer_size, 0, ( struct sockaddr *) &cliaddr, &len); // Receive message over UDP containing full leg state
         buffer[n] = '\0'; // Add string ending delimiter to end of string (n is length of message)
 
         std::string raw_state(buffer); // Create string from buffer char array to split
@@ -482,6 +481,8 @@ void discretize_state_space_matrices(const Eigen::Matrix<double, n, n> &A_c, con
 
 void run_mpc() {
 
+    // Setting up UDP server socket...
+    
 }
 
 int main()
@@ -502,16 +503,44 @@ int main()
     
     //left_leg_state_thread = std::thread(std::bind(update_left_leg_state));
     left_leg_torque_thread = std::thread(std::bind(calculate_left_leg_torques)); // Bind function to thread
-    left_leg_mpc_thread = std::thread(std::bind(run_mpc));
+    //left_leg_mpc_thread = std::thread(std::bind(run_mpc));
 
     std::cout << "omega_desired is currently:" << omega_desired(0) << ", " << omega_desired(1) << ", " << omega_desired(2) << std::endl; // Print out current natural frequency
     std::cout << std::endl << std::endl << std::endl;
 
+    int sockfd;
+    char buffer[udp_buffer_size];
+    struct sockaddr_in servaddr, cliaddr;
+    
+    // Creating socket file descriptor
+    if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
+        perror("socket creation failed");
+        exit(EXIT_FAILURE);
+    }
+    
+    memset(&servaddr, 0, sizeof(servaddr));
+    memset(&cliaddr, 0, sizeof(cliaddr));
+    
+    // Filling server information
+    servaddr.sin_family = AF_INET; // IPv4
+    servaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    servaddr.sin_port = htons(mpc_port);
+    
+    // Bind the socket with the server address
+    if ( bind(sockfd, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0 )
+    {
+        perror("bind failed");
+        exit(EXIT_FAILURE);
+    }
+    
+    int msg_length;
+
+    socklen_t len;
     Eigen::Matrix<double, n, 1> x_t = (Eigen::Matrix<double, n, 1>() << 0, 0, 0, 0, 0, 1.48, 0, 0, 0, 0, 0, 0, -9.81).finished();
     Eigen::Matrix<double, m, 1> u_t = Eigen::ArrayXXd::Zero(m, 1);
 
     static const double m_value = 30.0; // kg
-
+    
     /*
     opts = {}
     opts["print_time"] = 1
@@ -527,7 +556,7 @@ int main()
     ipopt_opts["acceptable_tol"] = 1e-7;
     ipopt_opts["acceptable_obj_change_tol"] = 1e-5;
 
-    opts["print_time"] = 0;
+    opts["print_time"] = 1;
     opts["ipopt"] = ipopt_opts;
     opts["expand"] = false;
 
@@ -561,22 +590,16 @@ int main()
         ubg(i) = 0;
     }
 
-    std::cout << "After initial state, dynamics and contact constraint setup." << std::endl;
-
     // Friction constraints
     for(int i = n * (N+1) + m*N; i < num_constraint_bounds; ++i) {
         lbg(i) = -DM::inf();
         ubg(i) = 0;
     }
 
-    std::cout << "After friction constraint setup." << std::endl;
-
     for(int i = 0; i < n*(N+1); ++i) {
         lbx(i) = -DM::inf();
         ubx(i) = DM::inf();
     }
-
-    std::cout << "After state bounds setup." << std::endl;
 
     for(int i = 0; i < N; ++i) {
         int index = n*(N+1) + (i*m);
@@ -608,9 +631,9 @@ int main()
 
     Eigen::Matrix<double, 3, 3> I_world = Eigen::ArrayXXd::Zero(3, 3);;
 
-    static const Eigen::MatrixXd I_body = (Eigen::Matrix<double, 3, 3>() << 0.836, 0.0, 0.0,
-                                                                            0.0, 1.2288, 0.0,
-                                                                            0.0, 0.0, 1.4843).finished();
+    static const Eigen::MatrixXd I_body = (Eigen::Matrix<double, 3, 3>() << 0.1536, 0.0, 0.0,
+                                                                            0.0, 0.62288, 0.0,
+                                                                            0.0, 0.0, 0.6843).finished();
 
     static const double Ixx = I_body(0, 0);
     static const double Ixy = I_body(0, 1);
@@ -657,12 +680,12 @@ int main()
     static bool foot_behind_right = !swing_right;
 
     static double pos_y_desired = 0.0;
-    static double vel_y_desired = 0.2;
+    static double vel_y_desired = 0;
 
     static double psi_desired = 0.0;
     static double omega_z_desired = 0.0;
 
-    static double step_length = 0.2;
+    static double step_length = 0.0;
 
     static const int contact_swap_interval = 15; // 0.5s
 
@@ -679,323 +702,371 @@ int main()
 
     while(true) {
         // Loop starts here
-    auto start = high_resolution_clock::now();
-    auto start_total = high_resolution_clock::now();
+        auto start = high_resolution_clock::now();
+        auto start_total = high_resolution_clock::now();
 
-    iterations_left_until_contact_swap -= 1;
+        //msg_length = recvfrom(sockfd, (char *)buffer, udp_buffer_size, 0, ( struct sockaddr *) &cliaddr, &len); // Receive message over UDP containing full leg state
+        //buffer[msg_length] = '\0'; // Add string ending delimiter to end of string (n is length of message)
+        
+        // std::string raw_state(buffer); // Create string from buffer char array to split
 
-    if (total_iterations % contact_swap_interval == 0) {
-        swing_left = !swing_left;
-        swing_right = !swing_right;
-        iterations_left_until_contact_swap = contact_swap_interval;
-    }
+        // std::cout << raw_state << std::endl;
 
-    D_current << swing_left, 0, 0, 0, 0, 0,
-            0, swing_left, 0, 0, 0, 0,
-            0, 0, swing_left, 0, 0, 0,
-            0, 0, 0, swing_right, 0, 0,
-            0, 0, 0, 0, swing_right, 0,
-            0, 0, 0, 0, 0, swing_right;
+        // std::vector<std::string> com_state = split_string(raw_state, '|'); // Split raw state message by message delimiter to parse individual elements
 
-    if(contact_swap_interval >= N) {
-        for(int i = 0; i < N; ++i) {
-            D_vector.block(0, i*m, m, m) = D_current;
-        }
-    }
-    else {
-        for(int i = 0; i < iterations_left_until_contact_swap; ++i) {
-            D_vector.block(0, i*m, m, m) = D_current;
+        // for(int i = 0; i < n; ++i) {
+        //     x_t(i, 0) = atof(com_state[i].c_str());
+        // }
+
+        iterations_left_until_contact_swap -= 1;
+
+        if (total_iterations % contact_swap_interval == 0) {
+            swing_left = !swing_left;
+            swing_right = !swing_right;
+            iterations_left_until_contact_swap = contact_swap_interval;
         }
 
-        D_next << swing_left, 0, 0, 0, 0, 0,
+        D_current << swing_left, 0, 0, 0, 0, 0,
                 0, swing_left, 0, 0, 0, 0,
                 0, 0, swing_left, 0, 0, 0,
                 0, 0, 0, swing_right, 0, 0,
                 0, 0, 0, 0, swing_right, 0,
                 0, 0, 0, 0, 0, swing_right;
 
-        for(int i = iterations_left_until_contact_swap; i < N; ++i) {
-            D_vector.block(0, i*m, m, m) = D_next;
+        if(contact_swap_interval >= N) {
+            for(int i = 0; i < N; ++i) {
+                D_vector.block(0, i*m, m, m) = D_current;
+            }
         }
-    }
-    P_param.block(0, 1+N+n*N+m*N, m, m*N) = D_vector;
+        else {
+            for(int i = 0; i < iterations_left_until_contact_swap; ++i) {
+                D_vector.block(0, i*m, m, m) = D_current;
+            }
 
-    for(int k = 0; k < N; ++k) {
-        if(swing_left && swing_right) { // No feet in contact
-            P_param(m+0, 1 + N + n*N + m*N + k*m) = 0;
-            P_param(m+1, 1 + N + n*N + m*N + k*m) = 0;
-            P_param(m+2, 1 + N + n*N + m*N + k*m) = 0;
-            P_param(m+3, 1 + N + n*N + m*N + k*m) = 0;
-            P_param(m+4, 1 + N + n*N + m*N + k*m) = 0;
-            P_param(m+5, 1 + N + n*N + m*N + k*m) = 0;
+            D_next << !swing_left, 0, 0, 0, 0, 0,
+                    0, !swing_left, 0, 0, 0, 0,
+                    0, 0, !swing_left, 0, 0, 0,
+                    0, 0, 0, !swing_right, 0, 0,
+                    0, 0, 0, 0, !swing_right, 0,
+                    0, 0, 0, 0, 0, !swing_right;
+
+            for(int i = iterations_left_until_contact_swap; i < N; ++i) {
+                D_vector.block(0, i*m, m, m) = D_next;
+            }
         }
-        else if(swing_left && !swing_right) { // Right foot in contact
-            P_param(m+0, 1 + N + n*N + m*N + k*m) = 0;
-            P_param(m+1, 1 + N + n*N + m*N + k*m) = 0;
-            P_param(m+2, 1 + N + n*N + m*N + k*m) = 0;
-            P_param(m+3, 1 + N + n*N + m*N + k*m) = 0;
-            P_param(m+4, 1 + N + n*N + m*N + k*m) = 0;
-            P_param(m+5, 1 + N + n*N + m*N + k*m) = m_value * 9.81;
+        P_param.block(0, 1+N+n*N+m*N, m, m*N) = D_vector;
+
+        for(int k = 0; k < N; ++k) {
+            if(swing_left && swing_right) { // No feet in contact
+                P_param(m+0, 1 + N + n*N + m*N + k*m) = 0;
+                P_param(m+1, 1 + N + n*N + m*N + k*m) = 0;
+                P_param(m+2, 1 + N + n*N + m*N + k*m) = 0;
+                P_param(m+3, 1 + N + n*N + m*N + k*m) = 0;
+                P_param(m+4, 1 + N + n*N + m*N + k*m) = 0;
+                P_param(m+5, 1 + N + n*N + m*N + k*m) = 0;
+            }
+            else if(swing_left && !swing_right) { // Right foot in contact
+                P_param(m+0, 1 + N + n*N + m*N + k*m) = 0;
+                P_param(m+1, 1 + N + n*N + m*N + k*m) = 0;
+                P_param(m+2, 1 + N + n*N + m*N + k*m) = 0;
+                P_param(m+3, 1 + N + n*N + m*N + k*m) = 0;
+                P_param(m+4, 1 + N + n*N + m*N + k*m) = 0;
+                P_param(m+5, 1 + N + n*N + m*N + k*m) = m_value * 9.81;
+            }
+            else if(!swing_left && swing_right) { // Left foot in contact
+                P_param(m+0, 1 + N + n*N + m*N + k*m) = 0;
+                P_param(m+1, 1 + N + n*N + m*N + k*m) = 0;
+                P_param(m+2, 1 + N + n*N + m*N + k*m) = m_value * 9.81;
+                P_param(m+3, 1 + N + n*N + m*N + k*m) = 0;
+                P_param(m+4, 1 + N + n*N + m*N + k*m) = 0;
+                P_param(m+5, 1 + N + n*N + m*N + k*m) = 0;
+            }
+            else if(swing_left && !swing_right) { // Both feet in contact
+                P_param(m+0, 1 + N + n*N + m*N + k*m) = 0;
+                P_param(m+1, 1 + N + n*N + m*N + k*m) = 0;
+                P_param(m+2, 1 + N + n*N + m*N + k*m) = (m_value * 9.81) / 2;
+                P_param(m+3, 1 + N + n*N + m*N + k*m) = 0;
+                P_param(m+4, 1 + N + n*N + m*N + k*m) = 0;
+                P_param(m+5, 1 + N + n*N + m*N + k*m) = (m_value * 9.81) / 2;
+            }
         }
-        else if(!swing_left && swing_right) { // Left foot in contact
-            P_param(m+0, 1 + N + n*N + m*N + k*m) = 0;
-            P_param(m+1, 1 + N + n*N + m*N + k*m) = 0;
-            P_param(m+2, 1 + N + n*N + m*N + k*m) = m_value * 9.81;
-            P_param(m+3, 1 + N + n*N + m*N + k*m) = 0;
-            P_param(m+4, 1 + N + n*N + m*N + k*m) = 0;
-            P_param(m+5, 1 + N + n*N + m*N + k*m) = 0;
-        }
-        else if(swing_left && !swing_right) { // Both feet in contact
-            P_param(m+0, 1 + N + n*N + m*N + k*m) = 0;
-            P_param(m+1, 1 + N + n*N + m*N + k*m) = 0;
-            P_param(m+2, 1 + N + n*N + m*N + k*m) = (m_value * 9.81) / 2;
-            P_param(m+3, 1 + N + n*N + m*N + k*m) = 0;
-            P_param(m+4, 1 + N + n*N + m*N + k*m) = 0;
-            P_param(m+5, 1 + N + n*N + m*N + k*m) = (m_value * 9.81) / 2;
-        }
-    }
-    // Move this into if statement below to reduce execution time
-    if(foot_behind_left) {
-        r_y_left = -step_length;
-    }
-    else {
-        r_y_left = step_length;
-    }
-
-    if(total_iterations % (contact_swap_interval * 2) == 0) {
-        foot_behind_left = !foot_behind_left;
-        foot_behind_right = !foot_behind_right;
-    }
-
-    r_z_left = -x_t(5);
-    r_z_right = -x_t(5);
-
-    size_t rows_x0_solver = x0_solver.rows();
-    size_t cols_x0_solver = x0_solver.cols();
-
-    DM x0_solver_casadi = casadi::DM::zeros(rows_x0_solver, cols_x0_solver);
-
-    std::memcpy(x0_solver_casadi.ptr(), x0_solver.data(), sizeof(double)*rows_x0_solver*cols_x0_solver);
-    solver_arguments["x0"] = x0_solver_casadi;
-
-    for(int i = 0; i < n; ++i) {
-        P_param(i,0) = x_t(i);
-    }
-
-    static double pos_y_desired_temp = pos_y_desired;
-    static double psi_desired_temp = psi_desired;
-
-    for(int i = 0; i < N; ++i) {
-        pos_y_desired_temp += vel_y_desired * dt;
-        psi_desired_temp += omega_z_desired * dt;
-
-        x_ref(0, i) = 0;
-        x_ref(1, i) = 0;
-        x_ref(2, i) = psi_desired_temp;
-        x_ref(3, i) = 0;
-        x_ref(4, i) = 0;
-        x_ref(5, i) = pos_y_desired;
-        x_ref(6, i) = 0;
-        x_ref(7, i) = 0;
-        x_ref(8, i) = omega_z_desired;
-        x_ref(9, i) = 0;
-        x_ref(10, i) = vel_y_desired;
-        x_ref(11, i) = 0;
-        x_ref(12, i) = -9.81;
-    }
-    P_param.block(0, 1, n, N) = x_ref;
-
-    pos_y_desired += vel_y_desired * dt;
-    psi_desired += omega_z_desired * dt;
-
-    static bool foot_behind_left_temp = foot_behind_left;
-    static bool foot_behind_right_temp = foot_behind_right;
-
-    static double r_y_left_temp = r_y_left;
-    static double r_y_right_temp = r_y_right;
-
-    static double vel_x_t = 0.0;
-    static double vel_y_t = 0.0;
-    static double vel_z_t = 0.0;
-    static double pos_y_t = 0.0;
-    static double pos_x_t = 0.0;
-    static double pos_y_t_next = 0.0f;
-    static double pos_z_t = 0.0;
-
-    for(int i = 0; i < N; ++i) {
-        if (i < N-1) {
-            phi_t = X_t(n*(i+1) + 0);
-            theta_t = X_t(n*(i+1) + 1);
-            psi_t = X_t(n*(i+1) + 2);
-
-            vel_x_t = X_t(n*(i+1)+9);
-            vel_y_t = X_t(n*(i+1)+10);
-            vel_z_t = X_t(n*(i+1)+11);
-            
-            pos_x_t = X_t(n*(i+1)+3);
-            pos_y_t = X_t(n*(i+1)+4);
-            pos_y_t_next = X_t(n*(i+2)+4);
-            pos_z_t = X_t(n*(i+1)+5);
-        }
-        if(i == 0) {
-            phi_t = x_t(0);
-            theta_t = x_t(1);
-            psi_t = x_t(2);
-
-            vel_x_t = x_t(9);
-            vel_y_t = x_t(10);
-            vel_z_t = x_t(11);
-
-            pos_x_t = x_t(3);
-            pos_y_t = x_t(4);
-            pos_y_t_next = X_t(n*(i+1)+4);
-            pos_z_t = x_t(5);
-        }
-
-        if(foot_behind_left_temp) {
+        // Move this into if statement below to reduce execution time
+        if(foot_behind_left) {
             r_y_left = -step_length;
         }
         else {
             r_y_left = step_length;
         }
 
-        if(foot_behind_right_temp) {
+        if(foot_behind_right) {
             r_y_right = -step_length;
         }
         else {
             r_y_right = step_length;
         }
 
-        if ((total_iterations+i) % (contact_swap_interval *2) == 0 && i != 0) {
-            foot_behind_left_temp = !foot_behind_left_temp;
-            foot_behind_right_temp = !foot_behind_right_temp;
+        if(total_iterations % (contact_swap_interval * 2) == 0) {
+            foot_behind_left = !foot_behind_left;
+            foot_behind_right = !foot_behind_right;
         }
 
-        r_z_left = -pos_z_t;
-        r_z_right = -pos_z_t;
+        r_z_left = -x_t(5);
+        r_z_right = -x_t(5);
 
-        r_y_left -= (pos_y_t_next - pos_y_t);
-        r_y_right -= (pos_y_t_next - pos_y_t);
+        for(int i = 0; i < n; ++i) {
+            P_param(i,0) = x_t(i);
+        }
 
-        I_world << (Ixx*cos(psi_t) + Iyx*sin(psi_t))*cos(psi_t) + (Ixy*cos(psi_t) + Iyy*sin(psi_t))*sin(psi_t), -(Ixx*cos(psi_t) + Iyx*sin(psi_t))*sin(psi_t) + (Ixy*cos(psi_t) + Iyy*sin(psi_t))*cos(psi_t), Ixz*cos(psi_t) + Iyz*sin(psi_t), (-Ixx*sin(psi_t) + Iyx*cos(psi_t))*cos(psi_t) + (-Ixy*sin(psi_t) + Iyy*cos(psi_t))*sin(psi_t), -(-Ixx*sin(psi_t) + Iyx*cos(psi_t))*sin(psi_t) + (-Ixy*sin(psi_t) + Iyy*cos(psi_t))*cos(psi_t), -Ixz*sin(psi_t) + Iyz*cos(psi_t), Ixy*sin(psi_t) + Izx*cos(psi_t), Ixy*cos(psi_t) - Izx*sin(psi_t), Izz;
+        static double pos_y_desired_temp = pos_y_desired;
+        static double psi_desired_temp = psi_desired;
 
+        for(int i = 0; i < N; ++i) {
+            pos_y_desired_temp += vel_y_desired * dt;
+            psi_desired_temp += omega_z_desired * dt;
 
-        r_left_skew_symmetric << 0, -r_z_left, r_y_left,
-                                    r_z_left, 0, -r_x_left,
-                                    -r_y_left, r_x_left, 0;
+            x_ref(0, i) = 0;
+            x_ref(1, i) = 0;
+            x_ref(2, i) = psi_desired_temp;
+            x_ref(3, i) = 0;
+            x_ref(4, i) = pos_y_desired;
+            x_ref(5, i) = 1;
+            x_ref(6, i) = 0;
+            x_ref(7, i) = 0;
+            x_ref(8, i) = omega_z_desired;
+            x_ref(9, i) = 0;
+            x_ref(10, i) = vel_y_desired;
+            x_ref(11, i) = 0;
+            x_ref(12, i) = -9.81;
+        }
+        P_param.block(0, 1, n, N) = x_ref;
+
+        pos_y_desired += vel_y_desired * dt;
+        psi_desired += omega_z_desired * dt;
+
+        static bool foot_behind_left_temp = foot_behind_left;
+        static bool foot_behind_right_temp = foot_behind_right;
+
+        static double r_y_left_temp = r_y_left;
+        static double r_y_right_temp = r_y_right;
+
+        static double r_x_left_temp = r_x_left;
+        static double r_x_right_temp = r_x_right;
+
+        static double r_z_left_temp = r_z_left;
+        static double r_z_right_temp = r_z_right;
+
+        static double vel_x_t = 0.0;
+        static double vel_y_t = 0.0;
+        static double vel_z_t = 0.0;
+        static double pos_y_t = 0.0;
+        static double pos_x_t = 0.0;
+        static double pos_y_t_next = 0.0f;
+        static double pos_z_t = 0.0;
+
+        for(int i = 0; i < N; ++i) {
+            if (i < N-1) {
+                phi_t = X_t(n*(i+1) + 0);
+                theta_t = X_t(n*(i+1) + 1);
+                psi_t = X_t(n*(i+1) + 2);
+
+                vel_x_t = X_t(n*(i+1)+9);
+                vel_y_t = X_t(n*(i+1)+10);
+                vel_z_t = X_t(n*(i+1)+11);
                 
-        r_right_skew_symmetric << 0, -r_z_right, r_y_right,
-                                    r_z_right, 0, -r_x_right,
-                                    -r_y_right, r_x_right, 0;
+                pos_x_t = X_t(n*(i+1)+3);
+                pos_y_t = X_t(n*(i+1)+4);
+                pos_y_t_next = X_t(n*(i+2)+4);
+                pos_z_t = X_t(n*(i+1)+5);
+            }
+            if(i == 0) {
+                phi_t = x_t(0);
+                theta_t = x_t(1);
+                psi_t = x_t(2);
 
-        A_c << 0, 0, 0, 0, 0, 0, cos(psi_t), sin(psi_t), 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, -sin(psi_t), cos(psi_t), 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0,
-                
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
-                
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-                
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+                vel_x_t = x_t(9);
+                vel_y_t = x_t(10);
+                vel_z_t = x_t(11);
 
-        B_c << 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0,
-                I_world * r_left_skew_symmetric, I_world * r_right_skew_symmetric,
-                1/m_value, 0, 0, 1/m_value, 0, 0,
-                0, 1/m_value, 0, 0, 1/m_value, 0,
-                0, 0, 1/m_value, 0, 0, 1/m_value,
-                0, 0, 0, 0, 0, 0;
+                pos_x_t = x_t(3);
+                pos_y_t = x_t(4);
+                pos_y_t_next = X_t(n*(i+1)+4);
+                pos_z_t = x_t(5);
+            }
 
-        discretize_state_space_matrices(A_c, B_c, dt, A_d_t, B_d_t);
+            if(foot_behind_left_temp) {
+                r_y_left_temp = -step_length;
+            }
+            else {
+                r_y_left_temp = step_length;
+            }
 
-        A_d_array[i] = A_d_t;
-        B_d_array[i] = B_d_t;
+            if(foot_behind_right_temp) {
+                r_y_right_temp = -step_length;
+            }
+            else {
+                r_y_right_temp = step_length;
+            }
 
-        P_param.block(0, 1 + N + (i*n), n, n) = A_d_t;
-        P_param.block(0, 1 + N + n * N + (i*m), n, m) = B_d_t;
+            if ((total_iterations+i) % (contact_swap_interval *2) == 0 && i != 0) {
+                foot_behind_left_temp = !foot_behind_left_temp;
+                foot_behind_right_temp = !foot_behind_right_temp;
+            }
+
+            r_z_left_temp = -pos_z_t;
+            r_z_right_temp = -pos_z_t;
+
+            r_y_left_temp -= (pos_y_t_next - pos_y_t);
+            r_y_right_temp -= (pos_y_t_next - pos_y_t);
+
+            I_world << (Ixx*cos(psi_t) + Iyx*sin(psi_t))*cos(psi_t) + (Ixy*cos(psi_t) + Iyy*sin(psi_t))*sin(psi_t), -(Ixx*cos(psi_t) + Iyx*sin(psi_t))*sin(psi_t) + (Ixy*cos(psi_t) + Iyy*sin(psi_t))*cos(psi_t), Ixz*cos(psi_t) + Iyz*sin(psi_t), (-Ixx*sin(psi_t) + Iyx*cos(psi_t))*cos(psi_t) + (-Ixy*sin(psi_t) + Iyy*cos(psi_t))*sin(psi_t), -(-Ixx*sin(psi_t) + Iyx*cos(psi_t))*sin(psi_t) + (-Ixy*sin(psi_t) + Iyy*cos(psi_t))*cos(psi_t), -Ixz*sin(psi_t) + Iyz*cos(psi_t), Ixy*sin(psi_t) + Izx*cos(psi_t), Ixy*cos(psi_t) - Izx*sin(psi_t), Izz;
+
+
+            r_left_skew_symmetric << 0, -r_z_left_temp, r_y_left_temp,
+                                        r_z_left_temp, 0, -r_x_left_temp,
+                                        -r_y_left_temp, r_x_left_temp, 0;
+                    
+            r_right_skew_symmetric << 0, -r_z_right_temp, r_y_right_temp,
+                                        r_z_right_temp, 0, -r_x_right_temp,
+                                        -r_y_right_temp, r_x_right_temp, 0;
+
+            A_c << 0, 0, 0, 0, 0, 0, cos(psi_t), sin(psi_t), 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, -sin(psi_t), cos(psi_t), 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0,
+                    
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
+                    
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+                    
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+
+            B_c << 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0,
+                    I_world * r_left_skew_symmetric, I_world * r_right_skew_symmetric,
+                    1/m_value, 0, 0, 1/m_value, 0, 0,
+                    0, 1/m_value, 0, 0, 1/m_value, 0,
+                    0, 0, 1/m_value, 0, 0, 1/m_value,
+                    0, 0, 0, 0, 0, 0;
+
+            discretize_state_space_matrices(A_c, B_c, dt, A_d_t, B_d_t);
+
+            A_d_array[i] = A_d_t;
+            B_d_array[i] = B_d_t;
+
+            P_param.block(0, 1 + N + (i*n), n, n) = A_d_t;
+            P_param.block(0, 1 + N + n * N + (i*m), n, m) = B_d_t;
+        }
+
+        size_t rows_P_param = P_param.rows();
+        size_t cols_P_param = P_param.cols();
+
+        DM P_param_casadi = casadi::DM::zeros(rows_P_param, cols_P_param);
+
+        std::memcpy(P_param_casadi.ptr(), P_param.data(), sizeof(double)*rows_P_param*cols_P_param);
+        
+        solver_arguments["p"] = P_param_casadi;
+
+        std::cout << "Before updating x0_solver." << std::endl;
+        
+        x0_solver << X_t, U_t;
+
+        size_t rows_x0_solver = x0_solver.rows();
+        size_t cols_x0_solver = x0_solver.cols();
+
+        DM x0_solver_casadi = casadi::DM::zeros(rows_x0_solver, cols_x0_solver);
+
+        std::memcpy(x0_solver_casadi.ptr(), x0_solver.data(), sizeof(double)*rows_x0_solver*cols_x0_solver);
+        solver_arguments["x0"] = x0_solver_casadi;
+        
+        std::cout << "After updating x0_solver." << std::endl;
+
+        //std::cout << "x0_solver:\n" << x0_solver << std::endl;
+
+        auto end = high_resolution_clock::now();
+
+        double duration_before = duration_cast<microseconds>(end - start).count();
+
+        auto sol_start = high_resolution_clock::now();
+
+        solution = solver(solver_arguments);
+
+        auto sol_end = high_resolution_clock::now();
+        double solver_time = duration_cast<microseconds>(sol_end - sol_start).count();
+
+        start = high_resolution_clock::now();
+
+        size_t rows = solution.at("x").size1();
+        size_t cols = solution.at("x").size2();
+
+        Eigen::Matrix<double, n*(N+1) + m*N, 1> solution_variables = Eigen::ArrayXXd::Zero(n*(N+1) + m*N, 1);
+
+        solution_variables.resize(rows,cols);
+        solution_variables.setZero(rows,cols);
+
+        std::memcpy(solution_variables.data(), solution.at("x").ptr(), sizeof(double)*rows*cols);
+
+        u_t << solution_variables(n*(N+1)+0),
+                solution_variables(n*(N+1)+1),
+                solution_variables(n*(N+1)+2),
+                solution_variables(n*(N+1)+3),
+                solution_variables(n*(N+1)+4),
+                solution_variables(n*(N+1)+5);
+
+        stringstream s;
+
+        s << u_t(0) << "|" << u_t(1) << "|" << u_t(2) << "|" << u_t(3) << "|" << u_t(4) << "|" << u_t(5) << "|" << r_x_left << "|" << r_y_left << "|" << r_z_left << "|" << r_x_right << "|" << r_y_right << "|" << r_z_right; // Write torque setpoints to stringstream
+
+        //sendto(sockfd, (const char *)s.str().c_str(), strlen(s.str().c_str()), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
+
+        X_t.block(0, 0, n*N, 1) = solution_variables.block(n, 0, n*N, 1);
+        X_t.block(n*N, 0, n, 1) = solution_variables.block(n*N, 0, n, 1);
+
+        U_t.block(0, 0, m*(N-1), 1) = solution_variables.block(n*(N+1)+m, 0, m*(N-1), 1);
+        U_t.block(m*(N-1), 0, m, 1) = solution_variables.block(n*(N+1)+m*(N-1), 0, m, 1);
+
+        for(int i = 0; i < n; ++i) {
+            x_t(i) = solution_variables(i+n);
+        }
+
+        ++total_iterations;
+
+        end = high_resolution_clock::now();
+        double duration_after = duration_cast<microseconds> (end - start).count();
+
+        std::cout << "Solver preparation took " << duration_before + duration_after << " microseconds" << std::endl;
+
+        std::cout << "u_t: " << u_t(0) << "," << u_t(1) << "," << u_t(2) << "," << u_t(3) << "," << u_t(4) << "," << u_t(5) << std::endl;
+
+        std::cout << "r_y_left: " << r_y_left << ",r_y_right: " << r_y_right << std::endl; 
+
+        std::cout << "D_t:\n" << D_current << std::endl;
+
+        std::cout << "x_t:" << x_t(0) << "," << x_t(1) << "," << x_t(2) << "," << x_t(3) << "," << x_t(4) << "," << x_t(5) << "," << x_t(6) << "," << x_t(7) << "," << x_t(8) << "," << x_t(9) << "," << x_t(10) << "," << x_t(11) << "," << x_t(12) << std::endl;
+
+        auto end_total = high_resolution_clock::now();
+        double full_iteration_duration = duration_cast<microseconds> (end_total - start_total).count();
+
+        std::cout << "Full iteration took " << full_iteration_duration << " microseconds" << std::endl;
+
+        long long remainder = (dt * 1e+6 - full_iteration_duration) * 1e+3;
+        std::cout << "Remainder: " << remainder << " microseconds" << std::endl;
+        deadline.tv_nsec = remainder;
+        deadline.tv_sec = 0;
+        clock_nanosleep(CLOCK_REALTIME, 0, &deadline, NULL);
     }
 
-    size_t rows_P_param = P_param.rows();
-    size_t cols_P_param = P_param.cols();
-
-    DM P_param_casadi = casadi::DM::zeros(rows_P_param, cols_P_param);
-
-    std::memcpy(P_param_casadi.ptr(), P_param.data(), sizeof(double)*rows_P_param*cols_P_param);
-    
-    solver_arguments["p"] = P_param_casadi;
-    
-    x0_solver << X_t, U_t;
-
-    //std::cout << "x0_solver:\n" << x0_solver << std::endl;
-
-    auto end = high_resolution_clock::now();
-
-    double duration_before = duration_cast<microseconds>(end - start).count();
-
-    auto sol_start = high_resolution_clock::now();
-
-    solution = solver(solver_arguments);
-
-    auto sol_end = high_resolution_clock::now();
-    double solver_time = duration_cast<microseconds>(sol_end - sol_start).count();
-
-    start = high_resolution_clock::now();
-
-    size_t rows = solution.at("x").size1();
-    size_t cols = solution.at("x").size2();
-
-    Eigen::Matrix<double, n*(N+1) + m*N, 1> solution_variables = Eigen::ArrayXXd::Zero(n*(N+1) + m*N, 1);
-
-    solution_variables.resize(rows,cols);
-    solution_variables.setZero(rows,cols);
-
-    std::memcpy(solution_variables.data(), solution.at("x").ptr(), sizeof(double)*rows*cols);
-
-    u_t << solution_variables(n*(N+1)+0),
-            solution_variables(n*(N+1)+1),
-            solution_variables(n*(N+1)+2),
-            solution_variables(n*(N+1)+3),
-            solution_variables(n*(N+1)+4),
-            solution_variables(n*(N+1)+5);
-
-    X_t.block(0, 0, n*N, 1) = solution_variables.block(n, 0, n*N, 1);
-    X_t.block(n*N, 0, n, 1) = solution_variables.block(n*N, 0, n, 1);
-
-    U_t.block(0, 0, m*(N-1), 1) = solution_variables.block(n*(N+1)+m, 0, m*(N-1), 1);
-    U_t.block(m*(N-1), 0, m, 1) = solution_variables.block(n*(N+1)+m*(N-1), 0, m, 1);
-
-    ++total_iterations;
-
-    end = high_resolution_clock::now();
-    double duration_after = duration_cast<microseconds> (end - start).count();
-
-    std::cout << "Full iteration setup took " << duration_before + duration_after << " microseconds" << std::endl;
-
-    std::cout << "u_t: " << u_t(0) << "," << u_t(1) << "," << u_t(2) << "," << u_t(3) << "," << u_t(4) << "," << u_t(5) << std::endl;
-
-    std::cout << "r_y_left: " << r_y_left << ",r_y_right: " << r_y_right << std::endl; 
-
-    std::cout << "D_t:\n" << D_current << std::endl;
-
-    auto end_total = high_resolution_clock::now();
-    double full_iteration_duration = duration_cast<microseconds> (end_total - start_total).count();
-
-    long long remainder = (dt * 1e+6 - full_iteration_duration) * 1e+3;
-    std::cout << "Remainder: " << remainder << " microseconds" << std::endl;
-    deadline.tv_nsec = remainder;
-    deadline.tv_sec = 0;
-    clock_nanosleep(CLOCK_REALTIME, 0, &deadline, NULL);
+    while(true) {
+        
     }
 }
