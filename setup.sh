@@ -132,6 +132,8 @@ sudo chmod -R ugo+rw ${GITHUB_DIRECTORY}/casadi/
 cd casadi
 mkdir build && cd build
 
+sudo chmod -R ugo+rw ${GITHUB_DIRECTORY}/casadi/
+
 echo -e "\n\n#This was added by the setup.sh script of the biped_controller project \n#make the casadi compiler find IPOPT.\n" >> ${HOME}/.bashrc
 echo -e "export PKG_CONFIG_PATH=/usr/lib/pkg_config/" >> ${HOME}/.bashrc & sleep 1
 
@@ -142,9 +144,12 @@ echo -e "\n${GREEN}PKG_CONFIG_PATH in bash script: $PKG_CONFIG_PATH\n${NC}"
 sh -c ". ${HOME}/.bashrc && export PKG_CONFIG_PATH=/usr/lib/pkg_config/ && echo '\nPKG_CONFIG_PATH in sh command: $PKG_CONFIG_PATH\n' && sudo cmake -DWITH_PYTHON=ON -DWITH_PYTHON3=ON -DWITH_IPOPT=ON .."
 
 #echo -e "\n${RED}Please make sure there is no error message about IPOPT not being found.${NC}\n" & sleep 4
+sudo chmod -R ugo+rw ${GITHUB_DIRECTORY}/casadi/
 
 make -j 12
 sudo make install
+sudo chmod -R ugo+rw ${GITHUB_DIRECTORY}/casadi/
+
 
 echo -e "\nInstallation finished, running unit tests in Python.\n" 
 
@@ -176,6 +181,8 @@ sudo ./waf configure
 
 ./waf configure --use-all
 
+sudo chmod -R ugo+rw ${GITHUB_DIRECTORY}/zcm/
+
 echo -e "\n\n#This was added by the setup.sh script of the biped_controller project \n#to successfully install ZCM.\n" >> ${HOME}/.bashrc
 echo -e "export PATH=${PATH}:${GITHUB_DIRECTORY}/zcm/deps/julia/bin\n" >> ${HOME}/.bashrc
 
@@ -183,6 +190,8 @@ eval "$(cat ${HOME}/.bashrc | tail -n +10)" # https://askubuntu.com/questions/64
 
 ./waf build
 sudo ./waf install
+
+sudo chmod -R ugo+rw ${GITHUB_DIRECTORY}/zcm/
 
 #Update LD_LIBRARY_PATH in order for gazebo to find the shared object
 
@@ -218,8 +227,11 @@ cd ${HOME}/.gazebo/models/simplified_biped/control_plugin/
 sudo rm -rf build
 
 mkdir build && cd build
+sudo chmod -R ugo+rw ${HOME}/.gazebo/models/simplified_biped/
 cmake ..
+sudo chmod -R ugo+rw ${HOME}/.gazebo/models/simplified_biped/
 make -j 12
+sudo chmod -R ugo+rw ${HOME}/.gazebo/models/simplified_biped/
 
 echo -e "\n#This alias will allow easier Simulation startup." >> ${HOME}/.bashrc
 echo -e "\nalias start_biped_simulation=\"mkdir ${HOME}/.gazebo/models/simplified_biped/control_plugin/build/ ; cd ${HOME}/.gazebo/models/simplified_biped/control_plugin/build/ && make && gazebo --verbose ../../simplified_biped.world\"" >> ${HOME}/.bashrc
@@ -232,10 +244,14 @@ cd $WORKSPACE_DIRECTORY
 
 cp -R eigen3/Eigen /usr/include/ # copy to include directory to be sure (is needed for internal includes like "#include <Eigen/Core>")
 
+sudo chmod -R ugo+rw $WORKSPACE_DIRECTORY
 sudo rm -rf build
 mkdir build && cd build
+sudo chmod -R ugo+rw $WORKSPACE_DIRECTORY
 cmake ..
+sudo chmod -R ugo+rw $WORKSPACE_DIRECTORY
 make -j 12
+sudo chmod -R ugo+rw $WORKSPACE_DIRECTORY
 
 echo -e "\n#This alias will allow easier startup of the Biped walking controller." >> ${HOME}/.bashrc
 echo -e "\nalias run_walking_controller=\"mkdir ${WORKSPACE_DIRECTORY}/build/ ; cd ${WORKSPACE_DIRECTORY}/build/ && make && ./controller\"" >> ${HOME}/.bashrc
