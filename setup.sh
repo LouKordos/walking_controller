@@ -25,6 +25,8 @@ export GITHUB_DIRECTORY=${HOME}/Documents/biped_controller
 mkdir $GITHUB_DIRECTORY
 sudo chmod -R ugo+rw ${GITHUB_DIRECTORY}
 
+echo -e "HOME:${HOME}\n"
+
 echo -e "GITHUB_DIRECTORY:${GITHUB_DIRECTORY}\n"
 
 echo -e "Github directory is $GITHUB_DIRECTORY"
