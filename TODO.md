@@ -12,12 +12,19 @@
 - Test different solvers
 - Uninstall all dependecies before installing new version
 - For compiling casadi: `-DWITH_THREAD=ON` and install HSL solver with -NUM_THREADS
+- Install mumps with multiple threads as shown in manual
 - Test script with not installing casadi from pip (installing python3-dev will probably fix this)
 - Test removing IPOPT path update for casadi install as done in the VM
 - Current version for installing casADi: Install deps for casadi as instructed in github docs, install IPOPT from source (**USE 3.12 LINK TO SVN**), then install casADi with `cmake .. -DWITH_PYTHON3=ON -DWITH_PYTHON3=ON -DWITH_IPOPT=ON -DWITH_THREAD=ON` (be sure to install python3-dev and python3-matplotlib and **not** install casadi as requirement) 
 - GDB
-- `print_matrix` for DM for debugging
 - Replace `std::endl` with `\n` where possible and use `std::flush` at the end to improve performance
 - Try if casadi compile works without installing any IPOPT version and what version it would use
 - Export loop time and solution time to CSV as well
 - Make block operations fixed size to improve performance
+- Add array of state history to biped plugin to send previous correct state that was not NaN instead of 0
+- Combine all `0:N` loops into one
+- Try running setup.sh with `sh setup.sh` instead of the more complex way, if it works, update `README.md`
+- Add casadi benchmark to repo to test install
+- Create `devel` branch
+- MAKE `setup.sh` INSTALL NEWEST C++ COMPILER (i.e. C++20)!!!
+- VENV's FOR ALL PYTHON INSTALLS!!!!
