@@ -25,6 +25,8 @@ export GITHUB_DIRECTORY=${HOME}/Documents/biped_controller
 mkdir $GITHUB_DIRECTORY
 sudo chmod -R ugo+rw ${GITHUB_DIRECTORY}
 
+echo -e "GITHUB_DIRECTORY:${GITHUB_DIRECTORY}\n"
+
 echo -e "Github directory is $GITHUB_DIRECTORY"
 
 echo -e "${GREEN}All github repositories will be cloned into ${GITHUB_DIRECTORY}${NC}\n" & sleep 2
