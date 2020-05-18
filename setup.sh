@@ -19,13 +19,14 @@ echo "Here is some time to think about it..." & sleep 10
 START_TIME=$SECONDS
 
 export WORKSPACE_DIRECTORY=$(pwd)
+export HOME_DIR="/home/$(logname)/"
 sudo chmod -R ugo+rw ${WORKSPACE_DIRECTORY}
 
-export GITHUB_DIRECTORY=${HOME}/Documents/biped_controller
+export GITHUB_DIRECTORY=${HOME_DIR}/Documents/biped_controller
 mkdir $GITHUB_DIRECTORY
 sudo chmod -R ugo+rw ${GITHUB_DIRECTORY}
 
-echo -e "HOME:${HOME}\n"
+echo -e "HOME_DIR:${HOME_DIR}\n"
 
 echo -e "GITHUB_DIRECTORY:${GITHUB_DIRECTORY}\n"
 
@@ -138,14 +139,14 @@ mkdir build && cd build
 
 sudo chmod -R ugo+rw ${GITHUB_DIRECTORY}/casadi/
 
-echo -e "\n\n#This was added by the setup.sh script of the biped_controller project \n#make the casadi compiler find IPOPT.\n" >> ${HOME}/.bashrc
-echo -e "export PKG_CONFIG_PATH=/usr/lib/pkg_config/" >> ${HOME}/.bashrc & sleep 1
+echo -e "\n\n#This was added by the setup.sh script of the biped_controller project \n#make the casadi compiler find IPOPT.\n" >> ${HOME_DIR}/.bashrc
+echo -e "export PKG_CONFIG_PATH=/usr/lib/pkg_config/" >> ${HOME_DIR}/.bashrc & sleep 1
 
-eval "$(cat ${HOME}/.bashrc | tail -n +10)" # https://askubuntu.com/questions/64387/cannot-successfully-source-bashrc-from-a-shell-script
+eval "$(cat ${HOME_DIR}/.bashrc | tail -n +10)" # https://askubuntu.com/questions/64387/cannot-successfully-source-bashrc-from-a-shell-script
 
 echo -e "\n${GREEN}PKG_CONFIG_PATH in bash script: $PKG_CONFIG_PATH\n${NC}"
 
-sh -c ". ${HOME}/.bashrc && export PKG_CONFIG_PATH=/usr/lib/pkg_config/ && echo '\nPKG_CONFIG_PATH in sh command: $PKG_CONFIG_PATH\n' && sudo cmake -DWITH_PYTHON=ON -DWITH_PYTHON3=ON -DWITH_IPOPT=ON .."
+sh -c ". ${HOME_DIR}/.bashrc && export PKG_CONFIG_PATH=/usr/lib/pkg_config/ && echo '\nPKG_CONFIG_PATH in sh command: $PKG_CONFIG_PATH\n' && sudo cmake -DWITH_PYTHON=ON -DWITH_PYTHON3=ON -DWITH_IPOPT=ON .."
 
 #echo -e "\n${RED}Please make sure there is no error message about IPOPT not being found.${NC}\n" & sleep 4
 sudo chmod -R ugo+rw ${GITHUB_DIRECTORY}/casadi/
@@ -187,10 +188,10 @@ sudo ./waf configure
 
 sudo chmod -R ugo+rw ${GITHUB_DIRECTORY}/zcm/
 
-echo -e "\n\n#This was added by the setup.sh script of the biped_controller project \n#to successfully install ZCM.\n" >> ${HOME}/.bashrc
-echo -e "export PATH=${PATH}:${GITHUB_DIRECTORY}/zcm/deps/julia/bin\n" >> ${HOME}/.bashrc
+echo -e "\n\n#This was added by the setup.sh script of the biped_controller project \n#to successfully install ZCM.\n" >> ${HOME_DIR}/.bashrc
+echo -e "export PATH=${PATH}:${GITHUB_DIRECTORY}/zcm/deps/julia/bin\n" >> ${HOME_DIR}/.bashrc
 
-eval "$(cat ${HOME}/.bashrc | tail -n +10)" # https://askubuntu.com/questions/64387/cannot-successfully-source-bashrc-from-a-shell-script
+eval "$(cat ${HOME_DIR}/.bashrc | tail -n +10)" # https://askubuntu.com/questions/64387/cannot-successfully-source-bashrc-from-a-shell-script
 
 ./waf build
 sudo ./waf install
@@ -199,10 +200,10 @@ sudo chmod -R ugo+rw ${GITHUB_DIRECTORY}/zcm/
 
 #Update LD_LIBRARY_PATH in order for gazebo to find the shared object
 
-echo -e "\n\n#This was added by the} setup.sh script of the biped_controller project \n#to make Gazebo find the Shared Object file of the controller plugin.\n" >> ${HOME}/.bashrc
-echo -e "export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${HOME}/.gazebo/models/simplified_biped/control_plugin/build" >> ${HOME}/.bashrc
+echo -e "\n\n#This was added by the} setup.sh script of the biped_controller project \n#to make Gazebo find the Shared Object file of the controller plugin.\n" >> ${HOME_DIR}/.bashrc
+echo -e "export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${HOME_DIR}/.gazebo/models/simplified_biped/control_plugin/build" >> ${HOME_DIR}/.bashrc
 
-eval "$(cat ${HOME}/.bashrc | tail -n +10)" # https://askubuntu.com/questions/64387/cannot-successfully-source-bashrc-from-a-shell-script
+eval "$(cat ${HOME_DIR}/.bashrc | tail -n +10)" # https://askubuntu.com/questions/64387/cannot-successfully-source-bashrc-from-a-shell-script
 
 cd $GITHUB_DIRECTORY
 
@@ -213,34 +214,34 @@ rm -rf ./jupyter_notebooks/
 git clone https://github.com/LouKordos/jupyter_notebooks.git
 sudo chmod -R ugo+rw ${GITHUB_DIRECTORY}/jupyter_notebooks/
 
-mkdir ${HOME}/.gazebo/ # Only gets created after first run of gazebo, so we do it manually
-sudo chmod -R ugo+rw ${HOME}/.gazebo/
+mkdir ${HOME_DIR}/.gazebo/ # Only gets created after first run of gazebo, so we do it manually
+sudo chmod -R ugo+rw ${HOME_DIR}/.gazebo/
 
-mkdir ${HOME}/.gazebo/models/ && cd ${HOME}/.gazebo/models/
-sudo chmod -R ugo+rw ${HOME}/.gazebo/models/
+mkdir ${HOME_DIR}/.gazebo/models/ && cd ${HOME_DIR}/.gazebo/models/
+sudo chmod -R ugo+rw ${HOME_DIR}/.gazebo/models/
 
 rm -rf ./simplified_biped/
 
 git clone https://github.com/LouKordos/simplified_biped.git
-sudo chmod -R ugo+rw ${HOME}/.gazebo/models/simplified_biped/
+sudo chmod -R ugo+rw ${HOME_DIR}/.gazebo/models/simplified_biped/
 
 echo -e "\n${GREEN}Building Gazebo control plugin for Biped...${NC}\n" & sleep 1
 
-cd ${HOME}/.gazebo/models/simplified_biped/control_plugin/
+cd ${HOME_DIR}/.gazebo/models/simplified_biped/control_plugin/
 
 sudo rm -rf build
 
 mkdir build && cd build
-sudo chmod -R ugo+rw ${HOME}/.gazebo/models/simplified_biped/
+sudo chmod -R ugo+rw ${HOME_DIR}/.gazebo/models/simplified_biped/
 cmake ..
-sudo chmod -R ugo+rw ${HOME}/.gazebo/models/simplified_biped/
+sudo chmod -R ugo+rw ${HOME_DIR}/.gazebo/models/simplified_biped/
 make -j 12
-sudo chmod -R ugo+rw ${HOME}/.gazebo/models/simplified_biped/
+sudo chmod -R ugo+rw ${HOME_DIR}/.gazebo/models/simplified_biped/
 
-echo -e "\n#This alias will allow easier Simulation startup." >> ${HOME}/.bashrc
-echo -e "\nalias start_biped_simulation=\"mkdir ${HOME}/.gazebo/models/simplified_biped/control_plugin/build/ ; cd ${HOME}/.gazebo/models/simplified_biped/control_plugin/build/ && make && gazebo --verbose ../../simplified_biped.world\"" >> ${HOME}/.bashrc
+echo -e "\n#This alias will allow easier Simulation startup." >> ${HOME_DIR}/.bashrc
+echo -e "\nalias start_biped_simulation=\"mkdir ${HOME_DIR}/.gazebo/models/simplified_biped/control_plugin/build/ ; cd ${HOME_DIR}/.gazebo/models/simplified_biped/control_plugin/build/ && make && gazebo --verbose ../../simplified_biped.world\"" >> ${HOME_DIR}/.bashrc
 
-eval "$(cat ${HOME}/.bashrc | tail -n +10)" # https://askubuntu.com/questions/64387/cannot-successfully-source-bashrc-from-a-shell-script
+eval "$(cat ${HOME_DIR}/.bashrc | tail -n +10)" # https://askubuntu.com/questions/64387/cannot-successfully-source-bashrc-from-a-shell-script
 
 echo -e "\n${GREEN}Building Gazebo main walking controller for Biped...${NC}\n" & sleep 1
 
@@ -257,13 +258,13 @@ sudo chmod -R ugo+rw $WORKSPACE_DIRECTORY
 make -j 12
 sudo chmod -R ugo+rw $WORKSPACE_DIRECTORY
 
-echo -e "\n#This alias will allow easier startup of the Biped walking controller." >> ${HOME}/.bashrc
-echo -e "\nalias run_walking_controller=\"mkdir ${WORKSPACE_DIRECTORY}/build/ ; cd ${WORKSPACE_DIRECTORY}/build/ && make && ./controller\"" >> ${HOME}/.bashrc
+echo -e "\n#This alias will allow easier startup of the Biped walking controller." >> ${HOME_DIR}/.bashrc
+echo -e "\nalias run_walking_controller=\"mkdir ${WORKSPACE_DIRECTORY}/build/ ; cd ${WORKSPACE_DIRECTORY}/build/ && make && ./controller\"" >> ${HOME_DIR}/.bashrc
 
-echo -e "\n#This alias will (hopefully) allow updating all Biped repos automatically." >> ${HOME}/.bashrc
-echo -e "\nalias update_biped_repos=\"cd ${WORKSPACE_DIRECTORY} && git pull ; cd ${GITHUB_DIRECTORY}/jupyter_notebooks/ && git pull ; cd ${HOME}/.gazebo/models/simplified_biped/ && git pull\"" >> ${HOME}/.bashrc
+echo -e "\n#This alias will (hopefully) allow updating all Biped repos automatically." >> ${HOME_DIR}/.bashrc
+echo -e "\nalias update_biped_repos=\"cd ${WORKSPACE_DIRECTORY} && git pull ; cd ${GITHUB_DIRECTORY}/jupyter_notebooks/ && git pull ; cd ${HOME_DIR}/.gazebo/models/simplified_biped/ && git pull\"" >> ${HOME_DIR}/.bashrc
 
-eval "$(cat ${HOME}/.bashrc | tail -n +10)" # https://askubuntu.com/questions/64387/cannot-successfully-source-bashrc-from-a-shell-script
+eval "$(cat ${HOME_DIR}/.bashrc | tail -n +10)" # https://askubuntu.com/questions/64387/cannot-successfully-source-bashrc-from-a-shell-script
 
 ELAPSED_TIME=$(($SECONDS - $START_TIME))
 
