@@ -19,7 +19,7 @@ echo "Here is some time to think about it..." & sleep 10
 START_TIME=$SECONDS
 
 export WORKSPACE_DIRECTORY=$(pwd)
-export HOME_DIR="/home/$(logname)/"
+export HOME_DIR="/home/$(logname)"
 sudo chmod -R ugo+rw ${WORKSPACE_DIRECTORY}
 
 export GITHUB_DIRECTORY=${HOME_DIR}/Documents/biped_controller
@@ -71,6 +71,8 @@ sudo apt-get install build-essential -y # make, gcc, g++
 sudo apt-get -q update -y
 
 sudo apt-get install gdb -y
+
+sudo apt-get install subversion -y
 
 sudo apt-get update -y -q
 
