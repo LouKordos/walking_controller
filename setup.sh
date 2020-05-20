@@ -90,29 +90,168 @@ sudo apt-get install manpages-dev -y
 
 sudo apt -q update -y
 
-#Install Gazebo v10
+# Install qt5 for Gazebo 11
 
-#if [ $1 -eq 9 ] || [ $# -eq 0 ]
-#then
-#    echo -e "\n${GREEN}Installing Gazebo v10.${NC}\n" & sleep 1
-#    sudo apt install gazebo9 -y
-#    sudo apt install libgazebo9-dev -y
-#fi
+sudo apt-get install -y build-dep qt5-default libxcb-xinerama0-dev build-essential perl python git '^libxcb.*-dev' libx11-xcb-dev libglu1-mesa-dev libxrender-dev libxi-dev libxkbcommon-dev libxkbcommon-x11-dev flex bison gperf libicu-dev libxslt-dev ruby libssl-dev libxcursor-dev libxcomposite-dev libxdamage-dev libxrandr-dev libdbus-1-dev libfontconfig1-dev libcap-dev libxtst-dev libpulse-dev libudev-dev libpci-dev libnss3-dev libasound2-dev libxss-dev libegl1-mesa-dev gperf bison libasound2-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libclang-6.0-dev llvm-6.0 qtbase5-dev qtdeclarative5-dev libboost-all-dev libtar-dev libtbb-dev libogre-1.9-dev libqwt-qt5-dev
 
-#if [ $1 -eq 10 ]
-#then
+sudo apt-get install -y subversion
 
-echo -e "\n${GREEN}Installing Gazebo v10.${NC}\n" & sleep 1
+git clone git://code.qt.io/qt/qt5.git /tmp/qt5/
+cd /tmp/qt5/
+git checkout 5.12
 
-sudo sh -c 'echo "deb http://packages.osrfoundation.org/gazebo/ubuntu-stable `lsb_release -cs` main" > /etc/apt/sources.list.d/gazebo-stable.list' & sleep 1
+perl init-repository
 
-sudo wget http://packages.osrfoundation.org/gazebo.key -O - | sudo apt-key add -
+export LLVM_INSTALL_DIR=/usr/llvm
+../qt5/configure -opensource -nomake examples -nomake tests -confirm-license
+make -j($nproc)
+sudo make install
 
-sudo apt -q update -y
+#Installing Gazebo 11 from source
 
-sudo apt-get install gazebo10 -y
-sudo apt-get install libgazebo10-dev -y
-#fi
+sudo apt-get remove '.*gazebo.*' '.*sdformat.*' '.*ignition-math.*' '.*ignition-msgs.*' '.*ignition-transport.*'
+sudo apt-get remove '.*sdformat.*' '.*ignition-.*'
+
+sudo apt-get install build-essential cmake pkg-config
+git clone https://github.com/ignitionrobotics/ign-cmake /tmp/ign-cmake
+cd /tmp/ign-cmake
+git checkout ign-cmake2
+mkdir build
+cd build
+cmake ../
+make -j($nproc)
+sudo make install
+
+sudo apt-get install build-essential \
+                     cmake \
+                     git \
+                     python
+
+git clone https://github.com/ignitionrobotics/ign-math /tmp/ign-math
+cd /tmp/ign-math
+
+git checkout ign-math6
+mkdir build
+cd build
+cmake ../
+make -j$(nproc)
+sudo make install
+
+sudo apt-get install build-essential \
+                     cmake \
+         libfreeimage-dev \
+         libtinyxml2-dev \
+         uuid-dev \
+         libgts-dev \
+         libavdevice-dev \
+         libavformat-dev \
+         libavcodec-dev \
+         libswscale-dev \
+         libavutil-dev \
+         libprotoc-dev \
+             libprotobuf-dev
+
+git clone https://github.com/ignitionrobotics/ign-common /tmp/ign-common
+cd /tmp/ign-common
+
+git checkout ign-common3
+mkdir build
+cd build
+cmake ../
+make -j$(nproc)
+sudo make install
+
+sudo apt-get install build-essential \
+                     cmake \
+                     git \
+                     python \
+                     libboost-system-dev \
+                     libtinyxml-dev \
+                     libxml2-utils \
+                     ruby-dev \
+                     ruby
+
+git clone https://github.com/osrf/sdformat /tmp/sdformat
+cd /tmp/sdformat/
+
+git checkout sdf9
+mkdir build
+cd build
+cmake ../
+make -j$(nproc)
+sudo make install
+
+sudo apt-get install build-essential \
+                     cmake \
+                     git \
+                     libprotoc-dev \
+                     libprotobuf-dev \
+                     protobuf-compiler
+
+git clone https://github.com/ignitionrobotics/ign-msgs /tmp/ign-msgs
+cd /tmp/ign-msgs
+git checkout ign-msgs5
+mkdir build
+cd build
+cmake ../
+make -j$(nproc)
+sudo make install
+
+sudo apt-get install build-essential \
+                     cmake \
+         libzip-dev \
+         libjsoncpp-dev \
+         libcurl4-openssl-dev \
+         libyaml-dev
+
+git clone https://github.com/ignitionrobotics/ign-fuel-tools /tmp/ign-fuel-tools
+cd /tmp/ign-fuel-tools
+git checkout ign-fuel-tools4
+mkdir build
+cd build
+
+cmake ../
+make -j$(nproc)
+sudo make install
+
+sudo apt-get remove libignition-transport3-dev
+
+sudo apt-get install mercurial cmake pkg-config python ruby-ronn libprotoc-dev libprotobuf-dev protobuf-compiler uuid-dev libzmq3-dev libignition-msgs-dev
+
+hg clone https://bitbucket.org/ignitionrobotics/ign-transport /tmp/ign-transport
+cd /tmp/ign-transport
+hg up ign-transport8
+
+mkdir build
+cd build
+cmake ../
+make -j$(nproc)
+sudo make install
+
+git clone https://github.com/osrf/gazebo /tmp/gazebo
+cd /tmp/gazebo
+
+mkdir build
+cd build
+cmake ../
+make -j$(nproc)
+sudo make install
+
+echo '/usr/local/lib' | sudo tee /etc/ld.so.conf.d/gazebo.conf
+sudo ldconfig
+
+# echo -e "\n${GREEN}Installing Gazebo v10.${NC}\n" & sleep 1
+
+# sudo sh -c 'echo "deb http://packages.osrfoundation.org/gazebo/ubuntu-stable `lsb_release -cs` main" > /etc/apt/sources.list.d/gazebo-stable.list' & sleep 1
+
+# sudo wget http://packages.osrfoundation.org/gazebo.key -O - | sudo apt-key add -
+
+# sudo apt -q update -y
+
+# sudo apt-get install gazebo10 -y
+# sudo apt-get install libgazebo10-dev -y
+
+cd $GITHUB_DIRECTORY
 
 sudo apt -q update -y
 
@@ -153,10 +292,9 @@ sh -c ". ${HOME_DIR}/.bashrc && export PKG_CONFIG_PATH=/usr/lib/pkg_config/ && e
 #echo -e "\n${RED}Please make sure there is no error message about IPOPT not being found.${NC}\n" & sleep 4
 sudo chmod -R ugo+rw ${GITHUB_DIRECTORY}/casadi/
 
-make -j 12
+make -j($nproc)
 sudo make install
 sudo chmod -R ugo+rw ${GITHUB_DIRECTORY}/casadi/
-
 
 echo -e "\nInstallation finished, running unit tests in Python.\n" 
 
@@ -209,8 +347,6 @@ eval "$(cat ${HOME_DIR}/.bashrc | tail -n +10)" # https://askubuntu.com/question
 
 cd $GITHUB_DIRECTORY
 
-sudo apt-get install libboost-all-dev -y
-
 rm -rf ./jupyter_notebooks/
 
 git clone https://github.com/LouKordos/jupyter_notebooks.git
@@ -237,7 +373,7 @@ mkdir build && cd build
 sudo chmod -R ugo+rw ${HOME_DIR}/.gazebo/models/simplified_biped/
 cmake ..
 sudo chmod -R ugo+rw ${HOME_DIR}/.gazebo/models/simplified_biped/
-make -j 12
+make -j($nproc)
 sudo chmod -R ugo+rw ${HOME_DIR}/.gazebo/models/simplified_biped/
 
 echo -e "\n#This alias will allow easier Simulation startup." >> ${HOME_DIR}/.bashrc
@@ -257,7 +393,7 @@ mkdir build && cd build
 sudo chmod -R ugo+rw $WORKSPACE_DIRECTORY
 cmake ..
 sudo chmod -R ugo+rw $WORKSPACE_DIRECTORY
-make -j 12
+make -j($nproc)
 sudo chmod -R ugo+rw $WORKSPACE_DIRECTORY
 
 echo -e "\n#This alias will allow easier startup of the Biped walking controller." >> ${HOME_DIR}/.bashrc
