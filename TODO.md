@@ -29,3 +29,4 @@
 - MAKE `setup.sh` INSTALL NEWEST C++ COMPILER (i.e. C++20)!!!
 - VENV's FOR ALL PYTHON INSTALLS!!!!
 - Find replacement for $HOME because Pop OS uses /root/ instead of /home/ when running as sudo
+- `make -j$(nproc)`
