@@ -100,7 +100,7 @@ git clone git://code.qt.io/qt/qt5.git /tmp/qt5/
 cd /tmp/qt5/
 git checkout 5.12
 
-perl init-repository
+perl init-repository -f
 
 export LLVM_INSTALL_DIR=/usr/llvm
 ../qt5/configure -opensource -nomake examples -nomake tests -confirm-license
