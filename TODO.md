@@ -4,7 +4,6 @@
 - Install SWIG from source (http://swig.org/svn.html) (PCRE, YACC, Autoconf)
 - Install IPOPT from source
 - Only build packages that are not on ubuntu package search (including focal)
-- Fix permission issues with make, git modifications (basically add read write permissions for everone on repos), then remove sudo on things like `make`
 - Test different solvers
 - For compiling casadi: `-DWITH_THREAD=ON` and install HSL solver with -NUM_THREADS
 - Install MUMPS with multiple threads as shown in manual
