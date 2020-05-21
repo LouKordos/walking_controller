@@ -279,7 +279,7 @@ echo -e "\n\n${GREEN}Installing casADi framework for use in C++ and Python now..
 
 sudo apt-get install gcc g++ gfortran git cmake liblapack-dev pkg-config --install-recommends -y
 
-sudo apt-get install swig ipython python-dev python-numpy python-scipy python-matplotlib --install-recommends -y
+sudo apt-get install swig ipython3 python3-dev python3-numpy python3-scipy python3-matplotlib --install-recommends -y
 
 sudo apt-get install spyder -y
 
@@ -305,7 +305,7 @@ eval "$(cat ${HOME_DIR}/.bashrc | tail -n +10)" # https://askubuntu.com/question
 
 echo -e "\n${GREEN}PKG_CONFIG_PATH in bash script: $PKG_CONFIG_PATH\n${NC}"
 
-sh -c ". ${HOME_DIR}/.bashrc && export PKG_CONFIG_PATH=/usr/lib/pkg_config/ && echo '\nPKG_CONFIG_PATH in sh command: $PKG_CONFIG_PATH\n' && sudo cmake -DWITH_PYTHON=ON -DWITH_PYTHON3=ON -DWITH_IPOPT=ON .."
+sh -c ". ${HOME_DIR}/.bashrc && export PKG_CONFIG_PATH=/usr/lib/pkg_config/ && echo '\nPKG_CONFIG_PATH in sh command: $PKG_CONFIG_PATH\n' && sudo cmake -DWITH_PYTHON3=ON -DWITH_IPOPT=ON .."
 
 #echo -e "\n${RED}Please make sure there is no error message about IPOPT not being found.${NC}\n" & sleep 4
 sudo chmod -R ugo+rw ${GITHUB_DIRECTORY}/casadi/
