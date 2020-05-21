@@ -97,6 +97,8 @@ sudo apt-get install -y libxcb-xinerama0-dev build-essential perl python git '^l
 
 sudo apt-get install -y subversion
 
+rm -rf /tmp/qt5/
+
 git clone git://code.qt.io/qt/qt5.git /tmp/qt5/
 cd /tmp/qt5/
 git checkout 5.12
@@ -113,7 +115,10 @@ sudo make install
 sudo apt-get remove '.*gazebo.*' '.*sdformat.*' '.*ignition-math.*' '.*ignition-msgs.*' '.*ignition-transport.*'
 sudo apt-get remove '.*sdformat.*' '.*ignition-.*'
 
-sudo apt-get install build-essential cmake pkg-config
+sudo apt-get install build-essential cmake pkg-config -y
+
+rm -rf /tmp/ign-cmake
+
 git clone https://github.com/ignitionrobotics/ign-cmake /tmp/ign-cmake
 cd /tmp/ign-cmake
 git checkout ign-cmake2
@@ -126,7 +131,9 @@ sudo make install
 sudo apt-get install build-essential \
                      cmake \
                      git \
-                     python
+                     python -y
+
+rm -rf /tmp/ign-math
 
 git clone https://github.com/ignitionrobotics/ign-math /tmp/ign-math
 cd /tmp/ign-math
@@ -138,7 +145,7 @@ cmake ../
 make -j$(nproc)
 sudo make install
 
-sudo apt-get install build-essential \
+sudo apt-get install -y build-essential \
                      cmake \
          libfreeimage-dev \
          libtinyxml2-dev \
@@ -152,6 +159,8 @@ sudo apt-get install build-essential \
          libprotoc-dev \
              libprotobuf-dev
 
+rm -rf /tmp/ign-common
+
 git clone https://github.com/ignitionrobotics/ign-common /tmp/ign-common
 cd /tmp/ign-common
 
@@ -162,7 +171,7 @@ cmake ../
 make -j$(nproc)
 sudo make install
 
-sudo apt-get install build-essential \
+sudo apt-get install -y build-essential \
                      cmake \
                      git \
                      python \
@@ -171,6 +180,8 @@ sudo apt-get install build-essential \
                      libxml2-utils \
                      ruby-dev \
                      ruby
+
+rm -rf /tmp/sdformat
 
 git clone https://github.com/osrf/sdformat /tmp/sdformat
 cd /tmp/sdformat/
@@ -182,12 +193,14 @@ cmake ../
 make -j$(nproc)
 sudo make install
 
-sudo apt-get install build-essential \
+sudo apt-get install -y build-essential \
                      cmake \
                      git \
                      libprotoc-dev \
                      libprotobuf-dev \
                      protobuf-compiler
+
+rm -rf /tmp/ign-msgs
 
 git clone https://github.com/ignitionrobotics/ign-msgs /tmp/ign-msgs
 cd /tmp/ign-msgs
@@ -198,12 +211,14 @@ cmake ../
 make -j$(nproc)
 sudo make install
 
-sudo apt-get install build-essential \
+sudo apt-get install -y build-essential \
                      cmake \
          libzip-dev \
          libjsoncpp-dev \
          libcurl4-openssl-dev \
          libyaml-dev
+
+rm -rf /tmp/ign-fuel-tools
 
 git clone https://github.com/ignitionrobotics/ign-fuel-tools /tmp/ign-fuel-tools
 cd /tmp/ign-fuel-tools
@@ -217,7 +232,7 @@ sudo make install
 
 sudo apt-get remove libignition-transport3-dev
 
-sudo apt-get install mercurial cmake pkg-config python ruby-ronn libprotoc-dev libprotobuf-dev protobuf-compiler uuid-dev libzmq3-dev libignition-msgs-dev
+sudo apt-get install -y mercurial cmake pkg-config python ruby-ronn libprotoc-dev libprotobuf-dev protobuf-compiler uuid-dev libzmq3-dev libignition-msgs-dev
 
 hg clone https://bitbucket.org/ignitionrobotics/ign-transport /tmp/ign-transport
 cd /tmp/ign-transport
@@ -228,6 +243,8 @@ cd build
 cmake ../
 make -j$(nproc)
 sudo make install
+
+rm -rf /tmp/gazebo
 
 git clone https://github.com/osrf/gazebo /tmp/gazebo
 cd /tmp/gazebo
