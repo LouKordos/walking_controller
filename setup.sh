@@ -104,7 +104,7 @@ perl init-repository -f
 
 export LLVM_INSTALL_DIR=/usr/llvm
 ../qt5/configure -opensource -nomake examples -nomake tests -confirm-license
-make -j($nproc)
+make -j$(nproc)
 sudo make install
 
 #Installing Gazebo 11 from source
