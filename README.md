@@ -3,7 +3,7 @@
 This repository contains the main code for making a Bipedal Robot walk and set up everything necessary for development while it's at it, including Jupyter Notebooks for deriving the model etc.
 
 A `setup.sh` script is included that sets up almost everything on your OS for easy testing and development. (Keep in mind that the script will add some lines to `~/.bashrc`)
-Currently, only Ubuntu and Pop! OS 18.04 have been tested successfully, but feel free to test other distros and suggest changes!
+Currently, only Ubuntu / Pop! OS 18.04 LTS and 20.04 LTS have been tested successfully, but feel free to test other distros and suggest changes!
 
 All required repositories will also be installed to `~/Documents/biped_controller`, but you need collaborator permissions to clone some of them, because my repositories are private. (On the other hand, you would not read this file if you would not be a collaborator...)
 
@@ -22,7 +22,7 @@ machine, assuming you have the Virtual Machine set up.
 
 If you want to try your luck with WSL, you have to do some extra steps to enable Desktop-like functionality:
 
-It is assumed you already have an Ubuntu (18.04 LTS) Installation via WSL.
+It is assumed you already have an Ubuntu (18.04 LTS or 20.04 LTS) Installation via WSL.
 
 Start by downloading and installing the most recent version of `VcXsrv` from their [SourceForge](https://sourceforge.net/projects/vcxsrv/). (Their GitHub repo is not updated anymore, so please do not use that.)
 
