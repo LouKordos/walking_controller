@@ -68,6 +68,12 @@ echo -e "\n${GREEN}Installing cmake 3.17.2, g++-8 and gcc-8 for compiling contro
 
 #sudo apt-get install build-essential -y # make, gcc, g++
 
+sudo apt-get update -y
+
+sudo apt-get install libssl-dev -y
+
+sudo apt-get update -y
+
 export cmake_version=3.17
 export cmake_build=2
 mkdir ~/temp
