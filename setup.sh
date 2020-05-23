@@ -50,7 +50,7 @@ sudo apt -q update -y
 
 #Install python3 pip3, juypter, and other dependencies
 
-echo -e "\n${GREEN}Installing python3, pip3 and library dependencies for the notebooks.${NC}\n" & sleep 2
+echo -e "\n${GREEN}Installing python3, pip3 and library dependencies for the notebooks.${NC}\n" & sleep 1
 
 sudo apt-get install python3 python3-dev python3-pip -y
 
@@ -64,7 +64,7 @@ sudo apt-get install jupyter-notebook -y
 
 cd $GITHUB_DIRECTORY
 
-echo -e "\n${GREEN}Installing build-essential (CMake, make, gcc, g++) for compiling controller and plugin...${NC}\n" & sleep 2
+echo -e "\n${GREEN}Installing cmake 3.17.2, g++-8 and gcc-8 for compiling controller and plugin...${NC}\n" & sleep 1
 
 #sudo apt-get install build-essential -y # make, gcc, g++
 
