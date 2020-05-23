@@ -115,7 +115,7 @@ sudo apt -q update -y
 # Install qt5 for Gazebo 11
 
 sudo apt-get build-dep qt5-default -y
-sudo apt-get install -y libxcb-xinerama0-dev build-essential perl python git '^libxcb.*-dev' libx11-xcb-dev libglu1-mesa-dev libxrender-dev libxi-dev libxkbcommon-dev libxkbcommon-x11-dev flex bison gperf libicu-dev libxslt-dev ruby libssl-dev libxcursor-dev libxcomposite-dev libxdamage-dev libxrandr-dev libdbus-1-dev libfontconfig1-dev libcap-dev libxtst-dev libpulse-dev libudev-dev libpci-dev libnss3-dev libasound2-dev libxss-dev libegl1-mesa-dev gperf bison libasound2-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libclang-6.0-dev llvm-6.0 qtbase5-dev qtdeclarative5-dev libboost-all-dev libtar-dev libtbb-dev libogre-1.9-dev libqwt-qt5-dev
+sudo apt-get install -y libxcb-xinerama0-dev perl python '^libxcb.*-dev' libx11-xcb-dev libglu1-mesa-dev libxrender-dev libxi-dev libxkbcommon-dev libxkbcommon-x11-dev flex bison gperf libicu-dev libxslt-dev ruby libssl-dev libxcursor-dev libxcomposite-dev libxdamage-dev libxrandr-dev libdbus-1-dev libfontconfig1-dev libcap-dev libxtst-dev libpulse-dev libudev-dev libpci-dev libnss3-dev libasound2-dev libxss-dev libegl1-mesa-dev gperf bison libasound2-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libclang-6.0-dev llvm-6.0 qtbase5-dev qtdeclarative5-dev libboost-all-dev libtar-dev libtbb-dev libogre-1.9-dev libqwt-qt5-dev
 
 sudo apt-get install -y subversion
 
@@ -137,7 +137,7 @@ sudo make install
 sudo apt-get remove '.*gazebo.*' '.*sdformat.*' '.*ignition-math.*' '.*ignition-msgs.*' '.*ignition-transport.*'
 sudo apt-get remove '.*sdformat.*' '.*ignition-.*'
 
-sudo apt-get install build-essential cmake pkg-config -y
+sudo apt-get install pkg-config -y
 
 rm -rf /tmp/ign-cmake
 
@@ -149,11 +149,6 @@ cd build
 cmake ../
 make -j$(nproc)
 sudo make install
-
-sudo apt-get install build-essential \
-                     cmake \
-                     git \
-                     python -y
 
 rm -rf /tmp/ign-math
 
@@ -167,9 +162,7 @@ cmake ../
 make -j$(nproc)
 sudo make install
 
-sudo apt-get install -y build-essential \
-                     cmake \
-         libfreeimage-dev \
+sudo apt-get install -y libfreeimage-dev \
          libtinyxml2-dev \
          uuid-dev \
          libgts-dev \
@@ -193,11 +186,7 @@ cmake ../
 make -j$(nproc)
 sudo make install
 
-sudo apt-get install -y build-essential \
-                     cmake \
-                     git \
-                     python \
-                     libboost-system-dev \
+sudo apt-get install -y libboost-system-dev \
                      libtinyxml-dev \
                      libxml2-utils \
                      ruby-dev \
@@ -215,10 +204,7 @@ cmake ../
 make -j$(nproc)
 sudo make install
 
-sudo apt-get install -y build-essential \
-                     cmake \
-                     git \
-                     libprotoc-dev \
+sudo apt-get install -y libprotoc-dev \
                      libprotobuf-dev \
                      protobuf-compiler
 
@@ -233,9 +219,7 @@ cmake ../
 make -j$(nproc)
 sudo make install
 
-sudo apt-get install -y build-essential \
-                     cmake \
-         libzip-dev \
+sudo apt-get install -y libzip-dev \
          libjsoncpp-dev \
          libcurl4-openssl-dev \
          libyaml-dev
