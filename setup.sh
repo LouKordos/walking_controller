@@ -66,7 +66,23 @@ cd $GITHUB_DIRECTORY
 
 echo -e "\n${GREEN}Installing build-essential (CMake, make, gcc, g++) for compiling controller and plugin...${NC}\n" & sleep 2
 
-sudo apt-get install build-essential -y # make, gcc, g++
+#sudo apt-get install build-essential -y # make, gcc, g++
+
+export cmake_version=3.17
+export cmake_build=2
+mkdir ~/temp
+cd ~/temp
+wget https://cmake.org/files/v$cmake_version/cmake-$cmake_version.$cmake_build.tar.gz
+tar -xzvf cmake-$cmake_version.$cmake_build.tar.gz
+cd cmake-$cmake_version.$cmake_build/
+./bootstrap
+make -j4
+sudo make install
+
+sudo apt-get install -y software-properties-common
+sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+sudo apt update
+sudo apt install g++-8 gcc-8 -y
 
 sudo apt-get -q update -y
 
