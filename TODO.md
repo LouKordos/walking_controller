@@ -20,5 +20,4 @@
 - Try running setup.sh with `sh setup.sh` instead of the more complex way, if it works, update `README.md`
 - Add casadi benchmark to repo to test install
 - Create `devel` branch
-- MAKE `setup.sh` INSTALL NEWEST C++ COMPILER (i.e. C++20)!!!
 - VENV's FOR ALL PYTHON INSTALLS!!!!
