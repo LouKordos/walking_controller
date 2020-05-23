@@ -86,8 +86,8 @@ make -j4
 sudo make install
 
 sudo apt-get install -y software-properties-common
-sudo add-apt-repository ppa:ubuntu-toolchain-r/test
-sudo apt update
+sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
+sudo apt update -y
 sudo apt install g++-8 gcc-8 -y
 
 sudo apt-get -q update -y
