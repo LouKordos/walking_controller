@@ -83,7 +83,7 @@ To get everything set up, run these commands:
 ```
 git clone https://github.com/LouKordos/walking_controller.git # Clone the main repository
 cd walking_controller/ # Change to repository directory
-chmod +x ./setup.sh # Make bash script executable
+sudo chmod +x ./setup.sh # Make bash script executable
 sudo ./setup.sh 2>&1 | tee ${HOME}/Documents/biped_controller_setup.log # Run setup script (make sure you do not forget the sudo!) and pipe into log file
 source ~/.bashrc # source .bashrc, in case the terminal is not updated yet and thus cannot find the custom commands
 ```
