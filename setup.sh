@@ -6,7 +6,7 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 NC='\033[0m' # No Color
 
-echo -e "\nThis is the setup script for the Bipedal robot controller and its dependencies/tools, such as GazeboSim.\nKeep in mind it is only tested for Ubuntu / Pop OS 18.04 LTS.${NC}\n\n" & sleep 2
+echo -e "\nThis is the setup script for the Bipedal robot controller and its dependencies/tools, such as GazeboSim.\nKeep in mind it is only tested for Ubuntu / Pop OS 18.04 LTS and 20.04 LTS.${NC}\n\n" & sleep 2
 
 echo -e "${RED}Please note that the current version of this script will require git credentials to clone the private repositories you should be a collaborator of.${NC}\n"
 
