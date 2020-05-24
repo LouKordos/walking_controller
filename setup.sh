@@ -401,7 +401,7 @@ make -j$(nproc)
 sudo chmod -R ugo+rw ${HOME_DIR}/.gazebo/models/simplified_biped/
 
 echo -e "\n#This alias will allow easier Simulation startup." >> ${HOME_DIR}/.bashrc
-echo -e "\nalias start_biped_simulation=\"mkdir ${HOME_DIR}/.gazebo/models/simplified_biped/control_plugin/build/ ; cd ${HOME_DIR}/.gazebo/models/simplified_biped/control_plugin/build/ && make && gazebo --verbose ../../simplified_biped.world\"" >> ${HOME_DIR}/.bashrc
+echo -e "\nalias start_biped_simulation=\"mkdir ${HOME_DIR}/.gazebo/models/simplified_biped/control_plugin/build/ ; cd ${HOME_DIR}/.gazebo/models/simplified_biped/control_plugin/build/ && make -j$(nproc) && gazebo --verbose ../../simplified_biped.world\"" >> ${HOME_DIR}/.bashrc
 
 eval "$(cat ${HOME_DIR}/.bashrc | tail -n +10)" # https://askubuntu.com/questions/64387/cannot-successfully-source-bashrc-from-a-shell-script
 
@@ -421,7 +421,7 @@ make -j$(nproc)
 sudo chmod -R ugo+rw $WORKSPACE_DIRECTORY
 
 echo -e "\n#This alias will allow easier startup of the Biped walking controller." >> ${HOME_DIR}/.bashrc
-echo -e "\nalias run_walking_controller=\"mkdir ${WORKSPACE_DIRECTORY}/build/ ; cd ${WORKSPACE_DIRECTORY}/build/ && make && ./controller\"" >> ${HOME_DIR}/.bashrc
+echo -e "\nalias run_walking_controller=\"mkdir ${WORKSPACE_DIRECTORY}/build/ ; cd ${WORKSPACE_DIRECTORY}/build/ && make -j$(nproc) && ./controller\"" >> ${HOME_DIR}/.bashrc
 
 echo -e "\n#This alias will (hopefully) allow updating all Biped repos automatically." >> ${HOME_DIR}/.bashrc
 echo -e "\nalias update_biped_repos=\"cd ${WORKSPACE_DIRECTORY} && git pull ; cd ${GITHUB_DIRECTORY}/jupyter_notebooks/ && git pull ; cd ${HOME_DIR}/.gazebo/models/simplified_biped/ && git pull\"" >> ${HOME_DIR}/.bashrc
