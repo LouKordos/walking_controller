@@ -137,6 +137,10 @@ sudo make install
 sudo apt-get remove '.*gazebo.*' '.*sdformat.*' '.*ignition-math.*' '.*ignition-msgs.*' '.*ignition-transport.*'
 sudo apt-get remove '.*sdformat.*' '.*ignition-.*'
 
+sudo apt-get install libbullet-dev -y
+
+sudo apt-get update -y
+
 sudo apt-get install pkg-config -y
 
 rm -rf /tmp/ign-cmake
