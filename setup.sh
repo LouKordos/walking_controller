@@ -255,6 +255,8 @@ rm -rf /tmp/gazebo
 git clone https://github.com/osrf/gazebo /tmp/gazebo
 cd /tmp/gazebo
 
+sudo apt-get install ruby-ronn -y # For Gazebo Man Pages
+
 mkdir build
 cd build
 cmake ../
