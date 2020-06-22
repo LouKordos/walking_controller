@@ -416,6 +416,7 @@ echo -e "\n${GREEN}Building Gazebo main walking controller for Biped...${NC}\n" 
 cd $WORKSPACE_DIRECTORY
 
 cp -R eigen3/Eigen /usr/include/ # copy to include directory to be sure (is needed for internal includes like "#include <Eigen/Core>")
+cp -R Eigen_unsupported /usr/include/
 
 sudo chmod -R ugo+rw $WORKSPACE_DIRECTORY
 sudo rm -rf build
