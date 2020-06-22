@@ -16,7 +16,7 @@
 #include <cmath>
 
 #include <stdlib.h>
-	
+
 #include <boost/algorithm/string.hpp>
 
 #include <unistd.h>
@@ -36,7 +36,7 @@
 
 #include <iomanip>
 #include "casadi/casadi.hpp"
-#include "Eigen_unsupported/Eigen/MatrixFunctions"
+#include <Eigen_unsupported/Eigen/MatrixFunctions>
 
 using namespace casadi;
 
@@ -83,8 +83,6 @@ inline void constrain(double &value, double lower_limit, double upper_limit) {
         value = lower_limit;
     }
 }
-
-
 
 std::thread left_leg_state_thread; // Thread for updating left leg state based on gazebosim messages
 std::thread left_leg_torque_thread; // Thread for updating matrices, calculating torque setpoint and sending torque setpoint to gazebosim
@@ -465,18 +463,22 @@ static const double dt = 1/30.0;
 static const int N = 30;
 
 double f_min_z = 0;
-double f_max_z = 1000;
+double f_max_z = 600;
 
-void discretize_state_space_matrices(const Eigen::Matrix<double, n, n> &A_c, const Eigen::Matrix<double, n, m> &B_c, const double &dt, Eigen::Matrix<double, n, n> &A_d, Eigen::Matrix<double, n, m> &B_d) {
-    static Eigen::MatrixXd A_B(n + m, n + m);
+void discretize_state_space_matrices(Eigen::Matrix<double, n, n> &A_c_temp, Eigen::Matrix<double, n, m> &B_c_temp, const double &dt, Eigen::Matrix<double, n, n> &A_d_temp, Eigen::Matrix<double, n, m> &B_d_temp) {
+    static Eigen::Matrix<double, n+m, n+m> A_B = Eigen::ArrayXXd::Zero(n+m, n+m);
 
-    A_B << A_c, B_c, Eigen::ArrayXXd::Zero(m, n), Eigen::ArrayXXd::Zero(m, m);
-    static const Eigen::MatrixXd e_A_B = (A_B * dt).exp();
+    A_B.block<n, n>(0, 0) = A_c_temp;
+    A_B.block<n, m>(0, n) = B_c_temp;
+    //A_B << A_c_temp, B_c_temp, Eigen::ArrayXXd::Zero(m, n), Eigen::ArrayXXd::Zero(m, m);
+    Eigen::MatrixXd e_A_B = (A_B * dt).exp();
 
     //std::cout << "A_B:\n" << A_B << std::endl;
 
-    A_d = e_A_B.block(0, 0, n, n);
-    B_d = e_A_B.block(0, n, n, m);
+    A_d_temp = e_A_B.block<n, n>(0, 0);
+    B_d_temp = e_A_B.block<n, m>(0, n);
+
+    //std::cout << "A_d_temp:\n" << A_d_temp << std::endl;
 }
 
 void run_mpc() {
@@ -647,17 +649,14 @@ int main()
     static const double Izy = I_body(2, 1);
     static const double Izz = I_body(2, 2);
 
-    double r_x_left = 0.15;
+    double r_x_left = -0.15;
     double r_y_left = 0;
     double r_z_left = -1;
 
     // Location of the force vector being applied by the right foot.
-    double r_x_right = -0.15;
+    double r_x_right = 0.15;
     double r_y_right = 0;
     double r_z_right = -1;
-
-    Eigen::Matrix<double, n, n> A_d_t = Eigen::ArrayXXd::Zero(n, n);
-    Eigen::Matrix<double, n, m> B_d_t = Eigen::ArrayXXd::Zero(n, m);
 
     double phi_t = 0; // This might need renaming in future since it might cause problems when accessing from other threads while discretizing at future values
     double theta_t = 0;
@@ -676,18 +675,18 @@ int main()
     static bool swing_left = true; // Still have to figure out how to change between standing in place and stepping / walking
     static bool swing_right = false;
 
-    static bool foot_behind_left = !swing_left;
-    static bool foot_behind_right = !swing_right;
+    static bool foot_behind_left = swing_left;
+    static bool foot_behind_right = swing_right;
 
     static double pos_y_desired = 0.0;
-    static double vel_y_desired = 0;
+    static double vel_y_desired = 0.0;
 
     static double psi_desired = 0.0;
     static double omega_z_desired = 0.0;
 
     static double step_length = 0.0;
 
-    static const int contact_swap_interval = 15; // 0.5s
+    static const int contact_swap_interval = 5; // 0.5s
 
     int iterations_left_until_contact_swap = contact_swap_interval;
 
@@ -698,6 +697,11 @@ int main()
     solver_arguments["lbx"] = lbx;
     solver_arguments["ubx"] = ubx;
 
+    ofstream data_file;
+    data_file.open(".././plot_data/mpc_log.csv");
+    data_file << "t,phi,theta,psi,pos_x,pos_y,pos_z,omega_x,omega_y,omega_z,vel_x,vel_y,vel_z,g,f_x_left,f_y_left,f_z_left,f_x_right,f_y_right,f_z_right,r_x_left,r_y_left,r_z_left,r_x_right,r_y_right,r_z_right" << std::endl; // Add header to csv file
+    data_file.close();
+
     struct timespec deadline; // timespec struct for storing time that execution thread should sleep for
 
     while(true) {
@@ -705,18 +709,18 @@ int main()
         auto start = high_resolution_clock::now();
         auto start_total = high_resolution_clock::now();
 
-        //msg_length = recvfrom(sockfd, (char *)buffer, udp_buffer_size, 0, ( struct sockaddr *) &cliaddr, &len); // Receive message over UDP containing full leg state
-        //buffer[msg_length] = '\0'; // Add string ending delimiter to end of string (n is length of message)
+        msg_length = recvfrom(sockfd, (char *)buffer, udp_buffer_size, 0, ( struct sockaddr *) &cliaddr, &len); // Receive message over UDP containing full leg state
+        buffer[msg_length] = '\0'; // Add string ending delimiter to end of string (n is length of message)
         
-        // std::string raw_state(buffer); // Create string from buffer char array to split
+        std::string raw_state(buffer); // Create string from buffer char array to split
 
-        // std::cout << raw_state << std::endl;
+        std::vector<std::string> com_state = split_string(raw_state, '|'); // Split raw state message by message delimiter to parse individual elements
 
-        // std::vector<std::string> com_state = split_string(raw_state, '|'); // Split raw state message by message delimiter to parse individual elements
+        for(int i = 0; i < n; ++i) {
+            P_param(i,0) = x_t(i, 0) = atof(com_state[i].c_str());
+        }
 
-        // for(int i = 0; i < n; ++i) {
-        //     x_t(i, 0) = atof(com_state[i].c_str());
-        // }
+        std::cout << "x_t:" << x_t(0) << "," << x_t(1) << "," << x_t(2) << "," << x_t(3) << "," << x_t(4) << "," << x_t(5) << "," << x_t(6) << "," << x_t(7) << "," << x_t(8) << "," << x_t(9) << "," << x_t(10) << "," << x_t(11) << "," << x_t(12) << std::endl;
 
         iterations_left_until_contact_swap -= 1;
 
@@ -727,20 +731,20 @@ int main()
         }
 
         D_current << swing_left, 0, 0, 0, 0, 0,
-                0, swing_left, 0, 0, 0, 0,
-                0, 0, swing_left, 0, 0, 0,
-                0, 0, 0, swing_right, 0, 0,
-                0, 0, 0, 0, swing_right, 0,
-                0, 0, 0, 0, 0, swing_right;
+                    0, swing_left, 0, 0, 0, 0,
+                    0, 0, swing_left, 0, 0, 0,
+                    0, 0, 0, swing_right, 0, 0,
+                    0, 0, 0, 0, swing_right, 0,
+                    0, 0, 0, 0, 0, swing_right;
 
         if(contact_swap_interval >= N) {
             for(int i = 0; i < N; ++i) {
-                D_vector.block(0, i*m, m, m) = D_current;
+                D_vector.block<m, m>(0, i*m) = D_current;
             }
         }
         else {
             for(int i = 0; i < iterations_left_until_contact_swap; ++i) {
-                D_vector.block(0, i*m, m, m) = D_current;
+                D_vector.block<m, m>(0, i*m) = D_current;
             }
 
             D_next << !swing_left, 0, 0, 0, 0, 0,
@@ -751,10 +755,10 @@ int main()
                     0, 0, 0, 0, 0, !swing_right;
 
             for(int i = iterations_left_until_contact_swap; i < N; ++i) {
-                D_vector.block(0, i*m, m, m) = D_next;
+                D_vector.block<m, m>(0, i*m) = D_next;
             }
         }
-        P_param.block(0, 1+N+n*N+m*N, m, m*N) = D_vector;
+        P_param.block<m, m*N> (0, 1 + N + n*N + m*N) = D_vector;
 
         for(int k = 0; k < N; ++k) {
             if(swing_left && swing_right) { // No feet in contact
@@ -781,7 +785,7 @@ int main()
                 P_param(m+4, 1 + N + n*N + m*N + k*m) = 0;
                 P_param(m+5, 1 + N + n*N + m*N + k*m) = 0;
             }
-            else if(swing_left && !swing_right) { // Both feet in contact
+            else if(!swing_left && !swing_right) { // Both feet in contact
                 P_param(m+0, 1 + N + n*N + m*N + k*m) = 0;
                 P_param(m+1, 1 + N + n*N + m*N + k*m) = 0;
                 P_param(m+2, 1 + N + n*N + m*N + k*m) = (m_value * 9.81) / 2;
@@ -790,6 +794,7 @@ int main()
                 P_param(m+5, 1 + N + n*N + m*N + k*m) = (m_value * 9.81) / 2;
             }
         }
+        
         // Move this into if statement below to reduce execution time
         if(foot_behind_left) {
             r_y_left = -step_length;
@@ -813,10 +818,6 @@ int main()
         r_z_left = -x_t(5);
         r_z_right = -x_t(5);
 
-        for(int i = 0; i < n; ++i) {
-            P_param(i,0) = x_t(i);
-        }
-
         static double pos_y_desired_temp = pos_y_desired;
         static double psi_desired_temp = psi_desired;
 
@@ -824,21 +825,21 @@ int main()
             pos_y_desired_temp += vel_y_desired * dt;
             psi_desired_temp += omega_z_desired * dt;
 
-            x_ref(0, i) = 0;
-            x_ref(1, i) = 0;
-            x_ref(2, i) = psi_desired_temp;
-            x_ref(3, i) = 0;
-            x_ref(4, i) = pos_y_desired;
-            x_ref(5, i) = 1;
-            x_ref(6, i) = 0;
-            x_ref(7, i) = 0;
-            x_ref(8, i) = omega_z_desired;
-            x_ref(9, i) = 0;
-            x_ref(10, i) = vel_y_desired;
-            x_ref(11, i) = 0;
-            x_ref(12, i) = -9.81;
+            x_ref(0, i) = 0; // Roll
+            x_ref(1, i) = 0; // Pitch
+            x_ref(2, i) = psi_desired_temp; // Yaw
+            x_ref(3, i) = 0; // X Pos
+            x_ref(4, i) = pos_y_desired; // Y Pos
+            x_ref(5, i) = 1; // Z Pos
+            x_ref(6, i) = 0; // Omega_x
+            x_ref(7, i) = 0; // Omega_y
+            x_ref(8, i) = omega_z_desired; // Omega_z
+            x_ref(9, i) = 0; // X Vel
+            x_ref(10, i) = vel_y_desired; // Y Vel
+            x_ref(11, i) = 0; // Z Vel
+            x_ref(12, i) = -9.81; // Gravity constant
         }
-        P_param.block(0, 1, n, N) = x_ref;
+        P_param.block<n, N>(0, 1) = x_ref;
 
         pos_y_desired += vel_y_desired * dt;
         psi_desired += omega_z_desired * dt;
@@ -860,7 +861,7 @@ int main()
         static double vel_z_t = 0.0;
         static double pos_y_t = 0.0;
         static double pos_x_t = 0.0;
-        static double pos_y_t_next = 0.0f;
+        static double pos_y_t_next = 0.0;
         static double pos_z_t = 0.0;
 
         for(int i = 0; i < N; ++i) {
@@ -878,6 +879,21 @@ int main()
                 pos_y_t_next = X_t(n*(i+2)+4);
                 pos_z_t = X_t(n*(i+1)+5);
             }
+            else {
+                phi_t = X_t(n*(N-1) + 0);
+                theta_t = X_t(n*(N-1) + 1);
+                psi_t = X_t(n*(N-1) + 2);
+
+                vel_x_t = X_t(n*(N-1)+9);
+                vel_y_t = X_t(n*(N-1)+10);
+                vel_z_t = X_t(n*(N-1)+11);
+                
+                pos_x_t = X_t(n*(N-1) + 3);
+                pos_y_t = X_t(n*(N-1) + 4);
+                pos_y_t_next = X_t(n*N + 4);
+                pos_z_t = X_t(n*(N-1) + 5);
+            }
+
             if(i == 0) {
                 phi_t = x_t(0);
                 theta_t = x_t(1);
@@ -889,9 +905,10 @@ int main()
 
                 pos_x_t = x_t(3);
                 pos_y_t = x_t(4);
-                pos_y_t_next = X_t(n*(i+1)+4);
                 pos_z_t = x_t(5);
             }
+
+            //std::cout << "total_iterations=" << total_iterations << ",i=" << i << ", phi_t:" << phi_t << ",theta_t:" << theta_t << ",psi_t:" << psi_t << ",pos_y_t:" << pos_y_t << ",pos_z_t:" << pos_z_t << std::endl;
 
             if(foot_behind_left_temp) {
                 r_y_left_temp = -step_length;
@@ -907,7 +924,7 @@ int main()
                 r_y_right_temp = step_length;
             }
 
-            if ((total_iterations+i) % (contact_swap_interval *2) == 0 && i != 0) {
+            if ((total_iterations+i) % (contact_swap_interval * 2) == 0 && i != 0) {
                 foot_behind_left_temp = !foot_behind_left_temp;
                 foot_behind_right_temp = !foot_behind_right_temp;
             }
@@ -918,8 +935,9 @@ int main()
             r_y_left_temp -= (pos_y_t_next - pos_y_t);
             r_y_right_temp -= (pos_y_t_next - pos_y_t);
 
-            I_world << (Ixx*cos(psi_t) + Iyx*sin(psi_t))*cos(psi_t) + (Ixy*cos(psi_t) + Iyy*sin(psi_t))*sin(psi_t), -(Ixx*cos(psi_t) + Iyx*sin(psi_t))*sin(psi_t) + (Ixy*cos(psi_t) + Iyy*sin(psi_t))*cos(psi_t), Ixz*cos(psi_t) + Iyz*sin(psi_t), (-Ixx*sin(psi_t) + Iyx*cos(psi_t))*cos(psi_t) + (-Ixy*sin(psi_t) + Iyy*cos(psi_t))*sin(psi_t), -(-Ixx*sin(psi_t) + Iyx*cos(psi_t))*sin(psi_t) + (-Ixy*sin(psi_t) + Iyy*cos(psi_t))*cos(psi_t), -Ixz*sin(psi_t) + Iyz*cos(psi_t), Ixy*sin(psi_t) + Izx*cos(psi_t), Ixy*cos(psi_t) - Izx*sin(psi_t), Izz;
-
+            I_world << -(Ixy*sin(theta_t) + Ixy*cos(psi_t)*cos(theta_t) - Iyy*sin(psi_t)*cos(theta_t))*sin(psi_t)*cos(theta_t) + (Ixx*cos(psi_t)*cos(theta_t) - Iyx*sin(psi_t)*cos(theta_t) + Izx*sin(theta_t))*cos(psi_t)*cos(theta_t) + (Ixz*cos(psi_t)*cos(theta_t) - Iyz*sin(psi_t)*cos(theta_t) + Izz*sin(theta_t))*sin(theta_t), (-sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t))*(Ixy*sin(theta_t) + Ixy*cos(psi_t)*cos(theta_t) - Iyy*sin(psi_t)*cos(theta_t)) + (sin(phi_t)*sin(theta_t)*cos(psi_t) + sin(psi_t)*cos(phi_t))*(Ixx*cos(psi_t)*cos(theta_t) - Iyx*sin(psi_t)*cos(theta_t) + Izx*sin(theta_t)) - (Ixz*cos(psi_t)*cos(theta_t) - Iyz*sin(psi_t)*cos(theta_t) + Izz*sin(theta_t))*sin(phi_t)*cos(theta_t), (sin(phi_t)*sin(psi_t) - sin(theta_t)*cos(phi_t)*cos(psi_t))*(Ixx*cos(psi_t)*cos(theta_t) - Iyx*sin(psi_t)*cos(theta_t) + Izx*sin(theta_t)) + (sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t))*(Ixy*sin(theta_t) + Ixy*cos(psi_t)*cos(theta_t) - Iyy*sin(psi_t)*cos(theta_t)) + (Ixz*cos(psi_t)*cos(theta_t) - Iyz*sin(psi_t)*cos(theta_t) + Izz*sin(theta_t))*cos(phi_t)*cos(theta_t),
+                        (Ixx*(sin(phi_t)*sin(theta_t)*cos(psi_t) + sin(psi_t)*cos(phi_t)) + Iyx*(-sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t)) - Izx*sin(phi_t)*cos(theta_t))*cos(psi_t)*cos(theta_t) - (Ixy*(sin(phi_t)*sin(theta_t)*cos(psi_t) + sin(psi_t)*cos(phi_t)) - Ixy*sin(phi_t)*cos(theta_t) + Iyy*(-sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t)))*sin(psi_t)*cos(theta_t) + (Ixz*(sin(phi_t)*sin(theta_t)*cos(psi_t) + sin(psi_t)*cos(phi_t)) + Iyz*(-sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t)) - Izz*sin(phi_t)*cos(theta_t))*sin(theta_t), (-sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t))*(Ixy*(sin(phi_t)*sin(theta_t)*cos(psi_t) + sin(psi_t)*cos(phi_t)) - Ixy*sin(phi_t)*cos(theta_t) + Iyy*(-sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t))) + (sin(phi_t)*sin(theta_t)*cos(psi_t) + sin(psi_t)*cos(phi_t))*(Ixx*(sin(phi_t)*sin(theta_t)*cos(psi_t) + sin(psi_t)*cos(phi_t)) + Iyx*(-sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t)) - Izx*sin(phi_t)*cos(theta_t)) - (Ixz*(sin(phi_t)*sin(theta_t)*cos(psi_t) + sin(psi_t)*cos(phi_t)) + Iyz*(-sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t)) - Izz*sin(phi_t)*cos(theta_t))*sin(phi_t)*cos(theta_t), (sin(phi_t)*sin(psi_t) - sin(theta_t)*cos(phi_t)*cos(psi_t))*(Ixx*(sin(phi_t)*sin(theta_t)*cos(psi_t) + sin(psi_t)*cos(phi_t)) + Iyx*(-sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t)) - Izx*sin(phi_t)*cos(theta_t)) + (sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t))*(Ixy*(sin(phi_t)*sin(theta_t)*cos(psi_t) + sin(psi_t)*cos(phi_t)) - Ixy*sin(phi_t)*cos(theta_t) + Iyy*(-sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t))) + (Ixz*(sin(phi_t)*sin(theta_t)*cos(psi_t) + sin(psi_t)*cos(phi_t)) + Iyz*(-sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t)) - Izz*sin(phi_t)*cos(theta_t))*cos(phi_t)*cos(theta_t), 
+                        (Ixx*(sin(phi_t)*sin(psi_t) - sin(theta_t)*cos(phi_t)*cos(psi_t)) + Iyx*(sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t)) + Izx*cos(phi_t)*cos(theta_t))*cos(psi_t)*cos(theta_t) - (Ixy*(sin(phi_t)*sin(psi_t) - sin(theta_t)*cos(phi_t)*cos(psi_t)) + Ixy*cos(phi_t)*cos(theta_t) + Iyy*(sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t)))*sin(psi_t)*cos(theta_t) + (Ixz*(sin(phi_t)*sin(psi_t) - sin(theta_t)*cos(phi_t)*cos(psi_t)) + Iyz*(sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t)) + Izz*cos(phi_t)*cos(theta_t))*sin(theta_t), (-sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t))*(Ixy*(sin(phi_t)*sin(psi_t) - sin(theta_t)*cos(phi_t)*cos(psi_t)) + Ixy*cos(phi_t)*cos(theta_t) + Iyy*(sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t))) + (sin(phi_t)*sin(theta_t)*cos(psi_t) + sin(psi_t)*cos(phi_t))*(Ixx*(sin(phi_t)*sin(psi_t) - sin(theta_t)*cos(phi_t)*cos(psi_t)) + Iyx*(sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t)) + Izx*cos(phi_t)*cos(theta_t)) - (Ixz*(sin(phi_t)*sin(psi_t) - sin(theta_t)*cos(phi_t)*cos(psi_t)) + Iyz*(sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t)) + Izz*cos(phi_t)*cos(theta_t))*sin(phi_t)*cos(theta_t), (sin(phi_t)*sin(psi_t) - sin(theta_t)*cos(phi_t)*cos(psi_t))*(Ixx*(sin(phi_t)*sin(psi_t) - sin(theta_t)*cos(phi_t)*cos(psi_t)) + Iyx*(sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t)) + Izx*cos(phi_t)*cos(theta_t)) + (sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t))*(Ixy*(sin(phi_t)*sin(psi_t) - sin(theta_t)*cos(phi_t)*cos(psi_t)) + Ixy*cos(phi_t)*cos(theta_t) + Iyy*(sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t))) + (Ixz*(sin(phi_t)*sin(psi_t) - sin(theta_t)*cos(phi_t)*cos(psi_t)) + Iyz*(sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t)) + Izz*cos(phi_t)*cos(theta_t))*cos(phi_t)*cos(theta_t);
 
             r_left_skew_symmetric << 0, -r_z_left_temp, r_y_left_temp,
                                         r_z_left_temp, 0, -r_x_left_temp,
@@ -929,9 +947,9 @@ int main()
                                         r_z_right_temp, 0, -r_x_right_temp,
                                         -r_y_right_temp, r_x_right_temp, 0;
 
-            A_c << 0, 0, 0, 0, 0, 0, cos(psi_t), sin(psi_t), 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, -sin(psi_t), cos(psi_t), 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0,
+            A_c << 0, 0, 0, 0, 0, 0, cos(psi_t)*cos(theta_t), -sin(psi_t)*cos(theta_t), sin(theta_t), 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, sin(phi_t)*sin(theta_t)*cos(psi_t) + sin(psi_t)*cos(phi_t), -sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t), -sin(phi_t)*cos(theta_t), 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, sin(phi_t)*sin(psi_t) - sin(theta_t)*cos(phi_t)*cos(psi_t), sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t), cos(phi_t)*cos(theta_t), 0, 0, 0, 0,
                     
                     0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
                     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0,
@@ -959,13 +977,17 @@ int main()
                     0, 0, 1/m_value, 0, 0, 1/m_value,
                     0, 0, 0, 0, 0, 0;
 
+
+            Eigen::Matrix<double, n, n> A_d_t = Eigen::ArrayXXd::Zero(n, n);
+            Eigen::Matrix<double, n, m> B_d_t = Eigen::ArrayXXd::Zero(n, m);
+
             discretize_state_space_matrices(A_c, B_c, dt, A_d_t, B_d_t);
 
-            A_d_array[i] = A_d_t;
-            B_d_array[i] = B_d_t;
+            //A_d_array[i] = A_d_t;
+            //B_d_array[i] = B_d_t;
 
-            P_param.block(0, 1 + N + (i*n), n, n) = A_d_t;
-            P_param.block(0, 1 + N + n * N + (i*m), n, m) = B_d_t;
+            P_param.block<n, n>(0, 1 + N + (i*n)) = A_d_t;
+            P_param.block<n, m>(0, 1 + N + n * N + (i*m)) = B_d_t;
         }
 
         size_t rows_P_param = P_param.rows();
@@ -977,7 +999,13 @@ int main()
         
         solver_arguments["p"] = P_param_casadi;
 
-        std::cout << "Before updating x0_solver." << std::endl;
+        // std::cout << "P_param_casadi matrices (B):\n" << std::endl;
+        // std::cout << P_param_casadi(Slice(0, n), Slice(1 + N + n*N, 1 + N + n*N + m)) << std::endl;
+        // std::cout << "\nx_t and x_ref in P_Param_casadi:\n" << std::endl;
+        // std::cout << P_param_casadi(Slice(0, n), Slice(0, N+1)) << std::endl;
+        // std::cout << "D_vector in P_Param_casadi:\n" << P_param_casadi(Slice(0, n), Slice(1+N+n*N+m*N, 1+N+n*N+m*N+m*N)) << std::endl;
+        // std::cout << std::endl;
+        // std::cout << P_param_casadi(Slice(0, n), Slice(1 + N + n*N + 3*m, 1 + N + n*N + 3*m + m)) << std::endl;
         
         x0_solver << X_t, U_t;
 
@@ -988,10 +1016,6 @@ int main()
 
         std::memcpy(x0_solver_casadi.ptr(), x0_solver.data(), sizeof(double)*rows_x0_solver*cols_x0_solver);
         solver_arguments["x0"] = x0_solver_casadi;
-        
-        std::cout << "After updating x0_solver." << std::endl;
-
-        //std::cout << "x0_solver:\n" << x0_solver << std::endl;
 
         auto end = high_resolution_clock::now();
 
@@ -1027,17 +1051,25 @@ int main()
 
         s << u_t(0) << "|" << u_t(1) << "|" << u_t(2) << "|" << u_t(3) << "|" << u_t(4) << "|" << u_t(5) << "|" << r_x_left << "|" << r_y_left << "|" << r_z_left << "|" << r_x_right << "|" << r_y_right << "|" << r_z_right; // Write torque setpoints to stringstream
 
-        //sendto(sockfd, (const char *)s.str().c_str(), strlen(s.str().c_str()), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
+        sendto(sockfd, (const char *)s.str().c_str(), strlen(s.str().c_str()), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
 
-        X_t.block(0, 0, n*N, 1) = solution_variables.block(n, 0, n*N, 1);
-        X_t.block(n*N, 0, n, 1) = solution_variables.block(n*N, 0, n, 1);
+        ofstream data_file;
+            data_file.open(".././plot_data/mpc_log.csv", ios::app); // Open csv file in append mode
+            data_file << total_iterations * dt << "," << x_t(0) << "," << x_t(1) << "," << x_t(2) << "," << x_t(3) << "," << x_t(4) << "," << x_t(5) << "," << x_t(6) << "," << x_t(7) << "," << x_t(8) << "," << x_t(9) << "," << x_t(10) << "," << x_t(11) << "," << x_t(12)
+                    << "," << u_t(0) << "," << u_t(1) << "," << u_t(2) << "," << u_t(3) << "," << u_t(4) << "," << u_t(5) 
+                    << "," << r_x_left << "," << r_y_left << "," << r_z_left << "," << r_x_right << "," << r_y_right << "," << r_z_right << std::endl;
+                
+            data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
 
-        U_t.block(0, 0, m*(N-1), 1) = solution_variables.block(n*(N+1)+m, 0, m*(N-1), 1);
-        U_t.block(m*(N-1), 0, m, 1) = solution_variables.block(n*(N+1)+m*(N-1), 0, m, 1);
+        X_t.block<n*N, 1>(0, 0) = solution_variables.block<n*N, 1>(n, 0);
+        X_t.block<n, 1>(n*N, 0) = solution_variables.block<n, 1>(n*N, 0);
 
-        for(int i = 0; i < n; ++i) {
-            x_t(i) = solution_variables(i+n);
-        }
+        U_t.block<m*(N-1), 1>(0, 0) = solution_variables.block<m*(N-1), 1>(n*(N+1) + m, 0);
+        U_t.block<m, 1>(m*(N-1), 0) = solution_variables.block<m, 1>(n*(N+1)+m*(N-1), 0);
+
+        // for(int i = 0; i < n; ++i) {
+        //     x_t(i) = solution_variables(i+n);
+        // }
 
         ++total_iterations;
 
@@ -1050,9 +1082,7 @@ int main()
 
         std::cout << "r_y_left: " << r_y_left << ",r_y_right: " << r_y_right << std::endl; 
 
-        std::cout << "D_t:\n" << D_current << std::endl;
-
-        std::cout << "x_t:" << x_t(0) << "," << x_t(1) << "," << x_t(2) << "," << x_t(3) << "," << x_t(4) << "," << x_t(5) << "," << x_t(6) << "," << x_t(7) << "," << x_t(8) << "," << x_t(9) << "," << x_t(10) << "," << x_t(11) << "," << x_t(12) << std::endl;
+        std::cout << "D_vector:\n" << D_vector << std::endl;
 
         auto end_total = high_resolution_clock::now();
         double full_iteration_duration = duration_cast<microseconds> (end_total - start_total).count();
