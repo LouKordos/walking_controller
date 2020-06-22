@@ -19,5 +19,6 @@
 - Combine all `0:N` loops into one
 - Try running setup.sh with `sh setup.sh` instead of the more complex way, if it works, update `README.md`
 - Add casadi benchmark to repo to test install
-- Create `devel` branch
+- Create `develop` branch (Git flow model, so `feature/[feature_name]` as well)
 - VENV's FOR ALL PYTHON INSTALLS!!!!
+- Use X and Y axes for world inertia as well
