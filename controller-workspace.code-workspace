@@ -70,7 +70,8 @@
 			"strstream": "cpp",
 			"cfenv": "cpp",
 			"valarray": "cpp",
-			"core": "cpp"
+			"core": "cpp",
+			"dense": "cpp"
 		}
 	}
 }
