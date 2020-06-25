@@ -22,3 +22,34 @@
 - Create `develop` branch (Git flow model, so `feature/[feature_name]` as well)
 - VENV's FOR ALL PYTHON INSTALLS!!!!
 - Use X and Y axes for world inertia as well
+- Use Bazel to compile project
+- Maybe merge everything into one repository
+- Try setup script on Manjaro
+- Maybe install everything in catkin workspace
+- Install Gazebo with Bullet engine!!!
+- Test setup script in WSL2
+- Somehow add footstep locations to decision variables, or make it seperate optimization problem (one combined optimization for motion planning would be better to give solver intuition about the effects different footstep locations have)
+- Consider rewriting NLP just using IPOPT and Pardiso to remove overhead and increase loop frequency, 60-100Hz should be the goal
+- Use running average solver time for discretization dt
+- Maybe Adaptive Horizon Length
+- Customize Gazebo to Draw Ground reaction force vectors etc. (https://answers.gazebosim.org/question/3383/how-to-add-a-dynamic-visual-marker-in-gazebo/)
+- Experiment with custom drawing in gazebo in general
+- Maybe/Eventually Kalman Filter for Probability of Contact and/or Foot force estimation
+- Add contact sensor to foot
+- Soft contact model
+- For advanced environment modelling: Either have a coordinate frame for world based on SLAM or try to get one frame for each foot to correctly orient feet
+- f_min and f_max constraints as J*tau instead of constant forces (would have to assume angles are constant over prediction horizon) or add f_min and f_max to parameters to make them scale dynamically based on current orientation and torque limits
+- ROS2 install from source in setup.sh!!!!
+- Maybe reduce state bounds length by combining friction constraints and force limits (now just using -inf and inf)
+- Test / Implement side stepping
+- PARDISO solver
+- Make c++ MPC heavily multithreaded to scale for high core-count CPU's
+- Try installing different solvers
+- Test transition from walking to standing and the other way around
+- Multithreaded global state update
+- https://github.com/fmtlib/fmt for printing out in same line
+- meshgrid for reachability of leg
+- Print Debug in same Line c++
+- Change `nx1` Matrices in Impedance Controller Code to Vectors
+- Add slight yaw outwards on foot for better stability while walking
+- For fixing link to world: https://answers.gazebosim.org//question/20081/sdf-how-to-fix-a-model-to-the-world/
