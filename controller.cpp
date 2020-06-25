@@ -1054,12 +1054,11 @@ int main()
         sendto(sockfd, (const char *)s.str().c_str(), strlen(s.str().c_str()), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
 
         ofstream data_file;
-            data_file.open(".././plot_data/mpc_log.csv", ios::app); // Open csv file in append mode
-            data_file << total_iterations * dt << "," << x_t(0) << "," << x_t(1) << "," << x_t(2) << "," << x_t(3) << "," << x_t(4) << "," << x_t(5) << "," << x_t(6) << "," << x_t(7) << "," << x_t(8) << "," << x_t(9) << "," << x_t(10) << "," << x_t(11) << "," << x_t(12)
-                    << "," << u_t(0) << "," << u_t(1) << "," << u_t(2) << "," << u_t(3) << "," << u_t(4) << "," << u_t(5) 
-                    << "," << r_x_left << "," << r_y_left << "," << r_z_left << "," << r_x_right << "," << r_y_right << "," << r_z_right << std::endl;
-                
-            data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
+        data_file.open(".././plot_data/mpc_log.csv", ios::app); // Open csv file in append mode
+        data_file << total_iterations * dt << "," << x_t(0) << "," << x_t(1) << "," << x_t(2) << "," << x_t(3) << "," << x_t(4) << "," << x_t(5) << "," << x_t(6) << "," << x_t(7) << "," << x_t(8) << "," << x_t(9) << "," << x_t(10) << "," << x_t(11) << "," << x_t(12)
+                << "," << u_t(0) << "," << u_t(1) << "," << u_t(2) << "," << u_t(3) << "," << u_t(4) << "," << u_t(5) 
+                << "," << r_x_left << "," << r_y_left << "," << r_z_left << "," << r_x_right << "," << r_y_right << "," << r_z_right << std::endl;
+        data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
 
         X_t.block<n*N, 1>(0, 0) = solution_variables.block<n*N, 1>(n, 0);
         X_t.block<n, 1>(n*N, 0) = solution_variables.block<n, 1>(n*N, 0);
