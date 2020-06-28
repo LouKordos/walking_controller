@@ -382,6 +382,12 @@ rm -rf ./jupyter_notebooks/
 git clone https://github.com/LouKordos/jupyter_notebooks.git
 sudo chmod -R ugo+rw ${GITHUB_DIRECTORY}/jupyter_notebooks/
 
+cd ./jupyter_notebooks
+
+jupyter trust *.ipynb # Sign and trust all notebooks
+
+cd ..
+
 mkdir ${HOME_DIR}/.gazebo/ # Only gets created after first run of gazebo, so we do it manually
 sudo chmod -R ugo+rw ${HOME_DIR}/.gazebo/
 
