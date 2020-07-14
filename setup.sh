@@ -36,13 +36,13 @@ echo -e "${GREEN}All github repositories will be cloned into ${GITHUB_DIRECTORY}
 
 # Install git, might be of some use, we'll see
 
-echo -e "${GREEN}Upgrading all upgradable packages first.\n${NC}"
+echo -e "${GREEN}Updating and upgrading all packages first.\n${NC}"
 
 sudo apt -q update -y
 
 sudo apt -q upgrade -y
 
-echo -e "${GREEN}Installing git, just to be sure.${NC}" & sleep 1
+echo -e "${GREEN}Making sure git is installed${NC}" & sleep 1
 
 sudo apt-get install git -y
 
