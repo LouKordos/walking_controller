@@ -244,9 +244,9 @@ sudo apt-get remove libignition-transport3-dev
 
 sudo apt-get install -y mercurial cmake pkg-config python ruby-ronn libprotoc-dev libprotobuf-dev protobuf-compiler uuid-dev libzmq3-dev libignition-msgs-dev
 
-hg clone https://bitbucket.org/ignitionrobotics/ign-transport /tmp/ign-transport
+git clone https://github.com/ignitionrobotics/ign-transport.git /tmp/ign-transport
 cd /tmp/ign-transport
-hg up ign-transport8
+git checkout ign-transport8
 
 mkdir build
 cd build
