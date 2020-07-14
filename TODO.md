@@ -5,6 +5,7 @@
 - Install IPOPT from source
 - Only build packages that are not on ubuntu package search (including focal)
 - Test different solvers
+- Check simulation paused in gazebo plugin and stop sending states to pause control plugin as well, otherwise simulation breaks after resuming
 - For compiling casadi: `-DWITH_THREAD=ON` and install HSL solver with -NUM_THREADS
 - Install MUMPS with multiple threads as shown in manual
 - Test script with not installing casadi from pip (installing python3-dev will probably fix this)
@@ -53,3 +54,5 @@
 - Change `nx1` Matrices in Impedance Controller Code to Vectors
 - Add slight yaw outwards on foot for better stability while walking
 - For fixing link to world: https://answers.gazebosim.org//question/20081/sdf-how-to-fix-a-model-to-the-world/
+- Move everything to `~/src/`
+- Give `setup.sh` executable flag so that user does not have to do it
