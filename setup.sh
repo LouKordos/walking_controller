@@ -421,8 +421,14 @@ echo -e "\n${GREEN}Building Gazebo main walking controller for Biped...${NC}\n" 
 
 cd $WORKSPACE_DIRECTORY
 
-cp -R eigen3/Eigen /usr/include/ # copy to include directory to be sure (is needed for internal includes like "#include <Eigen/Core>")
-cp -R Eigen_unsupported /usr/include/
+#cp -R eigen3/Eigen /usr/include/ # copy to include directory to be sure (is needed for internal includes like "#include <Eigen/Core>")
+#cp -R Eigen_unsupported /usr/include/
+export PREV_DIR = $(pwd)
+git clone https://gitlab.com/libeigen/eigen.git /tmp/eigen3 # Install Eigen3
+cd /tmp/eigen3/
+mkdir build && cd build
+sudo make install
+cd PREV_DIR
 
 sudo chmod -R ugo+rw $WORKSPACE_DIRECTORY
 sudo rm -rf build
