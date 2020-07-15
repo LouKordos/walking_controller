@@ -82,6 +82,7 @@ mkdir ${HOME}/Documents/
 To get everything set up, run these commands:
 ```
 git clone https://github.com/LouKordos/walking_controller.git # Clone the main repository
+git checkout master # Check out master branch. If you want to use the latest, possibly unstable branch, checkout the "develop" branch.
 cd walking_controller/ # Change to repository directory
 sudo ./setup.sh 2>&1 | tee ${HOME}/Documents/biped_controller_setup.log # Run setup script (make sure you do not forget the sudo!) and pipe into log file
 source ~/.bashrc # source .bashrc, in case the terminal is not updated yet and thus cannot find the custom commands
