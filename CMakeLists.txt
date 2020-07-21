@@ -10,10 +10,12 @@ find_package(casadi)
 add_definitions(-std=c++17 -Wall -Wpedantic -I .. -O3)
 
 add_executable(controller controller.cpp)
+add_executable(nlp_test nlp_test.cpp)
 
 #target_link_libraries (controller ${CMAKE_THREAD_LIBS_INIT} ${COMMUNICATIONS_LIBS} casadi)
 
 target_link_libraries (controller ${CMAKE_THREAD_LIBS_INIT} casadi)
+target_link_libraries (nlp_test ${CMAKE_THREAD_LIBS_INIT} casadi)
 
 message("CMAKE_CXX_FLAGS_DEBUG is ${CMAKE_CXX_FLAGS_DEBUG}")
 message("CMAKE_CXX_FLAGS_RELEASE is ${CMAKE_CXX_FLAGS_RELEASE}")
