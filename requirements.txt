@@ -9,3 +9,4 @@ nose
 casadi
 more-itertools
 playsound
+tqdm
