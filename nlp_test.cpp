@@ -429,8 +429,8 @@ int main() {
         }
         
         if (total_iterations % contact_swap_interval == 0) {
-            Eigen::Matrix<double, 3, 1> adjusted_pos_vector_left = (Eigen::Matrix<double, 3,1>() << x_t(3, 0) - hip_offset, x_t(4, 0), x_t(5, 0)).finished();
-            Eigen::Matrix<double, 3, 1> adjusted_pos_vector_right = (Eigen::Matrix<double, 3,1>() << x_t(3, 0) + hip_offset, x_t(4, 0), x_t(5, 0)).finished();
+            Eigen::Matrix<double, 3, 1> adjusted_pos_vector_left = (Eigen::Matrix<double, 3,1>() << (double)x_t(3, 0) - hip_offset, x_t(4, 0), x_t(5, 0)).finished();
+            Eigen::Matrix<double, 3, 1> adjusted_pos_vector_right = (Eigen::Matrix<double, 3,1>() << (double)x_t(3, 0) + hip_offset, x_t(4, 0), x_t(5, 0)).finished();
             
             Eigen::Matrix<double, 3, 1> vel_vector = (Eigen::Matrix<double, 3, 1>() << x_t(9, 0), x_t(10, 0), x_t(11, 0)).finished();
             Eigen::Matrix<double, 3, 1> vel_desired_vector = (Eigen::Matrix<double, 3, 1>() << vel_x_desired, vel_y_desired, vel_z_desired).finished();
@@ -439,26 +439,26 @@ int main() {
             left_foot_pos_world = adjusted_pos_vector_left /*+ (t_stance/2) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(x_t(5, 0)) / 9.81) * vel_vector.cross(omega_desired_vector)*/;
             right_foot_pos_world = adjusted_pos_vector_right /*+ (t_stance/2) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(x_t(5, 0)) / 9.81) * vel_vector.cross(omega_desired_vector)*/;
             
-            if (left_foot_pos_world(0, 0) - x_t(3, 0) > r_x_limit) {
-                left_foot_pos_world(0, 0) = x_t(3, 0) + r_x_limit;
+            if (left_foot_pos_world(0, 0) - (double)x_t(3, 0) > r_x_limit) {
+                left_foot_pos_world(0, 0) = (double)x_t(3, 0) + r_x_limit;
             }
-            else if (left_foot_pos_world(0, 0) - x_t(3, 0) < -r_x_limit) {
-                left_foot_pos_world(0, 0) = x_t(3, 0) - r_x_limit;
+            else if (left_foot_pos_world(0, 0) - (double)x_t(3, 0) < -r_x_limit) {
+                left_foot_pos_world(0, 0) = (double)x_t(3, 0) - r_x_limit;
             }
 
-            if (right_foot_pos_world(0, 0) - x_t(3, 0) > r_x_limit) {
-                right_foot_pos_world(0, 0) = x_t(3, 0) + r_x_limit;
+            if (right_foot_pos_world(0, 0) - (double)x_t(3, 0) > r_x_limit) {
+                right_foot_pos_world(0, 0) = (double)x_t(3, 0) + r_x_limit;
             }
-            else if (right_foot_pos_world(0, 0) - x_t(3, 0) < -r_x_limit) {
-                right_foot_pos_world(0, 0) = x_t(3, 0) - r_x_limit;
+            else if (right_foot_pos_world(0, 0) - (double)x_t(3, 0) < -r_x_limit) {
+                right_foot_pos_world(0, 0) = (double)x_t(3, 0) - r_x_limit;
             }
         }
 
-        r_x_left = left_foot_pos_world(0, 0) - x_t(3, 0);
-        r_x_right = right_foot_pos_world(0, 0) - x_t(3, 0);
+        r_x_left = left_foot_pos_world(0, 0) - (double)x_t(3, 0);
+        r_x_right = right_foot_pos_world(0, 0) - (double)x_t(3, 0);
 
-        r_y_left = left_foot_pos_world(1, 0) - x_t(4, 0);
-        r_y_right = right_foot_pos_world(1, 0) - x_t(4, 0);
+        r_y_left = left_foot_pos_world(1, 0) - (double)x_t(4, 0);
+        r_y_right = right_foot_pos_world(1, 0) - (double)x_t(4, 0);
 
         // r_x_left = -hip_offset;
         // r_x_right = hip_offset;
@@ -509,14 +509,11 @@ int main() {
         theta_desired += omega_y_desired * dt;
         psi_desired += omega_z_desired * dt;
 
-        double r_y_left_prev = r_y_left;
-        double r_y_right_prev = r_y_right;
-
         double r_x_left_prev = r_x_left;
         double r_x_right_prev = r_x_right;
 
-        double r_z_left_prev = r_z_left;
-        double r_z_right_prev = r_z_right;
+        double r_y_left_prev = r_y_left;
+        double r_y_right_prev = r_y_right;
 
         Eigen::Matrix<double, 3, 1> left_foot_pos_world_prev = left_foot_pos_world;
         Eigen::Matrix<double, 3, 1> right_foot_pos_world_prev = right_foot_pos_world;
@@ -565,17 +562,17 @@ int main() {
             }
 
             if(i == 0) {
-                phi_t = x_t(0, 0);
-                theta_t = x_t(1, 0);
-                psi_t = x_t(2, 0);
+                phi_t = (double)x_t(0, 0);
+                theta_t = (double)x_t(1, 0);
+                psi_t = (double)x_t(2, 0);
 
-                vel_x_t = x_t(9, 0);
-                vel_y_t = x_t(10, 0);
-                vel_z_t = x_t(11, 0);
+                vel_x_t = (double)x_t(9, 0);
+                vel_y_t = (double)x_t(10, 0);
+                vel_z_t = (double)x_t(11, 0);
 
-                pos_x_t = x_t(3, 0);
-                pos_y_t = x_t(4, 0);
-                pos_z_t = x_t(5, 0);
+                pos_x_t = (double)x_t(3, 0);
+                pos_y_t = (double)x_t(4, 0);
+                pos_z_t = (double)x_t(5, 0);
             }
 
             if((total_iterations+i) % contact_swap_interval == 0 && i != 0) {
@@ -617,7 +614,7 @@ int main() {
             r_z_left = -pos_z_t;
             r_z_right = -pos_z_t;
 
-            I_world << (Ixx*cos(psi_t_temp) + Iyx*sin(psi_t_temp))*cos(psi_t_temp) + (Ixy*cos(psi_t_temp) + Iyy*sin(psi_t_temp))*sin(psi_t_temp), -(Ixx*cos(psi_t_temp) + Iyx*sin(psi_t_temp))*sin(psi_t_temp) + (Ixy*cos(psi_t_temp) + Iyy*sin(psi_t_temp))*cos(psi_t_temp), Ixz*cos(psi_t_temp) + Iyz*sin(psi_t_temp), (-Ixx*sin(psi_t_temp) + Iyx*cos(psi_t_temp))*cos(psi_t_temp) + (-Ixy*sin(psi_t_temp) + Iyy*cos(psi_t_temp))*sin(psi_t_temp), -(-Ixx*sin(psi_t_temp) + Iyx*cos(psi_t_temp))*sin(psi_t_temp) + (-Ixy*sin(psi_t_temp) + Iyy*cos(psi_t_temp))*cos(psi_t_temp), -Ixz*sin(psi_t_temp) + Iyz*cos(psi_t_temp), Ixy*sin(psi_t_temp) + Izx*cos(psi_t_temp), Ixy*cos(psi_t_temp) - Izx*sin(psi_t_temp), Izz;
+            I_world << (Ixx*cos(psi_t) + Iyx*sin(psi_t))*cos(psi_t) + (Ixy*cos(psi_t) + Iyy*sin(psi_t))*sin(psi_t), -(Ixx*cos(psi_t) + Iyx*sin(psi_t))*sin(psi_t) + (Ixy*cos(psi_t) + Iyy*sin(psi_t))*cos(psi_t), Ixz*cos(psi_t) + Iyz*sin(psi_t), (-Ixx*sin(psi_t) + Iyx*cos(psi_t))*cos(psi_t) + (-Ixy*sin(psi_t) + Iyy*cos(psi_t))*sin(psi_t), -(-Ixx*sin(psi_t) + Iyx*cos(psi_t))*sin(psi_t) + (-Ixy*sin(psi_t) + Iyy*cos(psi_t))*cos(psi_t), -Ixz*sin(psi_t) + Iyz*cos(psi_t), Ixy*sin(psi_t) + Izx*cos(psi_t), Ixy*cos(psi_t) - Izx*sin(psi_t), Izz;
 
             r_left_skew_symmetric << 0, -r_z_left, r_y_left,
                                         r_z_left, 0, -r_x_left,
