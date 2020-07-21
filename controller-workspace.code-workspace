@@ -71,7 +71,8 @@
 			"cfenv": "cpp",
 			"valarray": "cpp",
 			"core": "cpp",
-			"dense": "cpp"
+			"dense": "cpp",
+			"*.ipp": "cpp"
 		}
 	}
 }
