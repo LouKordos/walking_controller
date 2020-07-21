@@ -323,9 +323,6 @@ int main() {
     Eigen::Matrix<double, 3, 1> left_foot_pos_world = Eigen::ArrayXd::Zero(3, 1);
     Eigen::Matrix<double, 3, 1> right_foot_pos_world = Eigen::ArrayXd::Zero(3, 1);
 
-    Eigen::Matrix<double, 3, 1> left_foot_pos_world_prev = Eigen::ArrayXd::Zero(3, 1);
-    Eigen::Matrix<double, 3, 1> right_foot_pos_world_prev = Eigen::ArrayXd::Zero(3, 1);
-
     double hip_offset = 0.15;
     
     // These might need renaming in future since it might cause problems when accessing from other threads while discretizing at future values
@@ -692,7 +689,7 @@ int main() {
         r_y_right = r_y_right_prev;
 
         r_z_left = r_z_right = -x_t(5, 0);
-        
+
         size_t rows_P_param = P_param.rows();
         size_t cols_P_param = P_param.cols();
 
