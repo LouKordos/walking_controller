@@ -274,7 +274,7 @@ int main() {
     Eigen::Matrix<double, n*(N+1), 1> X_t = Eigen::ArrayXXd::Zero(n*(N+1), 1); // Maybe this is actually obsolete and only x0_solver is sufficient
     Eigen::Matrix<double, m*N, 1> U_t = Eigen::ArrayXXd::Zero(m*N, 1); // Same here
 
-    Eigen::Matrix<double, n, N> x_ref = Eigen::ArrayXXd::Zero(n, N);;
+    Eigen::Matrix<double, n, N> x_ref = Eigen::ArrayXXd::Zero(n, N);
 
     static const int P_rows = n;
     static const int P_cols = 1 + N + n * N + m * N + N * m;
