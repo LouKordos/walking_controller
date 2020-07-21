@@ -1,5 +1,5 @@
 - 2 DOF ankle
-- Make every dependency in setup.sh build from source so that it works on any OS (Gazebo Dependencies From Source -> Install from Source)
+- Make every dependency in setup.sh build from source so that it works on any OS
 - Test more distros and their versions, then update README.md to mention that every version starting from Ubuntu 18.04 LTS and up will work
 - Install SWIG from source (http://swig.org/svn.html) (PCRE, YACC, Autoconf)
 - Install IPOPT from source
@@ -20,7 +20,6 @@
 - Combine all `0:N` loops into one
 - Try running setup.sh with `sh setup.sh` instead of the more complex way, if it works, update `README.md`
 - Add casadi benchmark to repo to test install
-- Create `develop` branch (Git flow model, so `feature/[feature_name]` as well)
 - VENV's FOR ALL PYTHON INSTALLS!!!!
 - Use X and Y axes for world inertia as well
 - Use Bazel to compile project
