@@ -11,6 +11,7 @@ add_definitions(-std=c++17 -Wall -Wpedantic -I .. -O3)
 
 add_executable(controller controller.cpp)
 add_executable(nlp_test nlp_test.cpp)
+add_executable(eigen_test eigen_test.cpp)
 
 #target_link_libraries (controller ${CMAKE_THREAD_LIBS_INIT} ${COMMUNICATIONS_LIBS} casadi)
 
