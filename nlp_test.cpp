@@ -94,8 +94,8 @@ void discretize_state_space_matrices(Eigen::Matrix<double, n, n> &A_c_temp, Eige
 
     Eigen::MatrixXd e_A_B = (A_B * dt).exp();
 
-    A_d_temp = e_A_B.block<n, n>(0, 0);
-    B_d_temp = e_A_B.block<n, m>(0, n);
+    A_d_temp = e_A_B.block<n, n>(0, 0).eval();
+    B_d_temp = e_A_B.block<n, m>(0, n).eval();
 }
 
 Eigen::Matrix<double, n, 1> step_discrete_model(Eigen::Matrix<double, n, 1> x, Eigen::Matrix<double, m, 1> u, double r_x_left_temp, double r_x_right_temp, double r_y_left_temp, double r_y_right_temp, double r_z_left_temp, double r_z_right_temp) {
@@ -388,7 +388,7 @@ int main() {
                     0, 0, 0, 0, swing_right_temp, 0,
                     0, 0, 0, 0, 0, swing_right_temp;
 
-            D_vector.block<m, m>(0, k*m) = D_k;
+            D_vector.block<m, m>(0, k*m) = D_k.eval();
         }
 
         P_param.block<m, m*N> (0, 1 + N + n*N + m*N) = D_vector;
@@ -748,11 +748,11 @@ int main() {
                 << "," << r_x_left << "," << r_y_left << "," << r_z_left << "," << r_x_right << "," << r_y_right << "," << r_z_right << ",0" << std::endl; // Zero at the end has to be replace with predicted delay compensation state!
         data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
 
-        X_t.block<n*N, 1>(0, 0) = solution_variables.block<n*N, 1>(n, 0);
-        X_t.block<n, 1>(n*N, 0) = solution_variables.block<n, 1>(n*N, 0);
+        X_t.block<n*N, 1>(0, 0) = solution_variables.block<n*N, 1>(n, 0).eval();
+        X_t.block<n, 1>(n*N, 0) = solution_variables.block<n, 1>(n*N, 0).eval();
 
-        U_t.block<m*(N-1), 1>(0, 0) = solution_variables.block<m*(N-1), 1>(n*(N+1) + m, 0);
-        U_t.block<m, 1>(m*(N-1), 0) = solution_variables.block<m, 1>(n*(N+1)+m*(N-1), 0);
+        U_t.block<m*(N-1), 1>(0, 0) = solution_variables.block<m*(N-1), 1>(n*(N+1) + m, 0).eval();
+        U_t.block<m, 1>(m*(N-1), 0) = solution_variables.block<m, 1>(n*(N+1)+m*(N-1), 0).eval();
 
         ++total_iterations;
 
@@ -774,4 +774,6 @@ int main() {
         deadline.tv_sec = 0;
         clock_nanosleep(CLOCK_REALTIME, 0, &deadline, NULL);
     }
+
+    return 0;
 }
