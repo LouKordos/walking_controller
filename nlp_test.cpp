@@ -270,6 +270,11 @@ int main() {
 
     Eigen::Matrix<double, n*(N+1)+m*N, 1> x0_solver = Eigen::ArrayXXd::Zero(n*(N+1)+m*N, 1);
     Eigen::Matrix<double, n*(N+1), 1> X_t = Eigen::ArrayXXd::Zero(n*(N+1), 1); // Maybe this is actually obsolete and only x0_solver is sufficient
+    
+    for(int k = 0; k < n; ++k) {
+        X_t(k*n+0, 0) = x_t(k, 0);
+    }
+    
     Eigen::Matrix<double, m*N, 1> U_t = Eigen::ArrayXXd::Zero(m*N, 1); // Same here
 
     Eigen::Matrix<double, n, N> x_ref = Eigen::ArrayXXd::Zero(n, N);
@@ -350,6 +355,8 @@ int main() {
         // Loop starts here
         auto start = high_resolution_clock::now();
         auto start_total = high_resolution_clock::now();
+
+        std::cout << "-----------------------------------------------------------------------------\nr_left at beginning of iteration: " << r_x_left << "," << r_y_left << "," << r_z_left << ", r_right at beginning of iteration: " << r_x_right << "," << r_y_right << "," << r_z_right << std::endl;
 
         //msg_length = recvfrom(sockfd, (char *)buffer, udp_buffer_size, 0, ( struct sockaddr *) &cliaddr, &len); // Receive message over UDP containing full leg state
         //buffer[msg_length] = '\0'; // Add string ending delimiter to end of string (n is length of message)
@@ -460,12 +467,14 @@ int main() {
         r_y_left = left_foot_pos_world(1, 0) - (double)x_t(4, 0);
         r_y_right = right_foot_pos_world(1, 0) - (double)x_t(4, 0);
 
-        // r_x_left = -hip_offset;
-        // r_x_right = hip_offset;
-        // r_y_left = r_y_right = 0;
+        r_x_left = -hip_offset;
+        r_x_right = hip_offset;
+        r_y_left = r_y_right = 0;
 
         r_z_left = -x_t(5, 0);
         r_z_right = -x_t(5, 0);
+
+        std::cout << "r_left after foot pos update: " << r_x_left << "," << r_y_left << "," << r_z_left << ", r_right after foot pos update: " << r_x_right << "," << r_y_right << "," << r_z_right << std::endl;
 
         double pos_x_desired_temp = pos_x_desired;
         double pos_y_desired_temp = pos_y_desired;
@@ -602,17 +611,19 @@ int main() {
             }
 
             r_x_left = left_foot_pos_world(0, 0) - pos_x_t;
-            r_x_right = left_foot_pos_world(0, 0) - pos_x_t;
+            r_x_right = right_foot_pos_world(0, 0) - pos_x_t;
 
-            r_y_left = left_foot_pos_world(0, 0) - pos_y_t;
-            r_y_right = right_foot_pos_world(0, 0) - pos_y_t;
+            r_y_left = left_foot_pos_world(1, 0) - pos_y_t;
+            r_y_right = right_foot_pos_world(1, 0) - pos_y_t;
 
-            // r_x_left = -hip_offset;
-            // r_x_right = hip_offset;
-            // r_y_left = r_y_right = 0;
+            r_x_left = -hip_offset;
+            r_x_right = hip_offset;
+            r_y_left = r_y_right = 0;
 
             r_z_left = -pos_z_t;
             r_z_right = -pos_z_t;
+
+            std::cout << "r_left after discretization update: " << r_x_left << "," << r_y_left << "," << r_z_left << ", r_right after discretization update: " << r_x_right << "," << r_y_right << "," << r_z_right << std::endl;
 
             I_world << (Ixx*cos(psi_t) + Iyx*sin(psi_t))*cos(psi_t) + (Ixy*cos(psi_t) + Iyy*sin(psi_t))*sin(psi_t), -(Ixx*cos(psi_t) + Iyx*sin(psi_t))*sin(psi_t) + (Ixy*cos(psi_t) + Iyy*sin(psi_t))*cos(psi_t), Ixz*cos(psi_t) + Iyz*sin(psi_t), (-Ixx*sin(psi_t) + Iyx*cos(psi_t))*cos(psi_t) + (-Ixy*sin(psi_t) + Iyy*cos(psi_t))*sin(psi_t), -(-Ixx*sin(psi_t) + Iyx*cos(psi_t))*sin(psi_t) + (-Ixy*sin(psi_t) + Iyy*cos(psi_t))*cos(psi_t), -Ixz*sin(psi_t) + Iyz*cos(psi_t), Ixy*sin(psi_t) + Izx*cos(psi_t), Ixy*cos(psi_t) - Izx*sin(psi_t), Izz;
 
@@ -659,8 +670,8 @@ int main() {
 
             discretize_state_space_matrices(A_c, B_c, dt, A_d_t, B_d_t);
 
-            P_param.block<n, n>(0, 1 + N + (i*n)) = A_d_t;
-            P_param.block<n, m>(0, 1 + N + n * N + (i*m)) = B_d_t;
+            P_param.block<n, n>(0, 1 + N + (i*n)) = A_d_t.eval();
+            P_param.block<n, m>(0, 1 + N + n * N + (i*m)) = B_d_t.eval();
         }
 
         left_foot_pos_world = left_foot_pos_world_prev;
@@ -674,8 +685,12 @@ int main() {
 
         r_z_left = r_z_right = -x_t(5, 0);
 
+        std::cout << "r_left after discretization loop: " << r_x_left << "," << r_y_left << "," << r_z_left << ", r_right after discretization loop: " << r_x_right << "," << r_y_right << "," << r_z_right << std::endl;
+
         size_t rows_P_param = P_param.rows();
         size_t cols_P_param = P_param.cols();
+
+        //std::cout << "P_param:\n" << P_param << std::endl;
 
         DM P_param_casadi = casadi::DM::zeros(rows_P_param, cols_P_param);
 
@@ -733,12 +748,11 @@ int main() {
         
         x_t = step_discrete_model(x_t, u_t, r_x_left, r_x_right, r_y_left, r_y_right, r_z_left, r_z_right);
 
-        std::cout << "after stepping model" << std::endl;
+        std::cout << "r_left after stepping model: " << r_x_left << "," << r_y_left << "," << r_z_left << ", r_right after stepping model: " << r_x_right << "," << r_y_right << "," << r_z_right << std::endl;
 
         stringstream s;
 
         // s << u_t(0) << "|" << u_t(1) << "|" << u_t(2) << "|" << u_t(3) << "|" << u_t(4) << "|" << u_t(5) << "|" << r_x_left << "|" << r_y_left << "|" << r_z_left << "|" << r_x_right << "|" << r_y_right << "|" << r_z_right; // Write torque setpoints to stringstream
-
         // sendto(sockfd, (const char *)s.str().c_str(), strlen(s.str().c_str()), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
         
         ofstream data_file;
