@@ -36,7 +36,7 @@
 
 #include <iomanip>
 #include "casadi/casadi.hpp"
-#include <Eigen_unsupported/Eigen/MatrixFunctions>
+#include <eigen3/unsupported/Eigen/MatrixFunctions>
 
 
 using namespace casadi;
