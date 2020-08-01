@@ -55,3 +55,5 @@
 - For fixing link to world: https://answers.gazebosim.org//question/20081/sdf-how-to-fix-a-model-to-the-world/
 - Move everything to `~/src/`
 - Use static where possible to optimize performance
+- Refactor code to use Eigen Matrix for r instead of seperate values
+- Fetch one state before setting up everything solver, then set everything up, then refetch state to make first iteration better
