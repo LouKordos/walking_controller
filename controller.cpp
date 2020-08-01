@@ -210,7 +210,7 @@ void calculate_left_leg_torques() {
 
     while(true) {
         start = high_resolution_clock::now();
-
+        
         double t = iteration_counter * dt;
 
         // pos_desired_left_leg << 0, 0, 0.1*sin(2*t) - 0.9, 0, 0;
