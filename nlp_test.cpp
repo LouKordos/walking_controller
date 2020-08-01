@@ -63,7 +63,7 @@ static const int n = 13;
 static const int m = 6;
 
 static const double dt = 1/30.0;
-static const int N = 30;
+static const int N = 20;
 
 double f_min_z = 0;
 double f_max_z = 1000;
@@ -94,8 +94,8 @@ void discretize_state_space_matrices(Eigen::Matrix<double, n, n> &A_c_temp, Eige
 
     Eigen::MatrixXd e_A_B = (A_B * dt).exp();
 
-    A_d_temp = e_A_B.block<n, n>(0, 0).eval();
-    B_d_temp = e_A_B.block<n, m>(0, n).eval();
+    A_d_temp = e_A_B.block<n, n>(0, 0);
+    B_d_temp = e_A_B.block<n, m>(0, n);
 }
 
 Eigen::Matrix<double, n, 1> step_discrete_model(Eigen::Matrix<double, n, 1> x, Eigen::Matrix<double, m, 1> u, double r_x_left_temp, double r_x_right_temp, double r_y_left_temp, double r_y_right_temp, double r_z_left_temp, double r_z_right_temp) {
@@ -158,6 +158,16 @@ Eigen::Matrix<double, n, 1> step_discrete_model(Eigen::Matrix<double, n, 1> x, E
     discretize_state_space_matrices(A_c_temp_temp, B_c_temp_temp, dt, A_d_temp_temp, B_d_temp_temp);
 
     return A_d_temp_temp * x + B_d_temp_temp * u;
+}
+
+// Helper function for splitting string by delimiter character
+
+std::vector<std::string> split_string(std::string str, char delimiter) {
+    std::vector<std::string> results;
+
+    boost::split(results, str, [&delimiter](char c){return c == delimiter;});
+
+    return results;
 }
 
 int main() {
@@ -265,14 +275,34 @@ int main() {
         ubx(index+5) = f_max_z;
     }
 
+    double r_x_left = 0;
+    double r_y_left = 0;
+    double r_z_left = 0;
+
+    double r_x_right = 0;
+    double r_y_right = 0;
+    double r_z_right = 0;
+
     Eigen::Matrix<double, n, 1> x_t = (Eigen::Matrix<double, n, 1>() << 0, 0, 0, 0, 0, 1.48, 0, 0, 0, 0, 0, 0, -9.81).finished();
     Eigen::Matrix<double, m, 1> u_t = Eigen::ArrayXXd::Zero(m, 1);
+    
+    std::vector<Eigen::Matrix<double, m, 1>> control_history = {Eigen::ArrayXXd::Zero(m, 1), Eigen::ArrayXXd::Zero(m, 1)};
+
+    std::vector<Eigen::Matrix<double, 3, 1>> r_left_history = {(Eigen::Matrix<double, 3, 1>() << r_x_left, r_y_left, -x_t(5, 0)).finished(), (Eigen::Matrix<double, 3, 1>() << r_x_left, r_y_left, -x_t(5, 0)).finished()};
+    std::vector<Eigen::Matrix<double, 3, 1>> r_right_history = {(Eigen::Matrix<double, 3, 1>() << r_x_right, r_y_right, -x_t(5, 0)).finished(), (Eigen::Matrix<double, 3, 1>() << r_x_right, r_y_right, -x_t(5, 0)).finished()};
+
+    control_history.reserve(600 * dt);
+    r_left_history.reserve(600 * dt);
+    r_right_history.reserve(600 * dt);
 
     Eigen::Matrix<double, n*(N+1)+m*N, 1> x0_solver = Eigen::ArrayXXd::Zero(n*(N+1)+m*N, 1);
     Eigen::Matrix<double, n*(N+1), 1> X_t = Eigen::ArrayXXd::Zero(n*(N+1), 1); // Maybe this is actually obsolete and only x0_solver is sufficient
     
-    for(int k = 0; k < n; ++k) {
-        X_t(k*n+0, 0) = x_t(k, 0);
+    
+    for(int i = 0; i < (N+1); ++i) {
+        for(int k = 0; k < n; ++k) {
+            X_t(k + n*i, 0) = x_t(k, 0);
+        }
     }
     
     Eigen::Matrix<double, m*N, 1> U_t = Eigen::ArrayXXd::Zero(m*N, 1); // Same here
@@ -309,14 +339,6 @@ int main() {
 
     double r_x_limit = 0.5; // The relative foot position in x (so r_x_left and r_x_right) is limited to +/- r_x_limit
 
-    double r_x_left = 0;
-    double r_y_left = 0;
-    double r_z_left = 0;
-
-    double r_x_right = 0;
-    double r_y_right = 0;
-    double r_z_right = 0;
-
     Eigen::Matrix<double, 3, 1> left_foot_pos_world = Eigen::ArrayXd::Zero(3, 1);
     Eigen::Matrix<double, 3, 1> right_foot_pos_world = Eigen::ArrayXd::Zero(3, 1);
 
@@ -346,10 +368,12 @@ int main() {
 
     ofstream data_file;
     data_file.open(".././plot_data/mpc_log.csv");
-    data_file << "t,phi,theta,psi,pos_x,pos_y,pos_z,omega_x,omega_y,omega_z,vel_x,vel_y,vel_z,g,f_x_left,f_y_left,f_z_left,f_x_right,f_y_right,f_z_right,r_x_left,r_y_left,r_z_left,r_x_right,r_y_right,r_z_right" << std::endl; // Add header to csv file
+    data_file << "t,phi,theta,psi,pos_x,pos_y,pos_z,omega_x,omega_y,omega_z,vel_x,vel_y,vel_z,g,f_x_left,f_y_left,f_z_left,f_x_right,f_y_right,f_z_right,r_x_left,r_y_left,r_z_left,r_x_right,r_y_right,r_z_right,solver_time" << std::endl; // Add header to csv file
     data_file.close();
 
     struct timespec deadline; // timespec struct for storing time that execution thread should sleep for
+
+    //Eigen::Matrix<double, m, 1> u_t_prev = Eigen::ArrayXXd::Zero(m, 1);
 
     while(true) {
         // Loop starts here
@@ -358,19 +382,22 @@ int main() {
 
         std::cout << "-----------------------------------------------------------------------------\nr_left at beginning of iteration: " << r_x_left << "," << r_y_left << "," << r_z_left << ", r_right at beginning of iteration: " << r_x_right << "," << r_y_right << "," << r_z_right << std::endl;
 
-        //msg_length = recvfrom(sockfd, (char *)buffer, udp_buffer_size, 0, ( struct sockaddr *) &cliaddr, &len); // Receive message over UDP containing full leg state
-        //buffer[msg_length] = '\0'; // Add string ending delimiter to end of string (n is length of message)
+        msg_length = recvfrom(sockfd, (char *)buffer, udp_buffer_size, 0, ( struct sockaddr *) &cliaddr, &len); // Receive message over UDP containing full leg state
+        buffer[msg_length] = '\0'; // Add string ending delimiter to end of string (n is length of message)
         
-        //std::string raw_state(buffer); // Create string from buffer char array to split
+        std::string raw_state(buffer); // Create string from buffer char array to split
 
-        //std::vector<std::string> com_state = split_string(raw_state, '|'); // Split raw state message by message delimiter to parse individual elements
+        std::vector<std::string> com_state = split_string(raw_state, '|'); // Split raw state message by message delimiter to parse individual elements
 
         for(int i = 0; i < n; ++i) {
-            //x_t(i, 0) = atof(com_state[i].c_str());
-            P_param(i,0) = x_t(i, 0);
+            x_t(i, 0) = atof(com_state[i].c_str());
+            //P_param(i,0) = x_t(i, 0);
         }
 
-        // = x_t // Add delay compensation by stepping system here, use function to make code more compact.
+        //P_param.block<n,1>(0, 0) = step_discrete_model(x_t, u_t, r_x_left, r_x_right, r_y_left, r_y_right, r_z_left, r_z_right);
+
+        P_param.block<n,1>(0, 0) = step_discrete_model(x_t, control_history[control_history.size()-2], r_left_history[r_left_history.size()-2](0, 0), r_right_history[r_right_history.size()-2](0, 0), r_left_history[r_left_history.size()-2](1, 0), r_right_history[r_right_history.size()-2](1, 0), r_left_history[r_left_history.size()-2](2, 0), r_right_history[r_right_history.size()-2](2, 0));
+        P_param.block<n,1>(0, 0) = step_discrete_model(P_param.block<n,1>(0, 0), control_history.back(), r_left_history.back()(0, 0), r_right_history.back()(0, 0), r_left_history.back()(1, 0), r_right_history.back()(1, 0), r_left_history.back()(2, 0), r_right_history.back()(2, 0));
 
         std::cout << "x_t:" << x_t(0, 0) << "," << x_t(1, 0) << "," << x_t(2, 0) << "," << x_t(3, 0) << "," << x_t(4, 0) << "," << x_t(5, 0) << "," << x_t(6, 0) << "," << x_t(7, 0) << "," << x_t(8, 0) << "," << x_t(9, 0) << "," << x_t(10, 0) << "," << x_t(11, 0) << "," << x_t(12, 0) << std::endl;
 
@@ -395,7 +422,7 @@ int main() {
                     0, 0, 0, 0, swing_right_temp, 0,
                     0, 0, 0, 0, 0, swing_right_temp;
 
-            D_vector.block<m, m>(0, k*m) = D_k.eval();
+            D_vector.block<m, m>(0, k*m) = D_k;
         }
 
         P_param.block<m, m*N> (0, 1 + N + n*N + m*N) = D_vector;
@@ -443,8 +470,8 @@ int main() {
             Eigen::Matrix<double, 3, 1> vel_desired_vector = (Eigen::Matrix<double, 3, 1>() << vel_x_desired, vel_y_desired, vel_z_desired).finished();
             Eigen::Matrix<double, 3, 1> omega_desired_vector = (Eigen::Matrix<double, 3, 1>() << omega_x_desired, omega_y_desired, omega_z_desired).finished();
 
-            left_foot_pos_world = adjusted_pos_vector_left /*+ (t_stance/2) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(x_t(5, 0)) / 9.81) * vel_vector.cross(omega_desired_vector)*/;
-            right_foot_pos_world = adjusted_pos_vector_right /*+ (t_stance/2) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(x_t(5, 0)) / 9.81) * vel_vector.cross(omega_desired_vector)*/;
+            left_foot_pos_world = adjusted_pos_vector_left + (t_stance/2) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(x_t(5, 0)) / 9.81) * vel_vector.cross(omega_desired_vector);
+            right_foot_pos_world = adjusted_pos_vector_right + (t_stance/2) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(x_t(5, 0)) / 9.81) * vel_vector.cross(omega_desired_vector);
             
             if (left_foot_pos_world(0, 0) - (double)x_t(3, 0) > r_x_limit) {
                 left_foot_pos_world(0, 0) = (double)x_t(3, 0) + r_x_limit;
@@ -467,14 +494,14 @@ int main() {
         r_y_left = left_foot_pos_world(1, 0) - (double)x_t(4, 0);
         r_y_right = right_foot_pos_world(1, 0) - (double)x_t(4, 0);
 
-        r_x_left = -hip_offset;
-        r_x_right = hip_offset;
-        r_y_left = r_y_right = 0;
+        // r_x_left = -hip_offset;
+        // r_x_right = hip_offset;
+        // r_y_left = r_y_right = 0;
 
         r_z_left = -x_t(5, 0);
         r_z_right = -x_t(5, 0);
 
-        std::cout << "r_left after foot pos update: " << r_x_left << "," << r_y_left << "," << r_z_left << ", r_right after foot pos update: " << r_x_right << "," << r_y_right << "," << r_z_right << std::endl;
+        //std::cout << "r_left after foot pos update: " << r_x_left << "," << r_y_left << "," << r_z_left << ", r_right after foot pos update: " << r_x_right << "," << r_y_right << "," << r_z_right << std::endl;
 
         double pos_x_desired_temp = pos_x_desired;
         double pos_y_desired_temp = pos_y_desired;
@@ -592,8 +619,8 @@ int main() {
                 Eigen::Matrix<double, 3, 1> vel_desired_vector = (Eigen::Matrix<double, 3, 1>() << vel_x_desired, vel_y_desired, vel_z_desired).finished();
                 Eigen::Matrix<double, 3, 1> omega_desired_vector = (Eigen::Matrix<double, 3, 1>() << omega_x_desired, omega_y_desired, omega_z_desired).finished();
 
-                left_foot_pos_world = adjusted_pos_vector_left /*+ (t_stance/2) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(pos_z_t) / 9.81) * vel_vector.cross(omega_desired_vector)*/;
-                right_foot_pos_world = adjusted_pos_vector_right /*+ (t_stance/2) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) /*+ 0.5 * sqrt(abs(pos_z_t) / 9.81) * vel_vector.cross(omega_desired_vector)*/;
+                left_foot_pos_world = adjusted_pos_vector_left + (t_stance/2) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(pos_z_t) / 9.81) * vel_vector.cross(omega_desired_vector);
+                right_foot_pos_world = adjusted_pos_vector_right + (t_stance/2) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(pos_z_t) / 9.81) * vel_vector.cross(omega_desired_vector);
                 
                 if (left_foot_pos_world(0, 0) - pos_x_t > r_x_limit) {
                     left_foot_pos_world(0, 0) = pos_x_t + r_x_limit;
@@ -616,14 +643,14 @@ int main() {
             r_y_left = left_foot_pos_world(1, 0) - pos_y_t;
             r_y_right = right_foot_pos_world(1, 0) - pos_y_t;
 
-            r_x_left = -hip_offset;
-            r_x_right = hip_offset;
-            r_y_left = r_y_right = 0;
+            // r_x_left = -hip_offset;
+            // r_x_right = hip_offset;
+            // r_y_left = r_y_right = 0;
 
             r_z_left = -pos_z_t;
             r_z_right = -pos_z_t;
 
-            std::cout << "r_left after discretization update: " << r_x_left << "," << r_y_left << "," << r_z_left << ", r_right after discretization update: " << r_x_right << "," << r_y_right << "," << r_z_right << std::endl;
+            //std::cout << "r_left after discretization update: " << r_x_left << "," << r_y_left << "," << r_z_left << ", r_right after discretization update: " << r_x_right << "," << r_y_right << "," << r_z_right << std::endl;
 
             I_world << (Ixx*cos(psi_t) + Iyx*sin(psi_t))*cos(psi_t) + (Ixy*cos(psi_t) + Iyy*sin(psi_t))*sin(psi_t), -(Ixx*cos(psi_t) + Iyx*sin(psi_t))*sin(psi_t) + (Ixy*cos(psi_t) + Iyy*sin(psi_t))*cos(psi_t), Ixz*cos(psi_t) + Iyz*sin(psi_t), (-Ixx*sin(psi_t) + Iyx*cos(psi_t))*cos(psi_t) + (-Ixy*sin(psi_t) + Iyy*cos(psi_t))*sin(psi_t), -(-Ixx*sin(psi_t) + Iyx*cos(psi_t))*sin(psi_t) + (-Ixy*sin(psi_t) + Iyy*cos(psi_t))*cos(psi_t), -Ixz*sin(psi_t) + Iyz*cos(psi_t), Ixy*sin(psi_t) + Izx*cos(psi_t), Ixy*cos(psi_t) - Izx*sin(psi_t), Izz;
 
@@ -670,8 +697,8 @@ int main() {
 
             discretize_state_space_matrices(A_c, B_c, dt, A_d_t, B_d_t);
 
-            P_param.block<n, n>(0, 1 + N + (i*n)) = A_d_t.eval();
-            P_param.block<n, m>(0, 1 + N + n * N + (i*m)) = B_d_t.eval();
+            P_param.block<n, n>(0, 1 + N + (i*n)) = A_d_t;
+            P_param.block<n, m>(0, 1 + N + n * N + (i*m)) = B_d_t;
         }
 
         left_foot_pos_world = left_foot_pos_world_prev;
@@ -685,7 +712,7 @@ int main() {
 
         r_z_left = r_z_right = -x_t(5, 0);
 
-        std::cout << "r_left after discretization loop: " << r_x_left << "," << r_y_left << "," << r_z_left << ", r_right after discretization loop: " << r_x_right << "," << r_y_right << "," << r_z_right << std::endl;
+        //std::cout << "r_left after discretization loop: " << r_x_left << "," << r_y_left << "," << r_z_left << ", r_right after discretization loop: " << r_x_right << "," << r_y_right << "," << r_z_right << std::endl;
 
         size_t rows_P_param = P_param.rows();
         size_t cols_P_param = P_param.cols();
@@ -746,27 +773,22 @@ int main() {
                 solution_variables(n*(N+1)+4),
                 solution_variables(n*(N+1)+5);
         
-        x_t = step_discrete_model(x_t, u_t, r_x_left, r_x_right, r_y_left, r_y_right, r_z_left, r_z_right);
-
-        std::cout << "r_left after stepping model: " << r_x_left << "," << r_y_left << "," << r_z_left << ", r_right after stepping model: " << r_x_right << "," << r_y_right << "," << r_z_right << std::endl;
+        control_history.push_back(u_t);
+        r_left_history.push_back((Eigen::Matrix<double, 3, 1>() << r_x_left, r_y_left, r_z_left).finished());
+        r_right_history.push_back((Eigen::Matrix<double, 3, 1>() << r_x_right, r_y_right, r_z_right).finished());
+        
+        //x_t = step_discrete_model(x_t, u_t, r_x_left, r_x_right, r_y_left, r_y_right, r_z_left, r_z_right);
 
         stringstream s;
 
-        // s << u_t(0) << "|" << u_t(1) << "|" << u_t(2) << "|" << u_t(3) << "|" << u_t(4) << "|" << u_t(5) << "|" << r_x_left << "|" << r_y_left << "|" << r_z_left << "|" << r_x_right << "|" << r_y_right << "|" << r_z_right; // Write torque setpoints to stringstream
-        // sendto(sockfd, (const char *)s.str().c_str(), strlen(s.str().c_str()), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
-        
-        ofstream data_file;
-        data_file.open(".././plot_data/mpc_log.csv", ios::app); // Open csv file in append mode
-        data_file << total_iterations * dt << "," << x_t(0, 0) << "," << x_t(1, 0) << "," << x_t(2, 0) << "," << x_t(3, 0) << "," << x_t(4, 0) << "," << x_t(5, 0) << "," << x_t(6, 0) << "," << x_t(7, 0) << "," << x_t(8, 0) << "," << x_t(9, 0) << "," << x_t(10, 0) << "," << x_t(11, 0) << "," << x_t(12, 0)
-                << "," << u_t(0) << "," << u_t(1) << "," << u_t(2) << "," << u_t(3) << "," << u_t(4) << "," << u_t(5) 
-                << "," << r_x_left << "," << r_y_left << "," << r_z_left << "," << r_x_right << "," << r_y_right << "," << r_z_right << ",0" << std::endl; // Zero at the end has to be replace with predicted delay compensation state!
-        data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
+        s << u_t(0, 0) << "|" << u_t(1, 0) << "|" << u_t(2, 0) << "|" << u_t(3, 0) << "|" << u_t(4, 0) << "|" << u_t(5, 0) << "|" << r_x_left << "|" << r_y_left << "|" << r_z_left << "|" << r_x_right << "|" << r_y_right << "|" << r_z_right << "|" << P_param(1, 0); // Write torque setpoints to stringstream
+        sendto(sockfd, (const char *)s.str().c_str(), strlen(s.str().c_str()), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
 
-        X_t.block<n*N, 1>(0, 0) = solution_variables.block<n*N, 1>(n, 0).eval();
-        X_t.block<n, 1>(n*N, 0) = solution_variables.block<n, 1>(n*N, 0).eval();
+        X_t.block<n*N, 1>(0, 0) = solution_variables.block<n*N, 1>(n, 0);
+        X_t.block<n, 1>(n*N, 0) = solution_variables.block<n, 1>(n*N, 0);
 
-        U_t.block<m*(N-1), 1>(0, 0) = solution_variables.block<m*(N-1), 1>(n*(N+1) + m, 0).eval();
-        U_t.block<m, 1>(m*(N-1), 0) = solution_variables.block<m, 1>(n*(N+1)+m*(N-1), 0).eval();
+        U_t.block<m*(N-1), 1>(0, 0) = solution_variables.block<m*(N-1), 1>(n*(N+1) + m, 0);
+        U_t.block<m, 1>(m*(N-1), 0) = solution_variables.block<m, 1>(n*(N+1)+m*(N-1), 0);
 
         ++total_iterations;
 
@@ -781,6 +803,13 @@ int main() {
         double full_iteration_duration = duration_cast<microseconds> (end_total - start_total).count();
 
         std::cout << "Full iteration took " << full_iteration_duration << " microseconds" << std::endl;
+
+        ofstream data_file;
+        data_file.open(".././plot_data/mpc_log.csv", ios::app); // Open csv file in append mode
+        data_file << total_iterations * dt << "," << x_t(0, 0) << "," << x_t(1, 0) << "," << x_t(2, 0) << "," << x_t(3, 0) << "," << x_t(4, 0) << "," << x_t(5, 0) << "," << x_t(6, 0) << "," << x_t(7, 0) << "," << x_t(8, 0) << "," << x_t(9, 0) << "," << x_t(10, 0) << "," << x_t(11, 0) << "," << x_t(12, 0)
+                << "," << u_t(0) << "," << u_t(1) << "," << u_t(2) << "," << u_t(3) << "," << u_t(4) << "," << u_t(5) 
+                << "," << r_x_left << "," << r_y_left << "," << r_z_left << "," << r_x_right << "," << r_y_right << "," << r_z_right << "," << P_param(1, 0) << "," << full_iteration_duration / 1000.0 << std::endl; // Zero at the end has to be replace with predicted delay compensation state!
+        data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
 
         long long remainder = (dt * 1e+6 - full_iteration_duration) * 1e+3;
         //std::cout << "Remainder: " << remainder << " microseconds" << std::endl;
