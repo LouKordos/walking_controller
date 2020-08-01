@@ -8,7 +8,7 @@ install_manifest.txt
 compile_commands.json
 CTestTestfile.cmake
 _deps
-plot_data
+plot_data/*.csv
 build
 expression.txt
 expression_parsed.txt
