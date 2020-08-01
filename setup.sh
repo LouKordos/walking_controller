@@ -22,6 +22,8 @@ export WORKSPACE_DIRECTORY=$(pwd)
 export HOME_DIR="/home/$(logname)"
 sudo chmod -R ugo+rw ${WORKSPACE_DIRECTORY}
 
+mḱdir plot_data
+
 export GITHUB_DIRECTORY=${HOME_DIR}/Documents/biped_controller
 mkdir $GITHUB_DIRECTORY
 sudo chmod -R ugo+rw ${GITHUB_DIRECTORY}
@@ -427,6 +429,7 @@ export PREV_DIR = $(pwd)
 git clone https://gitlab.com/libeigen/eigen.git /tmp/eigen3 # Install Eigen3
 cd /tmp/eigen3/
 mkdir build && cd build
+cmake ../
 sudo make install
 cd PREV_DIR
 
