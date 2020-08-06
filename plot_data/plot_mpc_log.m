@@ -1,11 +1,12 @@
 % Plots the MPC log CSV files from controller running on Gazebo
 % Read the file
-data = csvread('mpc_log.csv');
-#data = csvread('/home/loukas/.gazebo/models/simplified_biped/control_plugin/mpc_log.csv');
+#data = csvread('mpc_log.csv');
+data = csvread('/home/loukas/.gazebo/models/simplified_biped/control_plugin/mpc_log.csv');
 %graphics_toolkit("qt")
 % Extract the data for easier access
 t       = data(:,1);
 phi     = data(:,2);
+phi_delay_step = data(:,29);
 theta   = data(:,3);
 theta_delay_step = data(:,27);
 psi     = data(:,4);
@@ -36,11 +37,12 @@ full_iteration_time = data(:,28);
 
 % Plot the CoM orientation
 figure(1); clf;
-plot(t, phi,'linewidth', 1.5); hold on; grid on;
-plot(t, theta,'linewidth', 1.5);
-plot(t, theta_delay_step,'linewidth',1.5);
+plot(t, phi,'linewidth', 2); hold on; grid on;
+plot(t, phi_delay_step, 'linewidth', 1, '--');
+plot(t, theta,'linewidth', 2);
+plot(t, theta_delay_step,'linewidth', 1, '--');
 plot(t, psi, 'linewidth', 1.5);
-legend('phi', 'theta','theta_delay_step', 'psi');
+legend('phi', 'phi_delay_step', 'theta','theta_delay_step', 'psi');
 title('Angles');
 xlabel('Time [s]');
 ylabel('Angle [rad]');

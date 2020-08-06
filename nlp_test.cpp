@@ -28,7 +28,7 @@
 
 #include <errno.h> //It defines macros for reporting and retrieving error conditions through error codes
 #include <time.h> //contains various functions for manipulating date and time
-#include <unistd.h> //contains various constants
+#include <unistd.h> //contains various coynstants
 #include <sys/types.h> //contains a number of basic derived types that should be used whenever appropriate
 #include <arpa/inet.h> // defines in_addr structure
 #include <sys/socket.h> // for socket creation
@@ -44,7 +44,7 @@ using namespace casadi;
 using namespace std;
 using namespace std::chrono;
 
-int udp_buffer_size = 4096;
+const int udp_buffer_size = 4096;
 const int udp_port = 4200; // UDP port for communication between gazebosim and controller code
 const int mpc_port = 4801;
 
@@ -283,7 +283,7 @@ int main() {
     double r_y_right = 0;
     double r_z_right = 0;
 
-    Eigen::Matrix<double, n, 1> x_t = (Eigen::Matrix<double, n, 1>() << 0, 0, 0, 0, 0, 1.48, 0, 0, 0, 0, 0, 0, -9.81).finished();
+    Eigen::Matrix<double, n, 1> x_t = (Eigen::Matrix<double, n, 1>() << 0., 0., 0., 0, 0, 1.48, 0, 0, 0, 0, 0, 0, -9.81).finished();
     Eigen::Matrix<double, m, 1> u_t = Eigen::ArrayXXd::Zero(m, 1);
     
     std::vector<Eigen::Matrix<double, m, 1>> control_history = {Eigen::ArrayXXd::Zero(m, 1), Eigen::ArrayXXd::Zero(m, 1)};
@@ -322,7 +322,7 @@ int main() {
     double pos_z_desired = 1.5;
 
     double vel_x_desired = 0.0;
-    double vel_y_desired = 0.0;
+    double vel_y_desired = 0.2;
     double vel_z_desired = 0.0;
 
     double phi_desired = 0;
@@ -333,7 +333,7 @@ int main() {
     double omega_y_desired = 0;
     double omega_z_desired = 0;
 
-    static const int contact_swap_interval = 15;
+    static const int contact_swap_interval = 10;
     double t_stance = contact_swap_interval * dt;
     double gait_gain = 0.1; // Rename to more accurate name
 
@@ -368,7 +368,7 @@ int main() {
 
     ofstream data_file;
     data_file.open(".././plot_data/mpc_log.csv");
-    data_file << "t,phi,theta,psi,pos_x,pos_y,pos_z,omega_x,omega_y,omega_z,vel_x,vel_y,vel_z,g,f_x_left,f_y_left,f_z_left,f_x_right,f_y_right,f_z_right,r_x_left,r_y_left,r_z_left,r_x_right,r_y_right,r_z_right,solver_time" << std::endl; // Add header to csv file
+    data_file << "t,phi,theta,psi,pos_x,pos_y,pos_z,omega_x,omega_y,omega_z,vel_x,vel_y,vel_z,g,f_x_left,f_y_left,f_z_left,f_x_right,f_y_right,f_z_right,r_x_left,r_y_left,r_z_left,r_x_right,r_y_right,r_z_right,theta_delay_compensation,full_iteration_time,phi_delay_compensation" << std::endl; // Add header to csv file
     data_file.close();
 
     struct timespec deadline; // timespec struct for storing time that execution thread should sleep for
@@ -394,10 +394,10 @@ int main() {
             //P_param(i,0) = x_t(i, 0);
         }
 
-        //P_param.block<n,1>(0, 0) = step_discrete_model(x_t, u_t, r_x_left, r_x_right, r_y_left, r_y_right, r_z_left, r_z_right);
+        P_param.block<n,1>(0, 0) = step_discrete_model(x_t, u_t, r_x_left, r_x_right, r_y_left, r_y_right, r_z_left, r_z_right);
 
-        P_param.block<n,1>(0, 0) = step_discrete_model(x_t, control_history[control_history.size()-2], r_left_history[r_left_history.size()-2](0, 0), r_right_history[r_right_history.size()-2](0, 0), r_left_history[r_left_history.size()-2](1, 0), r_right_history[r_right_history.size()-2](1, 0), r_left_history[r_left_history.size()-2](2, 0), r_right_history[r_right_history.size()-2](2, 0));
-        P_param.block<n,1>(0, 0) = step_discrete_model(P_param.block<n,1>(0, 0), control_history.back(), r_left_history.back()(0, 0), r_right_history.back()(0, 0), r_left_history.back()(1, 0), r_right_history.back()(1, 0), r_left_history.back()(2, 0), r_right_history.back()(2, 0));
+        //P_param.block<n,1>(0, 0) = step_discrete_model(x_t, control_history[control_history.size()-2], r_left_history[r_left_history.size()-2](0, 0), r_right_history[r_right_history.size()-2](0, 0), r_left_history[r_left_history.size()-2](1, 0), r_right_history[r_right_history.size()-2](1, 0), r_left_history[r_left_history.size()-2](2, 0), r_right_history[r_right_history.size()-2](2, 0));
+        //P_param.block<n,1>(0, 0) = step_discrete_model(P_param.block<n,1>(0, 0), control_history.back(), r_left_history.back()(0, 0), r_right_history.back()(0, 0), r_left_history.back()(1, 0), r_right_history.back()(1, 0), r_left_history.back()(2, 0), r_right_history.back()(2, 0));
 
         std::cout << "x_t:" << x_t(0, 0) << "," << x_t(1, 0) << "," << x_t(2, 0) << "," << x_t(3, 0) << "," << x_t(4, 0) << "," << x_t(5, 0) << "," << x_t(6, 0) << "," << x_t(7, 0) << "," << x_t(8, 0) << "," << x_t(9, 0) << "," << x_t(10, 0) << "," << x_t(11, 0) << "," << x_t(12, 0) << std::endl;
 
@@ -463,43 +463,43 @@ int main() {
         }
         
         if (total_iterations % contact_swap_interval == 0) {
-            Eigen::Matrix<double, 3, 1> adjusted_pos_vector_left = (Eigen::Matrix<double, 3,1>() << (double)x_t(3, 0) - hip_offset, x_t(4, 0), x_t(5, 0)).finished();
-            Eigen::Matrix<double, 3, 1> adjusted_pos_vector_right = (Eigen::Matrix<double, 3,1>() << (double)x_t(3, 0) + hip_offset, x_t(4, 0), x_t(5, 0)).finished();
+            Eigen::Matrix<double, 3, 1> adjusted_pos_vector_left = (Eigen::Matrix<double, 3,1>() << (double)P_param(3, 0) - hip_offset, P_param(4, 0), P_param(5, 0)).finished();
+            Eigen::Matrix<double, 3, 1> adjusted_pos_vector_right = (Eigen::Matrix<double, 3,1>() << (double)P_param(3, 0) + hip_offset, P_param(4, 0), P_param(5, 0)).finished();
             
-            Eigen::Matrix<double, 3, 1> vel_vector = (Eigen::Matrix<double, 3, 1>() << x_t(9, 0), x_t(10, 0), x_t(11, 0)).finished();
+            Eigen::Matrix<double, 3, 1> vel_vector = (Eigen::Matrix<double, 3, 1>() << P_param(9, 0), P_param(10, 0), P_param(11, 0)).finished();
             Eigen::Matrix<double, 3, 1> vel_desired_vector = (Eigen::Matrix<double, 3, 1>() << vel_x_desired, vel_y_desired, vel_z_desired).finished();
             Eigen::Matrix<double, 3, 1> omega_desired_vector = (Eigen::Matrix<double, 3, 1>() << omega_x_desired, omega_y_desired, omega_z_desired).finished();
 
-            left_foot_pos_world = adjusted_pos_vector_left + (t_stance/2) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(x_t(5, 0)) / 9.81) * vel_vector.cross(omega_desired_vector);
-            right_foot_pos_world = adjusted_pos_vector_right + (t_stance/2) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(x_t(5, 0)) / 9.81) * vel_vector.cross(omega_desired_vector);
+            left_foot_pos_world = adjusted_pos_vector_left + (t_stance/2) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(P_param(5, 0)) / 9.81) * vel_vector.cross(omega_desired_vector);
+            right_foot_pos_world = adjusted_pos_vector_right + (t_stance/2) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(P_param(5, 0)) / 9.81) * vel_vector.cross(omega_desired_vector);
             
-            if (left_foot_pos_world(0, 0) - (double)x_t(3, 0) > r_x_limit) {
-                left_foot_pos_world(0, 0) = (double)x_t(3, 0) + r_x_limit;
+            if (left_foot_pos_world(0, 0) - (double)P_param(3, 0) > r_x_limit) {
+                left_foot_pos_world(0, 0) = (double)P_param(3, 0) + r_x_limit;
             }
-            else if (left_foot_pos_world(0, 0) - (double)x_t(3, 0) < -r_x_limit) {
-                left_foot_pos_world(0, 0) = (double)x_t(3, 0) - r_x_limit;
+            else if (left_foot_pos_world(0, 0) - (double)P_param(3, 0) < -r_x_limit) {
+                left_foot_pos_world(0, 0) = (double)P_param(3, 0) - r_x_limit;
             }
 
-            if (right_foot_pos_world(0, 0) - (double)x_t(3, 0) > r_x_limit) {
-                right_foot_pos_world(0, 0) = (double)x_t(3, 0) + r_x_limit;
+            if (right_foot_pos_world(0, 0) - (double)P_param(3, 0) > r_x_limit) {
+                right_foot_pos_world(0, 0) = (double)P_param(3, 0) + r_x_limit;
             }
-            else if (right_foot_pos_world(0, 0) - (double)x_t(3, 0) < -r_x_limit) {
-                right_foot_pos_world(0, 0) = (double)x_t(3, 0) - r_x_limit;
+            else if (right_foot_pos_world(0, 0) - (double)P_param(3, 0) < -r_x_limit) {
+                right_foot_pos_world(0, 0) = (double)P_param(3, 0) - r_x_limit;
             }
         }
 
-        r_x_left = left_foot_pos_world(0, 0) - (double)x_t(3, 0);
-        r_x_right = right_foot_pos_world(0, 0) - (double)x_t(3, 0);
+        r_x_left = left_foot_pos_world(0, 0) - (double)P_param(3, 0);
+        r_x_right = right_foot_pos_world(0, 0) - (double)P_param(3, 0);
 
-        r_y_left = left_foot_pos_world(1, 0) - (double)x_t(4, 0);
-        r_y_right = right_foot_pos_world(1, 0) - (double)x_t(4, 0);
+        r_y_left = left_foot_pos_world(1, 0) - (double)P_param(4, 0);
+        r_y_right = right_foot_pos_world(1, 0) - (double)P_param(4, 0);
 
         // r_x_left = -hip_offset;
         // r_x_right = hip_offset;
         // r_y_left = r_y_right = 0;
 
-        r_z_left = -x_t(5, 0);
-        r_z_right = -x_t(5, 0);
+        r_z_left = -P_param(5, 0);
+        r_z_right = -P_param(5, 0);
 
         //std::cout << "r_left after foot pos update: " << r_x_left << "," << r_y_left << "," << r_z_left << ", r_right after foot pos update: " << r_x_right << "," << r_y_right << "," << r_z_right << std::endl;
 
@@ -598,17 +598,17 @@ int main() {
             }
 
             if(i == 0) {
-                phi_t = (double)x_t(0, 0);
-                theta_t = (double)x_t(1, 0);
-                psi_t = (double)x_t(2, 0);
+                phi_t = (double)P_param(0, 0);
+                theta_t = (double)P_param(1, 0);
+                psi_t = (double)P_param(2, 0);
 
-                vel_x_t = (double)x_t(9, 0);
-                vel_y_t = (double)x_t(10, 0);
-                vel_z_t = (double)x_t(11, 0);
+                vel_x_t = (double)P_param(9, 0);
+                vel_y_t = (double)P_param(10, 0);
+                vel_z_t = (double)P_param(11, 0);
 
-                pos_x_t = (double)x_t(3, 0);
-                pos_y_t = (double)x_t(4, 0);
-                pos_z_t = (double)x_t(5, 0);
+                pos_x_t = (double)P_param(3, 0);
+                pos_y_t = (double)P_param(4, 0);
+                pos_z_t = (double)P_param(5, 0);
             }
 
             if((total_iterations+i) % contact_swap_interval == 0 && i != 0) {
@@ -710,7 +710,7 @@ int main() {
         r_y_left = r_y_left_prev;
         r_y_right = r_y_right_prev;
 
-        r_z_left = r_z_right = -x_t(5, 0);
+        r_z_left = r_z_right = -P_param(5, 0);
 
         //std::cout << "r_left after discretization loop: " << r_x_left << "," << r_y_left << "," << r_z_left << ", r_right after discretization loop: " << r_x_right << "," << r_y_right << "," << r_z_right << std::endl;
 
@@ -777,11 +777,10 @@ int main() {
         r_left_history.push_back((Eigen::Matrix<double, 3, 1>() << r_x_left, r_y_left, r_z_left).finished());
         r_right_history.push_back((Eigen::Matrix<double, 3, 1>() << r_x_right, r_y_right, r_z_right).finished());
         
-        //x_t = step_discrete_model(x_t, u_t, r_x_left, r_x_right, r_y_left, r_y_right, r_z_left, r_z_right);
+        //x_t = step_discrete_model(x_t, control_history[control_history.size()-2], r_left_history[r_left_history.size()-2][0], r_right_history[r_right_history.size()-2][0], r_left_history[r_left_history.size()-2][1], r_right_history[r_right_history.size()-2][1], r_left_history[r_left_history.size()-2][2], r_right_history[r_right_history.size()-2][2]);
 
         stringstream s;
-
-        s << u_t(0, 0) << "|" << u_t(1, 0) << "|" << u_t(2, 0) << "|" << u_t(3, 0) << "|" << u_t(4, 0) << "|" << u_t(5, 0) << "|" << r_x_left << "|" << r_y_left << "|" << r_z_left << "|" << r_x_right << "|" << r_y_right << "|" << r_z_right << "|" << P_param(1, 0); // Write torque setpoints to stringstream
+        s << u_t(0, 0) << "|" << u_t(1, 0) << "|" << u_t(2, 0) << "|" << u_t(3, 0) << "|" << u_t(4, 0) << "|" << u_t(5, 0) << "|" << r_x_left << "|" << r_y_left << "|" << r_z_left << "|" << r_x_right << "|" << r_y_right << "|" << r_z_right << "|" << P_param(1, 0) << "|420|" << solution_variables(0, 0); // Write torque setpoints to stringstream
         sendto(sockfd, (const char *)s.str().c_str(), strlen(s.str().c_str()), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
 
         X_t.block<n*N, 1>(0, 0) = solution_variables.block<n*N, 1>(n, 0);
@@ -808,7 +807,7 @@ int main() {
         data_file.open(".././plot_data/mpc_log.csv", ios::app); // Open csv file in append mode
         data_file << total_iterations * dt << "," << x_t(0, 0) << "," << x_t(1, 0) << "," << x_t(2, 0) << "," << x_t(3, 0) << "," << x_t(4, 0) << "," << x_t(5, 0) << "," << x_t(6, 0) << "," << x_t(7, 0) << "," << x_t(8, 0) << "," << x_t(9, 0) << "," << x_t(10, 0) << "," << x_t(11, 0) << "," << x_t(12, 0)
                 << "," << u_t(0) << "," << u_t(1) << "," << u_t(2) << "," << u_t(3) << "," << u_t(4) << "," << u_t(5) 
-                << "," << r_x_left << "," << r_y_left << "," << r_z_left << "," << r_x_right << "," << r_y_right << "," << r_z_right << "," << P_param(1, 0) << "," << full_iteration_duration / 1000.0 << std::endl; // Zero at the end has to be replace with predicted delay compensation state!
+                << "," << r_x_left << "," << r_y_left << "," << r_z_left << "," << r_x_right << "," << r_y_right << "," << r_z_right << "," << P_param(1, 0) << "," << full_iteration_duration / 1000.0 << "," << solution_variables(n, 0) << std::endl; // Zero at the end has to be replace with predicted delay compensation state!
         data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
 
         long long remainder = (dt * 1e+6 - full_iteration_duration) * 1e+3;
