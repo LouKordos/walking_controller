@@ -1,9 +1,6 @@
 - 2 DOF ankle
 - Make every dependency in setup.sh build from source so that it works on any OS
 - Test more distros and their versions, then update README.md to mention that every version starting from Ubuntu 18.04 LTS and up will work
-- Install SWIG from source (http://swig.org/svn.html) (PCRE, YACC, Autoconf)
-- Install IPOPT from source
-- Only build packages that are not on ubuntu package search (including focal)
 - Test different solvers
 - Check simulation paused in gazebo plugin and stop sending states to pause control plugin as well, otherwise simulation breaks after resuming
 - For compiling casadi: `-DWITH_THREAD=ON` and install HSL solver with -NUM_THREADS
@@ -20,12 +17,9 @@
 - Combine all `0:N` loops into one
 - Try running setup.sh with `sh setup.sh` instead of the more complex way, if it works, update `README.md`
 - Add casadi benchmark to repo to test install
-- VENV's FOR ALL PYTHON INSTALLS!!!!
-- Use X and Y axes for world inertia as well
+- Use X and Y axes for world inertia as well!!
 - Use Bazel to compile project
 - Maybe merge everything into one repository
-- Try setup script on Manjaro
-- Maybe install everything in catkin workspace
 - Install Gazebo with Bullet engine!!!
 - Test setup script in WSL2
 - Somehow add footstep locations to decision variables, or make it seperate optimization problem (one combined optimization for motion planning would be better to give solver intuition about the effects different footstep locations have)
@@ -56,4 +50,3 @@
 - Move everything to `~/src/`
 - Use static where possible to optimize performance
 - Refactor code to use Eigen Matrix for r instead of seperate values
-- Fetch one state before setting up everything solver, then set everything up, then refetch state to make first iteration better
