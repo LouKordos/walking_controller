@@ -1,7 +1,7 @@
 % Plots the MPC log CSV files from controller running on Gazebo
 % Read the file
-#data = csvread('mpc_log.csv');
-data = csvread('/home/loukas/.gazebo/models/simplified_biped/control_plugin/mpc_log.csv');
+data = csvread('mpc_log.csv');
+#data = csvread('/home/loukas/.gazebo/models/simplified_biped/control_plugin/mpc_log.csv');
 %graphics_toolkit("qt")
 % Extract the data for easier access
 t       = data(:,1);
@@ -46,7 +46,6 @@ legend('phi', 'phi_delay_step', 'theta','theta_delay_step', 'psi');
 title('Angles');
 xlabel('Time [s]');
 ylabel('Angle [rad]');
-ylim([-3, 3])
 
 % Plot the CoM angular velocities
 figure(2); clf;
@@ -57,7 +56,6 @@ legend('omega_x', 'omega_y', 'omega_z');
 title('Angular velocities');
 xlabel('Time [s]');
 ylabel('Omega [rad/s]');
-ylim([-10, 10])
 
 % Plot the CoM position
 figure(3); clf;
@@ -79,7 +77,6 @@ legend('x', 'y', 'z');
 title('Location left foot');
 xlabel('Tie [s]');
 ylabel('Pos [m]');
-ylim([-5, 5])
 subplot(2,1,2);
 plot(t, r_x_right,'linewidth', 1.5); hold on; grid on;
 plot(t, r_y_right,'linewidth', 1.5);
@@ -88,7 +85,6 @@ legend('x', 'y', 'z');
 title('Location right foot');
 xlabel('Time [s]');
 ylabel('Pos [m]');
-ylim([-5, 5])
 
 % Plot the forces
 figure(6); clf;
@@ -100,7 +96,6 @@ legend('x', 'y', 'z');
 title('Forces left foot');
 xlabel('Time [s]');
 ylabel('Force [N]');
-ylim([-1500, 1500])
 subplot(2,1,2);
 plot(t, f_x_right,'linewidth', 1.5); hold on; grid on;
 plot(t, f_y_right,'linewidth', 1.5);
@@ -109,7 +104,6 @@ legend('x', 'y', 'z');
 title('Forces right foot');
 xlabel('Time [s]');
 ylabel('Force [N]');
-ylim([-1500, 1500])
 
 figure(7); clf;
 plot(t, full_iteration_time,'linewidth', 1.5); hold on; grid on;
@@ -117,6 +111,15 @@ legend('Full iteration time');
 title('Full iteration time');
 xlabel('Time [s]');
 ylabel('Full iteration time [ms]');
+
+figure(420); clf;
+plot(t, vel_x, 'linewidth', 1.5); hold on; grid on;
+plot(t, vel_y, 'linewidth', 1.5);
+plot(t, vel_z, 'linewidth', 1.5);
+legend('vel_x', 'vel_y', 'vel_z');
+title("Linear velocities");
+xlabel('Time [s]');
+ylabel('Velocity [m/s]');
 
 %tau_1_left = data(:,27);
 %tau_2_left = data(:,28);
