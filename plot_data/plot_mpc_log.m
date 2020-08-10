@@ -1,7 +1,7 @@
 % Plots the MPC log CSV files from controller running on Gazebo
 % Read the file
-data = csvread('mpc_log.csv');
-#data = csvread('/home/loukas/.gazebo/models/simplified_biped/control_plugin/mpc_log.csv');
+#data = csvread('mpc_log.csv');
+data = csvread('/home/loukas/.gazebo/models/simplified_biped/control_plugin/mpc_log.csv');
 %graphics_toolkit("qt")
 % Extract the data for easier access
 t       = data(:,1);
