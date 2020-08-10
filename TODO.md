@@ -48,5 +48,5 @@
 - Add slight yaw outwards on foot for better stability while walking
 - For fixing link to world: https://answers.gazebosim.org//question/20081/sdf-how-to-fix-a-model-to-the-world/
 - Move everything to `~/src/`
-- Use static where possible to optimize performance
+- RT Kernel, isolcpu, taskset
 - Refactor code to use Eigen Matrix for r instead of seperate values
