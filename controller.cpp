@@ -496,35 +496,35 @@ void discretize_state_space_matrices(Eigen::Matrix<double, n, n> &A_c_temp, Eige
 }
 
 // Step the discretized model. This calls discretize_state_space_matrices and applies control u to the model with current state x in the form of x_{t+1} = A * x_t + B * u_t
-Eigen::Matrix<double, n, 1> step_discrete_model(Eigen::Matrix<double, n, 1> x, Eigen::Matrix<double, m, 1> u, double r_x_left_temp, double r_x_right_temp, double r_y_left_temp, double r_y_right_temp, double r_z_left_temp, double r_z_right_temp) {
+Eigen::Matrix<double, n, 1> step_discrete_model(Eigen::Matrix<double, n, 1> x, Eigen::Matrix<double, m, 1> u, double r_x_left, double r_x_right, double r_y_left, double r_y_right, double r_z_left, double r_z_right) {
 
-    double phi_t_temp = x(0, 0);
-    double theta_t_temp = x(1, 0);
-    double psi_t_temp = x(2, 0);
+    double phi_t = x(0, 0);
+    double theta_t = x(1, 0);
+    double psi_t = x(2, 0);
 
-    Eigen::Matrix<double, 3, 3> I_world_temp = Eigen::ArrayXXd::Zero(3, 3);
+    Eigen::Matrix<double, 3, 3> I_world = Eigen::ArrayXXd::Zero(3, 3);
 
-    I_world_temp << (sin(phi_t_temp)*sin(psi_t_temp) + sin(theta_t_temp)*cos(phi_t_temp)*cos(psi_t_temp))*(Ixz*cos(psi_t_temp)*cos(theta_t_temp) + Iyz*(sin(phi_t_temp)*sin(theta_t_temp)*cos(psi_t_temp) - sin(psi_t_temp)*cos(phi_t_temp)) + Izz*(sin(phi_t_temp)*sin(psi_t_temp) + sin(theta_t_temp)*cos(phi_t_temp)*cos(psi_t_temp))) + (sin(phi_t_temp)*sin(theta_t_temp)*cos(psi_t_temp) - sin(psi_t_temp)*cos(phi_t_temp))*(Ixy*(sin(phi_t_temp)*sin(psi_t_temp) + sin(theta_t_temp)*cos(phi_t_temp)*cos(psi_t_temp)) + Ixy*cos(psi_t_temp)*cos(theta_t_temp) + Iyy*(sin(phi_t_temp)*sin(theta_t_temp)*cos(psi_t_temp) - sin(psi_t_temp)*cos(phi_t_temp))) + (Ixx*cos(psi_t_temp)*cos(theta_t_temp) + Iyx*(sin(phi_t_temp)*sin(theta_t_temp)*cos(psi_t_temp) - sin(psi_t_temp)*cos(phi_t_temp)) + Izx*(sin(phi_t_temp)*sin(psi_t_temp) + sin(theta_t_temp)*cos(phi_t_temp)*cos(psi_t_temp)))*cos(psi_t_temp)*cos(theta_t_temp), (-sin(phi_t_temp)*cos(psi_t_temp) + sin(psi_t_temp)*sin(theta_t_temp)*cos(phi_t_temp))*(Ixz*cos(psi_t_temp)*cos(theta_t_temp) + Iyz*(sin(phi_t_temp)*sin(theta_t_temp)*cos(psi_t_temp) - sin(psi_t_temp)*cos(phi_t_temp)) + Izz*(sin(phi_t_temp)*sin(psi_t_temp) + sin(theta_t_temp)*cos(phi_t_temp)*cos(psi_t_temp))) + (sin(phi_t_temp)*sin(psi_t_temp)*sin(theta_t_temp) + cos(phi_t_temp)*cos(psi_t_temp))*(Ixy*(sin(phi_t_temp)*sin(psi_t_temp) + sin(theta_t_temp)*cos(phi_t_temp)*cos(psi_t_temp)) + Ixy*cos(psi_t_temp)*cos(theta_t_temp) + Iyy*(sin(phi_t_temp)*sin(theta_t_temp)*cos(psi_t_temp) - sin(psi_t_temp)*cos(phi_t_temp))) + (Ixx*cos(psi_t_temp)*cos(theta_t_temp) + Iyx*(sin(phi_t_temp)*sin(theta_t_temp)*cos(psi_t_temp) - sin(psi_t_temp)*cos(phi_t_temp)) + Izx*(sin(phi_t_temp)*sin(psi_t_temp) + sin(theta_t_temp)*cos(phi_t_temp)*cos(psi_t_temp)))*sin(psi_t_temp)*cos(theta_t_temp), (Ixy*(sin(phi_t_temp)*sin(psi_t_temp) + sin(theta_t_temp)*cos(phi_t_temp)*cos(psi_t_temp)) + Ixy*cos(psi_t_temp)*cos(theta_t_temp) + Iyy*(sin(phi_t_temp)*sin(theta_t_temp)*cos(psi_t_temp) - sin(psi_t_temp)*cos(phi_t_temp)))*sin(phi_t_temp)*cos(theta_t_temp) - (Ixx*cos(psi_t_temp)*cos(theta_t_temp) + Iyx*(sin(phi_t_temp)*sin(theta_t_temp)*cos(psi_t_temp) - sin(psi_t_temp)*cos(phi_t_temp)) + Izx*(sin(phi_t_temp)*sin(psi_t_temp) + sin(theta_t_temp)*cos(phi_t_temp)*cos(psi_t_temp)))*sin(theta_t_temp) + (Ixz*cos(psi_t_temp)*cos(theta_t_temp) + Iyz*(sin(phi_t_temp)*sin(theta_t_temp)*cos(psi_t_temp) - sin(psi_t_temp)*cos(phi_t_temp)) + Izz*(sin(phi_t_temp)*sin(psi_t_temp) + sin(theta_t_temp)*cos(phi_t_temp)*cos(psi_t_temp)))*cos(phi_t_temp)*cos(theta_t_temp),
-                (sin(phi_t_temp)*sin(psi_t_temp) + sin(theta_t_temp)*cos(phi_t_temp)*cos(psi_t_temp))*(Ixz*sin(psi_t_temp)*cos(theta_t_temp) + Iyz*(sin(phi_t_temp)*sin(psi_t_temp)*sin(theta_t_temp) + cos(phi_t_temp)*cos(psi_t_temp)) + Izz*(-sin(phi_t_temp)*cos(psi_t_temp) + sin(psi_t_temp)*sin(theta_t_temp)*cos(phi_t_temp))) + (sin(phi_t_temp)*sin(theta_t_temp)*cos(psi_t_temp) - sin(psi_t_temp)*cos(phi_t_temp))*(Ixy*(-sin(phi_t_temp)*cos(psi_t_temp) + sin(psi_t_temp)*sin(theta_t_temp)*cos(phi_t_temp)) + Ixy*sin(psi_t_temp)*cos(theta_t_temp) + Iyy*(sin(phi_t_temp)*sin(psi_t_temp)*sin(theta_t_temp) + cos(phi_t_temp)*cos(psi_t_temp))) + (Ixx*sin(psi_t_temp)*cos(theta_t_temp) + Iyx*(sin(phi_t_temp)*sin(psi_t_temp)*sin(theta_t_temp) + cos(phi_t_temp)*cos(psi_t_temp)) + Izx*(-sin(phi_t_temp)*cos(psi_t_temp) + sin(psi_t_temp)*sin(theta_t_temp)*cos(phi_t_temp)))*cos(psi_t_temp)*cos(theta_t_temp), (-sin(phi_t_temp)*cos(psi_t_temp) + sin(psi_t_temp)*sin(theta_t_temp)*cos(phi_t_temp))*(Ixz*sin(psi_t_temp)*cos(theta_t_temp) + Iyz*(sin(phi_t_temp)*sin(psi_t_temp)*sin(theta_t_temp) + cos(phi_t_temp)*cos(psi_t_temp)) + Izz*(-sin(phi_t_temp)*cos(psi_t_temp) + sin(psi_t_temp)*sin(theta_t_temp)*cos(phi_t_temp))) + (sin(phi_t_temp)*sin(psi_t_temp)*sin(theta_t_temp) + cos(phi_t_temp)*cos(psi_t_temp))*(Ixy*(-sin(phi_t_temp)*cos(psi_t_temp) + sin(psi_t_temp)*sin(theta_t_temp)*cos(phi_t_temp)) + Ixy*sin(psi_t_temp)*cos(theta_t_temp) + Iyy*(sin(phi_t_temp)*sin(psi_t_temp)*sin(theta_t_temp) + cos(phi_t_temp)*cos(psi_t_temp))) + (Ixx*sin(psi_t_temp)*cos(theta_t_temp) + Iyx*(sin(phi_t_temp)*sin(psi_t_temp)*sin(theta_t_temp) + cos(phi_t_temp)*cos(psi_t_temp)) + Izx*(-sin(phi_t_temp)*cos(psi_t_temp) + sin(psi_t_temp)*sin(theta_t_temp)*cos(phi_t_temp)))*sin(psi_t_temp)*cos(theta_t_temp), (Ixy*(-sin(phi_t_temp)*cos(psi_t_temp) + sin(psi_t_temp)*sin(theta_t_temp)*cos(phi_t_temp)) + Ixy*sin(psi_t_temp)*cos(theta_t_temp) + Iyy*(sin(phi_t_temp)*sin(psi_t_temp)*sin(theta_t_temp) + cos(phi_t_temp)*cos(psi_t_temp)))*sin(phi_t_temp)*cos(theta_t_temp) - (Ixx*sin(psi_t_temp)*cos(theta_t_temp) + Iyx*(sin(phi_t_temp)*sin(psi_t_temp)*sin(theta_t_temp) + cos(phi_t_temp)*cos(psi_t_temp)) + Izx*(-sin(phi_t_temp)*cos(psi_t_temp) + sin(psi_t_temp)*sin(theta_t_temp)*cos(phi_t_temp)))*sin(theta_t_temp) + (Ixz*sin(psi_t_temp)*cos(theta_t_temp) + Iyz*(sin(phi_t_temp)*sin(psi_t_temp)*sin(theta_t_temp) + cos(phi_t_temp)*cos(psi_t_temp)) + Izz*(-sin(phi_t_temp)*cos(psi_t_temp) + sin(psi_t_temp)*sin(theta_t_temp)*cos(phi_t_temp)))*cos(phi_t_temp)*cos(theta_t_temp),
-                (sin(phi_t_temp)*sin(psi_t_temp) + sin(theta_t_temp)*cos(phi_t_temp)*cos(psi_t_temp))*(-Ixz*sin(theta_t_temp) + Iyz*sin(phi_t_temp)*cos(theta_t_temp) + Izz*cos(phi_t_temp)*cos(theta_t_temp)) + (sin(phi_t_temp)*sin(theta_t_temp)*cos(psi_t_temp) - sin(psi_t_temp)*cos(phi_t_temp))*(-Ixy*sin(theta_t_temp) + Ixy*cos(phi_t_temp)*cos(theta_t_temp) + Iyy*sin(phi_t_temp)*cos(theta_t_temp)) + (-Ixx*sin(theta_t_temp) + Iyx*sin(phi_t_temp)*cos(theta_t_temp) + Izx*cos(phi_t_temp)*cos(theta_t_temp))*cos(psi_t_temp)*cos(theta_t_temp), (-sin(phi_t_temp)*cos(psi_t_temp) + sin(psi_t_temp)*sin(theta_t_temp)*cos(phi_t_temp))*(-Ixz*sin(theta_t_temp) + Iyz*sin(phi_t_temp)*cos(theta_t_temp) + Izz*cos(phi_t_temp)*cos(theta_t_temp)) + (sin(phi_t_temp)*sin(psi_t_temp)*sin(theta_t_temp) + cos(phi_t_temp)*cos(psi_t_temp))*(-Ixy*sin(theta_t_temp) + Ixy*cos(phi_t_temp)*cos(theta_t_temp) + Iyy*sin(phi_t_temp)*cos(theta_t_temp)) + (-Ixx*sin(theta_t_temp) + Iyx*sin(phi_t_temp)*cos(theta_t_temp) + Izx*cos(phi_t_temp)*cos(theta_t_temp))*sin(psi_t_temp)*cos(theta_t_temp), -(-Ixx*sin(theta_t_temp) + Iyx*sin(phi_t_temp)*cos(theta_t_temp) + Izx*cos(phi_t_temp)*cos(theta_t_temp))*sin(theta_t_temp) + (-Ixy*sin(theta_t_temp) + Ixy*cos(phi_t_temp)*cos(theta_t_temp) + Iyy*sin(phi_t_temp)*cos(theta_t_temp))*sin(phi_t_temp)*cos(theta_t_temp) + (-Ixz*sin(theta_t_temp) + Iyz*sin(phi_t_temp)*cos(theta_t_temp) + Izz*cos(phi_t_temp)*cos(theta_t_temp))*cos(phi_t_temp)*cos(theta_t_temp);
+    I_world << (sin(phi_t)*sin(psi_t) + sin(theta_t)*cos(phi_t)*cos(psi_t))*(Ixz*cos(psi_t)*cos(theta_t) + Iyz*(sin(phi_t)*sin(theta_t)*cos(psi_t) - sin(psi_t)*cos(phi_t)) + Izz*(sin(phi_t)*sin(psi_t) + sin(theta_t)*cos(phi_t)*cos(psi_t))) + (sin(phi_t)*sin(theta_t)*cos(psi_t) - sin(psi_t)*cos(phi_t))*(Ixy*(sin(phi_t)*sin(psi_t) + sin(theta_t)*cos(phi_t)*cos(psi_t)) + Ixy*cos(psi_t)*cos(theta_t) + Iyy*(sin(phi_t)*sin(theta_t)*cos(psi_t) - sin(psi_t)*cos(phi_t))) + (Ixx*cos(psi_t)*cos(theta_t) + Iyx*(sin(phi_t)*sin(theta_t)*cos(psi_t) - sin(psi_t)*cos(phi_t)) + Izx*(sin(phi_t)*sin(psi_t) + sin(theta_t)*cos(phi_t)*cos(psi_t)))*cos(psi_t)*cos(theta_t), (-sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t))*(Ixz*cos(psi_t)*cos(theta_t) + Iyz*(sin(phi_t)*sin(theta_t)*cos(psi_t) - sin(psi_t)*cos(phi_t)) + Izz*(sin(phi_t)*sin(psi_t) + sin(theta_t)*cos(phi_t)*cos(psi_t))) + (sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t))*(Ixy*(sin(phi_t)*sin(psi_t) + sin(theta_t)*cos(phi_t)*cos(psi_t)) + Ixy*cos(psi_t)*cos(theta_t) + Iyy*(sin(phi_t)*sin(theta_t)*cos(psi_t) - sin(psi_t)*cos(phi_t))) + (Ixx*cos(psi_t)*cos(theta_t) + Iyx*(sin(phi_t)*sin(theta_t)*cos(psi_t) - sin(psi_t)*cos(phi_t)) + Izx*(sin(phi_t)*sin(psi_t) + sin(theta_t)*cos(phi_t)*cos(psi_t)))*sin(psi_t)*cos(theta_t), (Ixy*(sin(phi_t)*sin(psi_t) + sin(theta_t)*cos(phi_t)*cos(psi_t)) + Ixy*cos(psi_t)*cos(theta_t) + Iyy*(sin(phi_t)*sin(theta_t)*cos(psi_t) - sin(psi_t)*cos(phi_t)))*sin(phi_t)*cos(theta_t) - (Ixx*cos(psi_t)*cos(theta_t) + Iyx*(sin(phi_t)*sin(theta_t)*cos(psi_t) - sin(psi_t)*cos(phi_t)) + Izx*(sin(phi_t)*sin(psi_t) + sin(theta_t)*cos(phi_t)*cos(psi_t)))*sin(theta_t) + (Ixz*cos(psi_t)*cos(theta_t) + Iyz*(sin(phi_t)*sin(theta_t)*cos(psi_t) - sin(psi_t)*cos(phi_t)) + Izz*(sin(phi_t)*sin(psi_t) + sin(theta_t)*cos(phi_t)*cos(psi_t)))*cos(phi_t)*cos(theta_t),
+                (sin(phi_t)*sin(psi_t) + sin(theta_t)*cos(phi_t)*cos(psi_t))*(Ixz*sin(psi_t)*cos(theta_t) + Iyz*(sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t)) + Izz*(-sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t))) + (sin(phi_t)*sin(theta_t)*cos(psi_t) - sin(psi_t)*cos(phi_t))*(Ixy*(-sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t)) + Ixy*sin(psi_t)*cos(theta_t) + Iyy*(sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t))) + (Ixx*sin(psi_t)*cos(theta_t) + Iyx*(sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t)) + Izx*(-sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t)))*cos(psi_t)*cos(theta_t), (-sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t))*(Ixz*sin(psi_t)*cos(theta_t) + Iyz*(sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t)) + Izz*(-sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t))) + (sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t))*(Ixy*(-sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t)) + Ixy*sin(psi_t)*cos(theta_t) + Iyy*(sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t))) + (Ixx*sin(psi_t)*cos(theta_t) + Iyx*(sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t)) + Izx*(-sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t)))*sin(psi_t)*cos(theta_t), (Ixy*(-sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t)) + Ixy*sin(psi_t)*cos(theta_t) + Iyy*(sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t)))*sin(phi_t)*cos(theta_t) - (Ixx*sin(psi_t)*cos(theta_t) + Iyx*(sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t)) + Izx*(-sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t)))*sin(theta_t) + (Ixz*sin(psi_t)*cos(theta_t) + Iyz*(sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t)) + Izz*(-sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t)))*cos(phi_t)*cos(theta_t),
+                (sin(phi_t)*sin(psi_t) + sin(theta_t)*cos(phi_t)*cos(psi_t))*(-Ixz*sin(theta_t) + Iyz*sin(phi_t)*cos(theta_t) + Izz*cos(phi_t)*cos(theta_t)) + (sin(phi_t)*sin(theta_t)*cos(psi_t) - sin(psi_t)*cos(phi_t))*(-Ixy*sin(theta_t) + Ixy*cos(phi_t)*cos(theta_t) + Iyy*sin(phi_t)*cos(theta_t)) + (-Ixx*sin(theta_t) + Iyx*sin(phi_t)*cos(theta_t) + Izx*cos(phi_t)*cos(theta_t))*cos(psi_t)*cos(theta_t), (-sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t))*(-Ixz*sin(theta_t) + Iyz*sin(phi_t)*cos(theta_t) + Izz*cos(phi_t)*cos(theta_t)) + (sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t))*(-Ixy*sin(theta_t) + Ixy*cos(phi_t)*cos(theta_t) + Iyy*sin(phi_t)*cos(theta_t)) + (-Ixx*sin(theta_t) + Iyx*sin(phi_t)*cos(theta_t) + Izx*cos(phi_t)*cos(theta_t))*sin(psi_t)*cos(theta_t), -(-Ixx*sin(theta_t) + Iyx*sin(phi_t)*cos(theta_t) + Izx*cos(phi_t)*cos(theta_t))*sin(theta_t) + (-Ixy*sin(theta_t) + Ixy*cos(phi_t)*cos(theta_t) + Iyy*sin(phi_t)*cos(theta_t))*sin(phi_t)*cos(theta_t) + (-Ixz*sin(theta_t) + Iyz*sin(phi_t)*cos(theta_t) + Izz*cos(phi_t)*cos(theta_t))*cos(phi_t)*cos(theta_t);
 
     Eigen::Matrix<double, 3, 3> r_left_skew_symmetric_test = Eigen::ArrayXXd::Zero(3, 3);
     Eigen::Matrix<double, 3, 3> r_right_skew_symmetric_test = Eigen::ArrayXXd::Zero(3, 3);
 
-    r_left_skew_symmetric_test << 0, -r_z_left_temp, r_y_left_temp,
-                                r_z_left_temp, 0, -r_x_left_temp,
-                                -r_y_left_temp, r_x_left_temp, 0;
+    r_left_skew_symmetric_test << 0, -r_z_left, r_y_left,
+                                r_z_left, 0, -r_x_left,
+                                -r_y_left, r_x_left, 0;
             
-    r_right_skew_symmetric_test << 0, -r_z_right_temp, r_y_right_temp,
-                                r_z_right_temp, 0, -r_x_right_temp,
-                                -r_y_right_temp, r_x_right_temp, 0;
+    r_right_skew_symmetric_test << 0, -r_z_right, r_y_right,
+                                r_z_right, 0, -r_x_right,
+                                -r_y_right, r_x_right, 0;
 
-    Eigen::Matrix<double, n, n> A_c_temp_temp = Eigen::ArrayXXd::Zero(n, n);
-    Eigen::Matrix<double, n, m> B_c_temp_temp = Eigen::ArrayXXd::Zero(n, m);
+    Eigen::Matrix<double, n, n> A_c = Eigen::ArrayXXd::Zero(n, n);
+    Eigen::Matrix<double, n, m> B_c = Eigen::ArrayXXd::Zero(n, m);
 
-    A_c_temp_temp << 0, 0, 0, 0, 0, 0, cos(psi_t_temp) / cos(theta_t_temp), sin(psi_t_temp) / cos(theta_t_temp), 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, -sin(psi_t_temp), cos(psi_t_temp), 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, cos(psi_t_temp) * tan(theta_t_temp), sin(psi_t_temp)*tan(theta_t_temp), 1, 0, 0, 0, 0,
+    A_c << 0, 0, 0, 0, 0, 0, cos(psi_t) / cos(theta_t), sin(psi_t) / cos(theta_t), 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, -sin(psi_t), cos(psi_t), 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, cos(psi_t) * tan(theta_t), sin(psi_t)*tan(theta_t), 1, 0, 0, 0, 0,
                     
                     0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
                     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0,
@@ -540,24 +540,24 @@ Eigen::Matrix<double, n, 1> step_discrete_model(Eigen::Matrix<double, n, 1> x, E
                     
                     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
 
-    B_c_temp_temp << 0, 0, 0, 0, 0, 0,
+    B_c << 0, 0, 0, 0, 0, 0,
                     0, 0, 0, 0, 0, 0,
                     0, 0, 0, 0, 0, 0,
                     0, 0, 0, 0, 0, 0,
                     0, 0, 0, 0, 0, 0,
                     0, 0, 0, 0, 0, 0,   
-                    I_world_temp.inverse() * r_left_skew_symmetric_test, I_world_temp.inverse() * r_right_skew_symmetric_test,
+                    I_world.inverse() * r_left_skew_symmetric_test, I_world.inverse() * r_right_skew_symmetric_test,
                     1/m_value, 0, 0, 1/m_value, 0, 0,
                     0, 1/m_value, 0, 0, 1/m_value, 0,
                     0, 0, 1/m_value, 0, 0, 1/m_value,
                     0, 0, 0, 0, 0, 0;
 
-    Eigen::Matrix<double, n, n> A_d_temp_temp = Eigen::ArrayXXd::Zero(n, n);
-    Eigen::Matrix<double, n, m> B_d_temp_temp = Eigen::ArrayXXd::Zero(n, m);
+    Eigen::Matrix<double, n, n> A_d = Eigen::ArrayXXd::Zero(n, n);
+    Eigen::Matrix<double, n, m> B_d = Eigen::ArrayXXd::Zero(n, m);
 
-    discretize_state_space_matrices(A_c_temp_temp, B_c_temp_temp, dt, A_d_temp_temp, B_d_temp_temp);
+    discretize_state_space_matrices(A_c, B_c, dt, A_d, B_d);
 
-    return A_d_temp_temp * x + B_d_temp_temp * u;
+    return A_d * x + B_d * u;
 }
 
 void run_mpc() {
@@ -691,13 +691,13 @@ int main()
         ubx(index+5) = f_max_z;
     }
 
-    static Eigen::Matrix<double, n, 1> x_t = (Eigen::Matrix<double, n, 1>() << 0., 0., 0., 0, 0, 0.8, 0, 0, 0, 0, 0, 0, -9.81).finished();
-    static Eigen::Matrix<double, m, 1> u_t = (Eigen::Matrix<double, m, 1>() << 0, 0, m_value*9.81 / 2, 0, 0, m_value*9.81/2).finished();
+    Eigen::Matrix<double, n, 1> x_t = (Eigen::Matrix<double, n, 1>() << 0., 0., 0., 0, 0, 0.8, 0, 0, 0, 0, 0, 0, -9.81).finished();
+    Eigen::Matrix<double, m, 1> u_t = (Eigen::Matrix<double, m, 1>() << 0, 0, m_value*9.81 / 2, 0, 0, m_value*9.81/2).finished();
     
     static std::vector<Eigen::Matrix<double, m, 1>> control_history = {Eigen::ArrayXXd::Zero(m, 1), Eigen::ArrayXXd::Zero(m, 1)};
 
-    static Eigen::Matrix<double, n*(N+1)+m*N, 1> x0_solver = Eigen::ArrayXXd::Zero(n*(N+1)+m*N, 1); // Full initial solver state, containing initial model state, N future states and N control actions
-    static Eigen::Matrix<double, n*(N+1), 1> X_t = Eigen::ArrayXXd::Zero(n*(N+1), 1); // Maybe this is actually obsolete and only x0_solver is sufficient
+    Eigen::Matrix<double, n*(N+1)+m*N, 1> x0_solver = Eigen::ArrayXXd::Zero(n*(N+1)+m*N, 1); // Full initial solver state, containing initial model state, N future states and N control actions
+    Eigen::Matrix<double, n*(N+1), 1> X_t = Eigen::ArrayXXd::Zero(n*(N+1), 1); // Maybe this is actually obsolete and only x0_solver is sufficient
     
     static Eigen::Matrix<double, m*N, 1> U_t = Eigen::ArrayXXd::Zero(m*N, 1); // Same here
 
@@ -707,35 +707,35 @@ int main()
     static const int P_cols = 1 + N + n * N + m * N + N * m; // 1 for initial state, N for N reference states, N A matrices, N B matrices, N D matrices for contact
     static Eigen::Matrix<double, P_rows, P_cols> P_param = Eigen::ArrayXXd::Zero(P_rows, P_cols);
 
-    static Eigen::Matrix<double, 3, 3> I_world = Eigen::ArrayXXd::Zero(3, 3); // Body inertia in World frame
+    Eigen::Matrix<double, 3, 3> I_world = Eigen::ArrayXXd::Zero(3, 3); // Body inertia in World frame
 
     static long long total_iterations = 0; // Total loop iterations
 
     // Desired state values
-    static double pos_x_desired = 0;
-    static double pos_y_desired = 0.0;
-    static double pos_z_desired = 1;
+    double pos_x_desired = 0;
+    double pos_y_desired = 0.0;
+    double pos_z_desired = 1;
 
-    static double vel_x_desired = 0.0;
-    static double vel_y_desired = 0.0;
-    static double vel_z_desired = 0.0;
+    double vel_x_desired = 0.0;
+    double vel_y_desired = 0.0;
+    double vel_z_desired = 0.0;
 
-    static double phi_desired = 0;  
-    static double theta_desired = 0;
-    static double psi_desired = 0;
+    double phi_desired = 0;  
+    double theta_desired = 0;
+    double psi_desired = 0;
 
-    static double omega_x_desired = 0;
-    static double omega_y_desired = 0;
-    static double omega_z_desired = 0;
+    double omega_x_desired = 0;
+    double omega_y_desired = 0;
+    double omega_z_desired = 0;
 
-    static const int contact_swap_interval = 10; // Interval at which the contact swaps from one foot to the other in Samples
-    static double t_stance = contact_swap_interval * dt; // Duration that the foot will be in stance phase
-    static double gait_gain = 0.1; // Rename to more accurate name
+    const int contact_swap_interval = 10; // Interval at which the contact swaps from one foot to the other in Samples
+    double t_stance = contact_swap_interval * dt; // Duration that the foot will be in stance phase
+    double gait_gain = 0.1; // Rename to more accurate name
 
     double r_x_limit = 0.5; // The relative foot position in x (so r_x_left and r_x_right) is limited to +/- r_x_limit
 
-    static Eigen::Matrix<double, 3, 1> left_foot_pos_world = Eigen::ArrayXd::Zero(3, 1); // Left foot position in world frame
-    static Eigen::Matrix<double, 3, 1> right_foot_pos_world = Eigen::ArrayXd::Zero(3, 1); // Right foot position in world frame
+    Eigen::Matrix<double, 3, 1> left_foot_pos_world = Eigen::ArrayXd::Zero(3, 1); // Left foot position in world frame
+    Eigen::Matrix<double, 3, 1> right_foot_pos_world = Eigen::ArrayXd::Zero(3, 1); // Right foot position in world frame
 
     double hip_offset = 0.15; // Offset in x direction from Center of body frame / CoM to center of hip joint
     
@@ -748,14 +748,14 @@ int main()
     double r_y_right = 0;
     double r_z_right = -x_t(5, 0);
 
-    static Eigen::Matrix<double, n, n> A_c = Eigen::ArrayXXd::Zero(n, n); // A Matrix in Continuous time
-    static Eigen::Matrix<double, n, m> B_c = Eigen::ArrayXXd::Zero(n, m); // B Matrix in Continuous time
+    Eigen::Matrix<double, n, n> A_c = Eigen::ArrayXXd::Zero(n, n); // A Matrix in Continuous time
+    Eigen::Matrix<double, n, m> B_c = Eigen::ArrayXXd::Zero(n, m); // B Matrix in Continuous time
     
-    static Eigen::Matrix<double, 3, 3> r_left_skew_symmetric = Eigen::ArrayXXd::Zero(3, 3); // Skew symmetric version of the cross product with r. Needed because cross product cannot be a matrix element
-    static Eigen::Matrix<double, 3, 3> r_right_skew_symmetric = Eigen::ArrayXXd::Zero(3, 3); // Skew symmetric version of the cross product with r. Needed because cross product cannot be a matrix element
+    Eigen::Matrix<double, 3, 3> r_left_skew_symmetric = Eigen::ArrayXXd::Zero(3, 3); // Skew symmetric version of the cross product with r. Needed because cross product cannot be a matrix element
+    Eigen::Matrix<double, 3, 3> r_right_skew_symmetric = Eigen::ArrayXXd::Zero(3, 3); // Skew symmetric version of the cross product with r. Needed because cross product cannot be a matrix element
 
-    static Eigen::Matrix<double, m, m*N> D_vector = Eigen::ArrayXXd::Zero(m, m*N); // Vector containting N D matrices for contact constraints
-    static Eigen::Matrix<double, m, m> D_k = Eigen::ArrayXXd::Zero(m, m); // D Matrix at timestep k in Prediction Horizon
+    Eigen::Matrix<double, m, m*N> D_vector = Eigen::ArrayXXd::Zero(m, m*N); // Vector containting N D matrices for contact constraints
+    Eigen::Matrix<double, m, m> D_k = Eigen::ArrayXXd::Zero(m, m); // D Matrix at timestep k in Prediction Horizon
 
     // Booleans representing foot state. True means foot is in the air, i.e. no contact, false means foot is in stance phase. i.e. contact
     bool swing_left = true;
@@ -801,6 +801,7 @@ int main()
             //P_param(i,0) = x_t(i, 0);
         }
 
+        // Step the model one timestep and use the resulting state as the initial state for the solver. This compensates for the roughly 1 sample delay due to the solver time
         P_param.block<n,1>(0, 0) = step_discrete_model(x_t, u_t, r_x_left, r_x_right, r_y_left, r_y_right, r_z_left, r_z_right);
 
         if (total_iterations == 0) {
