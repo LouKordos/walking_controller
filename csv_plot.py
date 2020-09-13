@@ -18,13 +18,13 @@ largest_index = 0
 
 for name in filenames:
 	try:
-		index = int(name.split('.')[0])
+		index = int(name.split('.')[0].split('_')[0])
 		if index > largest_index:
 			largest_index = index
 	except:
 		print("Invalid parse")
 
-filename = str(largest_index) + ".csv"
+filename = str(largest_index) + "_left.csv"
 print("Filename:", filename) 
 
 data = np.genfromtxt("./plot_data/" + filename, delimiter=',', skip_header=50,

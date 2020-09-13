@@ -11,19 +11,16 @@
 - GDB
 - Replace `std::endl` with `\n` where possible and use `std::flush` at the end to improve performance
 - Try if casadi compile works without installing any IPOPT version and what version it would use
-- Export loop time and solution time to CSV as well
-- Make block operations fixed size to improve performance
 - Add array of state history to biped plugin to send previous correct state that was not NaN instead of 0
 - Combine all `0:N` loops into one
 - Try running setup.sh with `sh setup.sh` instead of the more complex way, if it works, update `README.md`
 - Add casadi benchmark to repo to test install
-- Use X and Y axes for world inertia as well!!
 - Use Bazel to compile project
 - Maybe merge everything into one repository
 - Install Gazebo with Bullet engine!!!
 - Test setup script in WSL2
 - Somehow add footstep locations to decision variables, or make it seperate optimization problem (one combined optimization for motion planning would be better to give solver intuition about the effects different footstep locations have)
-- Consider rewriting NLP just using IPOPT and Pardiso to remove overhead and increase loop frequency, 60-100Hz should be the goal
+- Consider rewriting NLP just using IPOPT and Pardiso/HSL solver to remove overhead and increase loop frequency, 60-100Hz should be the goal
 - Use running average solver time for discretization dt
 - Maybe Adaptive Horizon Length
 - Customize Gazebo to Draw Ground reaction force vectors etc. (https://answers.gazebosim.org/question/3383/how-to-add-a-dynamic-visual-marker-in-gazebo/)
@@ -36,10 +33,7 @@
 - ROS2 install from source in setup.sh!!!!
 - Maybe reduce state bounds length by combining friction constraints and force limits (now just using -inf and inf)
 - Test / Implement side stepping
-- PARDISO solver
-- Make c++ MPC heavily multithreaded to scale for high core-count CPU's
-- Try installing different solvers
-- Test transition from walking to standing and the other way around
+- Make C++ MPC heavily multithreaded to scale for high core-count CPU's
 - Multithreaded global state update
 - https://github.com/fmtlib/fmt for printing out in same line
 - meshgrid for reachability of leg
