@@ -7,7 +7,7 @@ find_package(casadi)
 
 #set(COMMUNICATIONS_LIBS zcm)
 
-add_definitions(-std=c++17 -Wall -Wpedantic -I .. -I /usr/local/include/ -L /usr/local/lib -O3)
+add_definitions(-std=c++17 -Wpedantic -I .. -I /usr/local/include/ -L /usr/local/lib -O3)
 
 add_executable(controller controller.cpp)
 add_executable(nlp_test nlp_test.cpp)
