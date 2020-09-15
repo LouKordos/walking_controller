@@ -89,8 +89,8 @@ static Eigen::Matrix<double, 3, 1> lift_off_pos_right = Eigen::ArrayXd::Zero(3, 
 static Eigen::Matrix<double, 3, 1> lift_off_vel_left = Eigen::ArrayXd::Zero(3, 1);
 static Eigen::Matrix<double, 3, 1> lift_off_vel_right = Eigen::ArrayXd::Zero(3, 1);
 
-static Eigen::Matrix<double, 3, 1> foot_trajectory_left = Eigen::ArrayXXd::Zero(301, 6);
-static Eigen::Matrix<double, 3, 1> foot_trajectory_right = Eigen::ArrayXXd::Zero(301, 6);
+static Eigen::Matrix<double, 301, 6> foot_trajectory_left = Eigen::ArrayXXd::Zero(301, 6);
+static Eigen::Matrix<double, 301, 6> foot_trajectory_right = Eigen::ArrayXXd::Zero(301, 6);
 
 static Eigen::Matrix<double, 3, 1> next_body_vel = Eigen::ArrayXd::Zero(3, 1);
 
