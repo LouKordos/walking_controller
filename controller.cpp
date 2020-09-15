@@ -89,8 +89,8 @@ static Eigen::Matrix<double, 3, 1> lift_off_pos_right = Eigen::ArrayXd::Zero(3, 
 static Eigen::Matrix<double, 3, 1> lift_off_vel_left = Eigen::ArrayXd::Zero(3, 1);
 static Eigen::Matrix<double, 3, 1> lift_off_vel_right = Eigen::ArrayXd::Zero(3, 1);
 
-static Eigen::Matrix<double, 301, 6> foot_trajectory_left = Eigen::ArrayXXd::Zero(301, 6);
-static Eigen::Matrix<double, 301, 6> foot_trajectory_right = Eigen::ArrayXXd::Zero(301, 6);
+static Eigen::Matrix<double, 300, 6> foot_trajectory_left = Eigen::ArrayXXd::Zero(300, 6);
+static Eigen::Matrix<double, 300, 6> foot_trajectory_right = Eigen::ArrayXXd::Zero(300, 6);
 
 static Eigen::Matrix<double, 3, 1> next_body_vel = Eigen::ArrayXd::Zero(3, 1);
 
@@ -131,9 +131,9 @@ void constrain(double &value, double lower_limit, double upper_limit) {
 }
 
 //TODO: Make trajectory matrix length dynamic, it is currently 1 second long, assuming 1ms time steps
-Eigen::Matrix<double, 301, 6> get_swing_trajectory(const Eigen::Matrix<double, 3, 1> initial_pos, const Eigen::Matrix<double, 3, 1> middle_pos, const Eigen::Matrix<double, 3, 1> target_pos, 
+Eigen::Matrix<double, 300, 6> get_swing_trajectory(const Eigen::Matrix<double, 3, 1> initial_pos, const Eigen::Matrix<double, 3, 1> middle_pos, const Eigen::Matrix<double, 3, 1> target_pos, 
                                                     const Eigen::Matrix<double, 3, 1> initial_vel, const Eigen::Matrix<double, 3, 1> target_vel, const double duration) {
-    Eigen::Matrix<double, 301, 6> trajectory;
+    Eigen::Matrix<double, 300, 6> trajectory;
     
     for(int i = 0; i < 3; ++i) {
         double a = -2*(duration*initial_vel(i, 0) - duration*target_vel(i, 0) + 4*initial_pos(i, 0) + 4*target_pos(i, 0) - 8*middle_pos(i, 0))/pow(duration,4);
@@ -144,7 +144,7 @@ Eigen::Matrix<double, 301, 6> get_swing_trajectory(const Eigen::Matrix<double, 3
 
         int index = 0;
 
-        for(double t = 0.0; t < duration; t += 1/301.0) {
+        for(double t = 0.0; t < duration; t += 1/300.0) {
             trajectory(index, i*2+0) = a * pow(t, 4) + b * pow(t, 3) + c * pow(t, 2) + d * t + e;
             trajectory(index, i*2+1) = 4 * a * pow(t, 3) + 3 * b * pow(t, 2) + 2 * c * t + d;
             ++index;
@@ -155,7 +155,6 @@ Eigen::Matrix<double, 301, 6> get_swing_trajectory(const Eigen::Matrix<double, 3
 }
 
 void update_left_leg_foot_trajectory() {
-
     x_mutex.lock();
     Eigen::Matrix<double, n, 1> x = x_t;
     x_mutex.unlock();
@@ -1360,16 +1359,16 @@ int main()
             lift_off_pos_right_mutex.lock();
             lift_off_vel_left_mutex.lock();
             lift_off_vel_right_mutex.lock();
-            
+
             if(!swing_left) { // Left foot will now be in swing phase so we need to save lift off position for swing trajectory planning
                 t_stance_remainder_left = t_stance;
-                lift_off_pos_left = foot_pos_left_leg.block<3,1>(0, 2);
-                lift_off_vel_left = x_t.block<3, 1>(9, 11);
+                lift_off_pos_left = foot_pos_left_leg.block<3, 1>(0, 0);
+                lift_off_vel_left = x_t.block<3, 1>(9, 0);
             }
             if(!swing_right) { // Right foot will now be in swing phase so we need to save lift off position for swing trajectory planning
                 t_stance_remainder_right = t_stance;
-                lift_off_pos_right = foot_pos_right_leg.block<3,1>(0, 2);
-                lift_off_vel_right = x_t.block<3, 1>(9, 11);
+                lift_off_pos_right = foot_pos_right_leg.block<3,1>(0, 0);
+                lift_off_vel_right = x_t.block<3, 1>(9, 0);
             }
 
             lift_off_pos_left_mutex.unlock();
