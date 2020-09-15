@@ -1124,11 +1124,14 @@ int main()
     
     // Bind functions to threads
     //left_leg_state_thread = std::thread(std::bind(update_left_leg_state));
-    // left_leg_torque_thread = std::thread(std::bind(calculate_left_leg_torques));
+    left_leg_torque_thread = std::thread(std::bind(calculate_left_leg_torques));
     // right_leg_torque_thread = std::thread(std::bind(calculate_right_leg_torques));
     //mpc_thread = std::thread(std::bind(run_mpc));
 
     // while(true) { }
+    std::cerr << "\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
+    std::cerr << "If you're running this in a docker container, make sure to use the --net=host option when running it." << std::endl;
+    std::cerr << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n" << std::endl;
 
     std::cout << "omega_desired is currently:" << omega_desired(0) << ", " << omega_desired(1) << ", " << omega_desired(2) << std::endl; // Print out current natural frequency
     std::cout << std::endl;
