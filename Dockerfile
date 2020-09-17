@@ -18,9 +18,14 @@ USER root
 
 COPY . /src
 
-WORKDIR /src/ && mkdir build && cd build
+WORKDIR /src/ 
+
+RUN rm -rf ./build && mkdir ./build
+WORKDIR /src/build
 
 RUN cmake ..
 RUN make -j
 
-CMD ["./controller"]
+CMD bash -c './controller'
+
+# Current command: sudo docker run -it --net=host loukordos/walking_controller
