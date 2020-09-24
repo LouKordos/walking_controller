@@ -17,6 +17,7 @@ RUN rm -rf /home/build/.cache/yay/*
 USER root
 
 COPY ./src /src
+COPY ./nlp.so .
 
 WORKDIR /src
 
