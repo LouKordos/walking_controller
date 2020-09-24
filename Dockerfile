@@ -28,4 +28,4 @@ RUN make -j
 
 CMD bash -c './controller'
 
-# Current command: sudo docker run -it --net=host loukordos/walking_controller
+# Current command: sudo docker run -e "TERM=xterm-256color" -it --net=host loukordos/walking_controller
