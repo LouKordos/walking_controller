@@ -71,8 +71,11 @@ static double t_stance_remainder_left, t_stance_remainder_right;
 const int contact_swap_interval = 10; // Interval at which the contact swaps from one foot to the other in Samples
 double t_stance = contact_swap_interval * dt; // Duration that the foot will be in stance phase
 
-static const double hip_offset_left_leg = -0.15;
-static const double hip_offset_right_leg = 0.15;
+static const double hip_offset_x_left_leg = -0.15;
+static const double hip_offset_z_left_leg = -0.065;
+
+static const double hip_offset_x_right_leg = 0.15;
+static const double hip_offset_z_right_leg = -0.065;
 
 static Eigen::Matrix<double, n, 1> x_t = (Eigen::Matrix<double, n, 1>() << 0., 0., 0., 0, 0, 0.8, 0, 0, 0, 0, 0, 0, -9.81).finished();
 static Eigen::Matrix<double, m, 1> u_t = (Eigen::Matrix<double, m, 1>() << 0, 0, m_value*9.81 / 2, 0, 0, m_value*9.81/2).finished();
@@ -83,16 +86,29 @@ static Eigen::Matrix<double, 3, 1> right_foot_pos_world = Eigen::ArrayXd::Zero(3
 static Eigen::Matrix<double, 3, 1> left_foot_pos_desired_world = Eigen::ArrayXd::Zero(3, 1);
 static Eigen::Matrix<double, 3, 1> right_foot_pos_desired_world = Eigen::ArrayXd::Zero(3, 1);
 
-static Eigen::Matrix<double, 3, 1> lift_off_pos_left = Eigen::ArrayXd::Zero(3, 1);
-static Eigen::Matrix<double, 3, 1> lift_off_pos_right = Eigen::ArrayXd::Zero(3, 1);
+static Eigen::Matrix<double, 3, 1> foot_pos_left_leg_body_frame = Eigen::ArrayXd::Zero(3, 1);
+static Eigen::Matrix<double, 3, 1> foot_pos_right_leg_body_frame = Eigen::ArrayXd::Zero(3, 1);
+
+static Eigen::Matrix<double, 3, 1> lift_off_pos_left = Eigen::ArrayXd::Zero(3, 1); // Hip frame
+static Eigen::Matrix<double, 3, 1> lift_off_pos_right = Eigen::ArrayXd::Zero(3, 1); // Hip frame
 
 static Eigen::Matrix<double, 3, 1> lift_off_vel_left = Eigen::ArrayXd::Zero(3, 1);
 static Eigen::Matrix<double, 3, 1> lift_off_vel_right = Eigen::ArrayXd::Zero(3, 1);
 
-static Eigen::Matrix<double, 300, 6> foot_trajectory_left = Eigen::ArrayXXd::Zero(300, 6);
-static Eigen::Matrix<double, 300, 6> foot_trajectory_right = Eigen::ArrayXXd::Zero(300, 6);
+static Eigen::Matrix<double, 334, 6> foot_trajectory_left = Eigen::ArrayXXd::Zero(334, 6);
+static Eigen::Matrix<double, 334, 6> foot_trajectory_right = Eigen::ArrayXXd::Zero(334, 6);
 
 static Eigen::Matrix<double, 3, 1> next_body_vel = Eigen::ArrayXd::Zero(3, 1);
+
+std::thread left_leg_state_thread; // Thread for updating left leg state based on gazebosim messages
+std::thread left_leg_torque_thread; // Thread for updating matrices, calculating torque setpoint and sending torque setpoint to gazebosim
+std::thread right_leg_torque_thread;
+std::thread mpc_thread;
+std::thread time_thread;
+
+static const double state_update_interval = 1000.0; // Interval for fetching and parsing the leg state from gazebosim in microseconds
+static const double torque_calculation_interval = 1000.0; // Interval for calculating and sending the torque setpoint to gazebosim in microseconds
+static const double time_update_interval = 1000.0;
 
 std::mutex x_mutex, u_mutex,
             left_foot_pos_world_mutex, right_foot_pos_world_mutex, 
@@ -101,12 +117,111 @@ std::mutex x_mutex, u_mutex,
             lift_off_vel_left_mutex, lift_off_vel_right_mutex,
             t_stance_remainder_left_mutex, t_stance_remainder_right_mutex,
             foot_trajectory_left_mutex, foot_trajectory_right_mutex,
-            next_body_vel_mutex;
+            trajectory_start_time_left_leg_mutex, trajectory_start_time_right_leg_mutex,
+            foot_pos_left_leg_body_frame_mutex, foot_pos_right_leg_body_frame_mutex,
+            next_body_vel_mutex,
+            time_mutex;
+
+static double current_time = 0;
+static double trajectory_start_time_left_leg;
 
 // Setting up debugging and plotting csv file
 
 int largest_index = 0;
 std::string filename;
+
+
+void print_threadsafe(std::string str, std::string sender) {
+    std::string prepared_string = "\033[1;36m[From '" + sender + "']:\033[0m \033[1;33m'" + str + "'\033[0m\n";
+    std::cout << prepared_string;
+}
+
+void update_foot_pos_left_leg_body_frame() {
+
+    x_mutex.lock();
+    Eigen::Matrix<double, n, 1> x = x_t;
+    x_mutex.unlock();
+
+    double phi_com = x(0, 0);
+    double theta_com = x(1, 0);
+    double psi_com = x(2, 0);
+
+    double pos_x_com = x(3, 0);
+    double pos_y_com = x(4, 0);
+    double pos_z_com = x(5, 0);
+
+    double vel_x_com = x(9, 0);
+    double vel_y_com = x(10, 0);
+    double vel_z_com = x(11, 0);
+
+    Eigen::Matrix<double, 4, 4> H_world_body = (Eigen::Matrix<double, 4, 4>() << cos(psi_com)*cos(theta_com), sin(psi_com)*cos(theta_com), -sin(theta_com), -pos_x_com*cos(psi_com)*cos(theta_com) - pos_y_com*sin(psi_com)*cos(theta_com) + pos_z_com*sin(theta_com), 
+                                            sin(phi_com)*sin(theta_com)*cos(psi_com) - sin(psi_com)*cos(phi_com), sin(phi_com)*sin(psi_com)*sin(theta_com) + cos(phi_com)*cos(psi_com), sin(phi_com)*cos(theta_com), -pos_x_com*sin(phi_com)*sin(theta_com)*cos(psi_com) + pos_x_com*sin(psi_com)*cos(phi_com) - pos_y_com*sin(phi_com)*sin(psi_com)*sin(theta_com) - pos_y_com*cos(phi_com)*cos(psi_com) - pos_z_com*sin(phi_com)*cos(theta_com), 
+                                            sin(phi_com)*sin(psi_com) + sin(theta_com)*cos(phi_com)*cos(psi_com), -sin(phi_com)*cos(psi_com) + sin(psi_com)*sin(theta_com)*cos(phi_com), cos(phi_com)*cos(theta_com), -pos_x_com*sin(phi_com)*sin(psi_com) - pos_x_com*sin(theta_com)*cos(phi_com)*cos(psi_com) + pos_y_com*sin(phi_com)*cos(psi_com) - pos_y_com*sin(psi_com)*sin(theta_com)*cos(phi_com) - pos_z_com*cos(phi_com)*cos(theta_com), 
+                                            0, 0, 0, 1).finished();
+
+    // Convert from hip to body frame
+    Eigen::Matrix<double, 4, 4> H_hip_body = (Eigen::Matrix<double, 4, 4>() << 1, 0, 0, hip_offset_x_left_leg,
+                                                                                0, 1, 0, 0,
+                                                                                0, 0, 1, hip_offset_z_left_leg, // Torso Z - Hip Z in Gazebo SDF
+                                                                                0, 0, 0, 1).finished();
+
+    foot_pos_left_leg_body_frame_mutex.lock();
+    foot_pos_left_leg_body_frame = (H_hip_body * (Eigen::Matrix<double, 4, 1>() << foot_pos_left_leg.block<3,1>(0, 0), 1).finished()).block<3,1>(0, 0);
+    foot_pos_left_leg_body_frame_mutex.unlock();
+
+    stringstream temp;
+    temp << foot_pos_left_leg_body_frame;
+    print_threadsafe(temp.str(), "foot_pos_body_frame in update function");
+
+    temp.str(std::string());
+    temp << (H_world_body.inverse() * (Eigen::Matrix<double, 4, 1>() << foot_pos_left_leg_body_frame.block<3,1>(0, 0), 1).finished()).block<3,1>(0, 0);
+    print_threadsafe(temp.str(), "foot_pos_left_world in update function");
+}
+
+double get_time() {
+    time_mutex.lock();
+    double t = current_time; // Store in temporary variable because return would exit the function, but the mutex still has to be unlocked
+    time_mutex.unlock();
+
+    return t;
+}
+
+void update_time() {
+    // High resolution clocks used for measuring execution time of loop iteration.
+    high_resolution_clock::time_point start = high_resolution_clock::now();
+    high_resolution_clock::time_point end = high_resolution_clock::now();
+
+    double duration = 0.0f; // Duration double for storing execution duration
+
+    struct timespec deadline; // timespec struct for storing time that execution thread should sleep for
+
+    long double start_time = duration_cast<milliseconds> (system_clock::now().time_since_epoch()).count();
+
+    while(true) {
+        
+        start = high_resolution_clock::now();
+
+        time_mutex.lock();
+
+        current_time = (duration_cast<milliseconds> (system_clock::now().time_since_epoch()).count() - start_time) / 1000.0;
+
+        time_mutex.unlock();
+
+        // stringstream temp;
+        // temp << "time: " << get_time();
+        // print_threadsafe(temp.str(), "time_thread");
+
+        end = high_resolution_clock::now();
+
+        // This timed loop approach calculates the execution time of the current iteration,
+        // then calculates the remaining time for the loop to run at the desired frequency and waits this duration.
+        duration = duration_cast<microseconds>(end - start).count();
+        long long remainder = (time_update_interval - duration) * 1e+3;
+        deadline.tv_nsec = remainder;
+        deadline.tv_sec = 0;
+        clock_nanosleep(CLOCK_REALTIME, 0, &deadline, NULL);
+    }
+}
 
 // Helper function for splitting string by delimiter character
 std::vector<std::string> split_string(std::string str, char delimiter) {
@@ -131,9 +246,9 @@ void constrain(double &value, double lower_limit, double upper_limit) {
 }
 
 //TODO: Make trajectory matrix length dynamic, it is currently 1 second long, assuming 1ms time steps
-Eigen::Matrix<double, 300, 6> get_swing_trajectory(const Eigen::Matrix<double, 3, 1> initial_pos, const Eigen::Matrix<double, 3, 1> middle_pos, const Eigen::Matrix<double, 3, 1> target_pos, 
+Eigen::Matrix<double, 334, 6> get_swing_trajectory(const Eigen::Matrix<double, 3, 1> initial_pos, const Eigen::Matrix<double, 3, 1> middle_pos, const Eigen::Matrix<double, 3, 1> target_pos, 
                                                     const Eigen::Matrix<double, 3, 1> initial_vel, const Eigen::Matrix<double, 3, 1> target_vel, const double duration) {
-    Eigen::Matrix<double, 300, 6> trajectory;
+    Eigen::Matrix<double, 334, 6> trajectory;
     
     for(int i = 0; i < 3; ++i) {
         double a = -2*(duration*initial_vel(i, 0) - duration*target_vel(i, 0) + 4*initial_pos(i, 0) + 4*target_pos(i, 0) - 8*middle_pos(i, 0))/pow(duration,4);
@@ -143,8 +258,8 @@ Eigen::Matrix<double, 300, 6> get_swing_trajectory(const Eigen::Matrix<double, 3
         double e = initial_pos(i, 0);
 
         int index = 0;
-
-        for(double t = 0.0; t < duration; t += 1/300.0) {
+        
+        for(double t = 0.0; t < duration; t += 1/334.0) {
             trajectory(index, i*2+0) = a * pow(t, 4) + b * pow(t, 3) + c * pow(t, 2) + d * t + e;
             trajectory(index, i*2+1) = 4 * a * pow(t, 3) + 3 * b * pow(t, 2) + 2 * c * t + d;
             ++index;
@@ -171,26 +286,18 @@ void update_left_leg_foot_trajectory() {
     double vel_y_com = x(10, 0);
     double vel_z_com = x(11, 0);
 
-    Eigen::Matrix<double, 4, 4> H_world_hip = (Eigen::Matrix<double, 4, 4>() << cos(psi_com)*cos(theta_com), sin(psi_com)*cos(theta_com), -sin(theta_com), -pos_y_com*sin(psi_com)*cos(theta_com) + pos_z_com*sin(theta_com) - (hip_offset_left_leg + pos_x_com)*cos(psi_com)*cos(theta_com),
-                                                        sin(phi_com)*sin(theta_com)*cos(psi_com) - sin(psi_com)*cos(phi_com), sin(phi_com)*sin(psi_com)*sin(theta_com) + cos(phi_com)*cos(psi_com), sin(phi_com)*cos(theta_com), -pos_y_com*sin(phi_com)*sin(psi_com)*sin(theta_com) - pos_y_com*cos(phi_com)*cos(psi_com) - pos_z_com*sin(phi_com)*cos(theta_com) - (hip_offset_left_leg + pos_x_com)*sin(phi_com)*sin(theta_com)*cos(psi_com) + (hip_offset_left_leg + pos_x_com)*sin(psi_com)*cos(phi_com), 
-                                                        sin(phi_com)*sin(psi_com) + sin(theta_com)*cos(phi_com)*cos(psi_com), -sin(phi_com)*cos(psi_com) + sin(psi_com)*sin(theta_com)*cos(phi_com), cos(phi_com)*cos(theta_com), pos_y_com*sin(phi_com)*cos(psi_com) - pos_y_com*sin(psi_com)*sin(theta_com)*cos(phi_com) - pos_z_com*cos(phi_com)*cos(theta_com) - (hip_offset_left_leg + pos_x_com)*sin(phi_com)*sin(psi_com) - (hip_offset_left_leg + pos_x_com)*sin(theta_com)*cos(phi_com)*cos(psi_com),
-                                                        0, 0, 0, 1).finished();
-        
-    //Inverse of H_body_world, see Point Mass Jupyter noteboo for calculation
     Eigen::Matrix<double, 4, 4> H_world_body = (Eigen::Matrix<double, 4, 4>() << cos(psi_com)*cos(theta_com), sin(psi_com)*cos(theta_com), -sin(theta_com), -pos_x_com*cos(psi_com)*cos(theta_com) - pos_y_com*sin(psi_com)*cos(theta_com) + pos_z_com*sin(theta_com), 
-                                                sin(phi_com)*sin(theta_com)*cos(psi_com) - sin(psi_com)*cos(phi_com), sin(phi_com)*sin(psi_com)*sin(theta_com) + cos(phi_com)*cos(psi_com), sin(phi_com)*cos(theta_com), -pos_x_com*sin(phi_com)*sin(theta_com)*cos(psi_com) + pos_x_com*sin(psi_com)*cos(phi_com) - pos_y_com*sin(phi_com)*sin(psi_com)*sin(theta_com) - pos_y_com*cos(phi_com)*cos(psi_com) - pos_z_com*sin(phi_com)*cos(theta_com), 
-                                                sin(phi_com)*sin(psi_com) + sin(theta_com)*cos(phi_com)*cos(psi_com), -sin(phi_com)*cos(psi_com) + sin(psi_com)*sin(theta_com)*cos(phi_com), cos(phi_com)*cos(theta_com), -pos_x_com*sin(phi_com)*sin(psi_com) - pos_x_com*sin(theta_com)*cos(phi_com)*cos(psi_com) + pos_y_com*sin(phi_com)*cos(psi_com) - pos_y_com*sin(psi_com)*sin(theta_com)*cos(phi_com) - pos_z_com*cos(phi_com)*cos(theta_com), 
-                                                0, 0, 0, 1).finished();
+                                            sin(phi_com)*sin(theta_com)*cos(psi_com) - sin(psi_com)*cos(phi_com), sin(phi_com)*sin(psi_com)*sin(theta_com) + cos(phi_com)*cos(psi_com), sin(phi_com)*cos(theta_com), -pos_x_com*sin(phi_com)*sin(theta_com)*cos(psi_com) + pos_x_com*sin(psi_com)*cos(phi_com) - pos_y_com*sin(phi_com)*sin(psi_com)*sin(theta_com) - pos_y_com*cos(phi_com)*cos(psi_com) - pos_z_com*sin(phi_com)*cos(theta_com), 
+                                            sin(phi_com)*sin(psi_com) + sin(theta_com)*cos(phi_com)*cos(psi_com), -sin(phi_com)*cos(psi_com) + sin(psi_com)*sin(theta_com)*cos(phi_com), cos(phi_com)*cos(theta_com), -pos_x_com*sin(phi_com)*sin(psi_com) - pos_x_com*sin(theta_com)*cos(phi_com)*cos(psi_com) + pos_y_com*sin(phi_com)*cos(psi_com) - pos_y_com*sin(psi_com)*sin(theta_com)*cos(phi_com) - pos_z_com*cos(phi_com)*cos(theta_com), 
+                                            0, 0, 0, 1).finished();
     
     left_foot_pos_desired_world_mutex.lock();
     Eigen::Matrix<double, 3, 1> pos_desired_left_leg_body_frame = (H_world_body * (Eigen::Matrix<double, 4, 1>() << left_foot_pos_desired_world, 1).finished()).block<3, 1>(0, 0);
     left_foot_pos_desired_world_mutex.unlock();
-
-    // We need the foot position in the body frame. The below is the dirty equivalent of multiplying with a transformation matrix that has identity for the rotation part and hip_offset_left_leg for x displacement
-    Eigen::Matrix<double, 3, 1> foot_pos_left_leg_body_frame = (Eigen::Matrix<double, 3, 1>() << foot_pos_left_leg(0, 0) + hip_offset_left_leg, foot_pos_left_leg(1, 0), foot_pos_left_leg(2, 0)).finished();
+    
+    update_foot_pos_left_leg_body_frame();
     
     double step_height_world = 0.15;
-
     double step_height_body = (H_world_body * (Eigen::Matrix<double, 4, 1>() << 0, 0, step_height_world, 1).finished())(2, 0);
 
     next_body_vel_mutex.lock();
@@ -198,34 +305,35 @@ void update_left_leg_foot_trajectory() {
     lift_off_vel_left_mutex.lock();
     foot_trajectory_left_mutex.lock();
     
-    foot_trajectory_left = get_swing_trajectory(lift_off_pos_left, 
+    foot_trajectory_left = get_swing_trajectory(lift_off_pos_left,
         (Eigen::Matrix<double, 3, 1>() << (lift_off_pos_left(0, 0) - pos_desired_left_leg_body_frame(0, 0)) / 2, (lift_off_pos_left(1, 0) - pos_desired_left_leg_body_frame(1, 0)) / 2, step_height_body).finished(), pos_desired_left_leg_body_frame, 
-        lift_off_vel_left, -next_body_vel, 
+        lift_off_vel_left, -next_body_vel,
         t_stance);
+    
+    trajectory_start_time_left_leg_mutex.lock();
+    trajectory_start_time_left_leg = get_time();
+    trajectory_start_time_left_leg_mutex.unlock();
+    
+    std::stringstream temp;
+    temp << "lift_off_pos: " << lift_off_pos_left(0, 0) << "," << lift_off_pos_left(1, 0) << "," << lift_off_pos_left(2, 0)
+                << "\nleft_foot_pos_world_desired: " << left_foot_pos_world(0, 0) << "," << left_foot_pos_world(1, 0) << "," << left_foot_pos_world(2, 0)
+                << "\ntarget_foot_pos_body: " << pos_desired_left_leg_body_frame(0, 0) << "," << pos_desired_left_leg_body_frame(1, 0) << "," << pos_desired_left_leg_body_frame(2, 0) 
+                << "\ntarget_foot_pos_world: " << left_foot_pos_desired_world(0, 0) << "," << left_foot_pos_desired_world(1, 0) << "," << left_foot_pos_desired_world(2, 0);
+    print_threadsafe(temp.str(), "mpc_thread");
+    
     foot_trajectory_left_mutex.unlock();
     next_body_vel_mutex.unlock();
     lift_off_pos_left_mutex.unlock();
     lift_off_vel_left_mutex.unlock();
 }
 
-
-
 Eigen::Matrix<double, 5, 1> get_joint_torques(Eigen::Matrix<double, 3, 1> f, double theta1, double theta2, double theta3, double theta4, double theta5, double phi, double theta, double psi) {
     return (Eigen::Matrix<double, 5, 1>() << f(0, 0)*(0.41*sin(theta2)*sin(psi + theta1)*cos(theta3) + 0.4*sin(theta2)*sin(psi + theta1)*cos(theta3 + theta4) + 0.04*sin(theta2)*sin(psi + theta1)*cos(theta3 + theta4 + theta5) - 0.41*sin(theta3)*cos(psi + theta1) - 0.4*sin(theta3 + theta4)*cos(psi + theta1) - 0.04*sin(theta3 + theta4 + theta5)*cos(psi + theta1))*cos(theta) + f(1, 0)*((sin(phi)*sin(psi)*sin(theta) - cos(phi)*cos(psi))*(0.41*sin(theta1)*sin(theta3) + 0.4*sin(theta1)*sin(theta3 + theta4) + 0.04*sin(theta1)*sin(theta3 + theta4 + theta5) + 0.41*sin(theta2)*cos(theta1)*cos(theta3) + 0.4*sin(theta2)*cos(theta1)*cos(theta3 + theta4) + 0.04*sin(theta2)*cos(theta1)*cos(theta3 + theta4 + theta5)) + (sin(phi)*sin(theta)*cos(psi) + sin(psi)*cos(phi))*(0.41*sin(theta1)*sin(theta2)*cos(theta3) + 0.4*sin(theta1)*sin(theta2)*cos(theta3 + theta4) + 0.04*sin(theta1)*sin(theta2)*cos(theta3 + theta4 + theta5) - 0.41*sin(theta3)*cos(theta1) - 0.4*sin(theta3 + theta4)*cos(theta1) - 0.04*sin(theta3 + theta4 + theta5)*cos(theta1))) + f(2, 0)*((sin(phi)*sin(psi) - sin(theta)*cos(phi)*cos(psi))*(0.41*sin(theta1)*sin(theta2)*cos(theta3) + 0.4*sin(theta1)*sin(theta2)*cos(theta3 + theta4) + 0.04*sin(theta1)*sin(theta2)*cos(theta3 + theta4 + theta5) - 0.41*sin(theta3)*cos(theta1) - 0.4*sin(theta3 + theta4)*cos(theta1) - 0.04*sin(theta3 + theta4 + theta5)*cos(theta1)) - (sin(phi)*cos(psi) + sin(psi)*sin(theta)*cos(phi))*(0.41*sin(theta1)*sin(theta3) + 0.4*sin(theta1)*sin(theta3 + theta4) + 0.04*sin(theta1)*sin(theta3 + theta4 + theta5) + 0.41*sin(theta2)*cos(theta1)*cos(theta3) + 0.4*sin(theta2)*cos(theta1)*cos(theta3 + theta4) + 0.04*sin(theta2)*cos(theta1)*cos(theta3 + theta4 + theta5))), f(0, 0)*((0.41*sin(theta2)*cos(theta3) + 0.4*sin(theta2)*cos(theta3 + theta4) + 0.04*sin(theta2)*cos(theta3 + theta4 + theta5))*sin(theta) + (0.41*cos(theta2)*cos(theta3) + 0.4*cos(theta2)*cos(theta3 + theta4) + 0.04*cos(theta2)*cos(theta3 + theta4 + theta5))*sin(psi)*sin(theta1)*cos(theta) - (0.41*cos(theta2)*cos(theta3) + 0.4*cos(theta2)*cos(theta3 + theta4) + 0.04*cos(theta2)*cos(theta3 + theta4 + theta5))*cos(psi)*cos(theta)*cos(theta1)) - f(1, 0)*(-(sin(phi)*sin(psi)*sin(theta) - cos(phi)*cos(psi))*(0.41*cos(theta2)*cos(theta3) + 0.4*cos(theta2)*cos(theta3 + theta4) + 0.04*cos(theta2)*cos(theta3 + theta4 + theta5))*sin(theta1) + (sin(phi)*sin(theta)*cos(psi) + sin(psi)*cos(phi))*(0.41*cos(theta2)*cos(theta3) + 0.4*cos(theta2)*cos(theta3 + theta4) + 0.04*cos(theta2)*cos(theta3 + theta4 + theta5))*cos(theta1) + (0.41*sin(theta2)*cos(theta3) + 0.4*sin(theta2)*cos(theta3 + theta4) + 0.04*sin(theta2)*cos(theta3 + theta4 + theta5))*sin(phi)*cos(theta)) - f(2, 0)*((sin(phi)*sin(psi) - sin(theta)*cos(phi)*cos(psi))*(0.41*cos(theta2)*cos(theta3) + 0.4*cos(theta2)*cos(theta3 + theta4) + 0.04*cos(theta2)*cos(theta3 + theta4 + theta5))*cos(theta1) + (sin(phi)*cos(psi) + sin(psi)*sin(theta)*cos(phi))*(0.41*cos(theta2)*cos(theta3) + 0.4*cos(theta2)*cos(theta3 + theta4) + 0.04*cos(theta2)*cos(theta3 + theta4 + theta5))*sin(theta1) - (0.41*sin(theta2)*cos(theta3) + 0.4*sin(theta2)*cos(theta3 + theta4) + 0.04*sin(theta2)*cos(theta3 + theta4 + theta5))*cos(phi)*cos(theta)), -f(0, 0)*(-0.41*sin(theta)*sin(theta3)*cos(theta2) - 0.4*sin(theta)*sin(theta3 + theta4)*cos(theta2) - 0.04*sin(theta)*sin(theta3 + theta4 + theta5)*cos(theta2) - 0.41*sin(theta2)*sin(theta3)*cos(theta)*cos(psi + theta1) - 0.4*sin(theta2)*sin(theta3 + theta4)*cos(theta)*cos(psi + theta1) - 0.04*sin(theta2)*sin(theta3 + theta4 + theta5)*cos(theta)*cos(psi + theta1) + 0.41*sin(psi + theta1)*cos(theta)*cos(theta3) + 0.4*sin(psi + theta1)*cos(theta)*cos(theta3 + theta4) + 0.04*sin(psi + theta1)*cos(theta)*cos(theta3 + theta4 + theta5)) - f(1, 0)*((sin(phi)*sin(psi)*sin(theta) - cos(phi)*cos(psi))*(0.41*sin(theta1)*sin(theta2)*sin(theta3) + 0.4*sin(theta1)*sin(theta2)*sin(theta3 + theta4) + 0.04*sin(theta1)*sin(theta2)*sin(theta3 + theta4 + theta5) + 0.41*cos(theta1)*cos(theta3) + 0.4*cos(theta1)*cos(theta3 + theta4) + 0.04*cos(theta1)*cos(theta3 + theta4 + theta5)) + (sin(phi)*sin(theta)*cos(psi) + sin(psi)*cos(phi))*(0.41*sin(theta1)*cos(theta3) + 0.4*sin(theta1)*cos(theta3 + theta4) + 0.04*sin(theta1)*cos(theta3 + theta4 + theta5) - 0.41*sin(theta2)*sin(theta3)*cos(theta1) - 0.4*sin(theta2)*sin(theta3 + theta4)*cos(theta1) - 0.04*sin(theta2)*sin(theta3 + theta4 + theta5)*cos(theta1)) - (-0.41*sin(theta3) - 0.4*sin(theta3 + theta4) - 0.04*sin(theta3 + theta4 + theta5))*sin(phi)*cos(theta)*cos(theta2)) - f(2, 0)*((sin(phi)*sin(psi) - sin(theta)*cos(phi)*cos(psi))*(0.41*sin(theta1)*cos(theta3) + 0.4*sin(theta1)*cos(theta3 + theta4) + 0.04*sin(theta1)*cos(theta3 + theta4 + theta5) - 0.41*sin(theta2)*sin(theta3)*cos(theta1) - 0.4*sin(theta2)*sin(theta3 + theta4)*cos(theta1) - 0.04*sin(theta2)*sin(theta3 + theta4 + theta5)*cos(theta1)) - (sin(phi)*cos(psi) + sin(psi)*sin(theta)*cos(phi))*(0.41*sin(theta1)*sin(theta2)*sin(theta3) + 0.4*sin(theta1)*sin(theta2)*sin(theta3 + theta4) + 0.04*sin(theta1)*sin(theta2)*sin(theta3 + theta4 + theta5) + 0.41*cos(theta1)*cos(theta3) + 0.4*cos(theta1)*cos(theta3 + theta4) + 0.04*cos(theta1)*cos(theta3 + theta4 + theta5)) + (-0.41*sin(theta3) - 0.4*sin(theta3 + theta4) - 0.04*sin(theta3 + theta4 + theta5))*cos(phi)*cos(theta)*cos(theta2)), -f(0, 0)*(-0.4*sin(theta)*sin(theta3 + theta4)*cos(theta2) - 0.04*sin(theta)*sin(theta3 + theta4 + theta5)*cos(theta2) - 0.4*sin(theta2)*sin(theta3 + theta4)*cos(theta)*cos(psi + theta1) - 0.04*sin(theta2)*sin(theta3 + theta4 + theta5)*cos(theta)*cos(psi + theta1) + 0.4*sin(psi + theta1)*cos(theta)*cos(theta3 + theta4) + 0.04*sin(psi + theta1)*cos(theta)*cos(theta3 + theta4 + theta5)) - f(1, 0)*((sin(phi)*sin(psi)*sin(theta) - cos(phi)*cos(psi))*(0.4*sin(theta1)*sin(theta2)*sin(theta3 + theta4) + 0.04*sin(theta1)*sin(theta2)*sin(theta3 + theta4 + theta5) + 0.4*cos(theta1)*cos(theta3 + theta4) + 0.04*cos(theta1)*cos(theta3 + theta4 + theta5)) + (sin(phi)*sin(theta)*cos(psi) + sin(psi)*cos(phi))*(0.4*sin(theta1)*cos(theta3 + theta4) + 0.04*sin(theta1)*cos(theta3 + theta4 + theta5) - 0.4*sin(theta2)*sin(theta3 + theta4)*cos(theta1) - 0.04*sin(theta2)*sin(theta3 + theta4 + theta5)*cos(theta1)) - (-0.4*sin(theta3 + theta4) - 0.04*sin(theta3 + theta4 + theta5))*sin(phi)*cos(theta)*cos(theta2)) - f(2, 0)*((sin(phi)*sin(psi) - sin(theta)*cos(phi)*cos(psi))*(0.4*sin(theta1)*cos(theta3 + theta4) + 0.04*sin(theta1)*cos(theta3 + theta4 + theta5) - 0.4*sin(theta2)*sin(theta3 + theta4)*cos(theta1) - 0.04*sin(theta2)*sin(theta3 + theta4 + theta5)*cos(theta1)) - (sin(phi)*cos(psi) + sin(psi)*sin(theta)*cos(phi))*(0.4*sin(theta1)*sin(theta2)*sin(theta3 + theta4) + 0.04*sin(theta1)*sin(theta2)*sin(theta3 + theta4 + theta5) + 0.4*cos(theta1)*cos(theta3 + theta4) + 0.04*cos(theta1)*cos(theta3 + theta4 + theta5)) + (-0.4*sin(theta3 + theta4) - 0.04*sin(theta3 + theta4 + theta5))*cos(phi)*cos(theta)*cos(theta2)), -f(0, 0)*(-0.04*sin(theta)*sin(theta3 + theta4 + theta5)*cos(theta2) - 0.04*sin(theta2)*sin(theta3 + theta4 + theta5)*cos(theta)*cos(psi + theta1) + 0.04*sin(psi + theta1)*cos(theta)*cos(theta3 + theta4 + theta5)) - f(1, 0)*(-0.04*(-sin(theta1)*cos(theta3 + theta4 + theta5) + sin(theta2)*sin(theta3 + theta4 + theta5)*cos(theta1))*(sin(phi)*sin(theta)*cos(psi) + sin(psi)*cos(phi)) + 0.04*(sin(phi)*sin(psi)*sin(theta) - cos(phi)*cos(psi))*(sin(theta1)*sin(theta2)*sin(theta3 + theta4 + theta5) + cos(theta1)*cos(theta3 + theta4 + theta5)) + 0.04*sin(phi)*sin(theta3 + theta4 + theta5)*cos(theta)*cos(theta2)) - f(2, 0)*(-0.04*(sin(phi)*sin(psi) - sin(theta)*cos(phi)*cos(psi))*(-sin(theta1)*cos(theta3 + theta4 + theta5) + sin(theta2)*sin(theta3 + theta4 + theta5)*cos(theta1)) - 0.04*(sin(phi)*cos(psi) + sin(psi)*sin(theta)*cos(phi))*(sin(theta1)*sin(theta2)*sin(theta3 + theta4 + theta5) + cos(theta1)*cos(theta3 + theta4 + theta5)) - 0.04*sin(theta3 + theta4 + theta5)*cos(phi)*cos(theta)*cos(theta2))).finished();
 }
 
-std::thread left_leg_state_thread; // Thread for updating left leg state based on gazebosim messages
-std::thread left_leg_torque_thread; // Thread for updating matrices, calculating torque setpoint and sending torque setpoint to gazebosim
-std::thread right_leg_torque_thread;
-std::thread mpc_thread;
-
-static const double state_update_interval = 1000.0; // Interval for fetching and parsing the leg state from gazebosim in microseconds
-static const double torque_calculation_interval = 1000.0; // Interval for calculating and sending the torque setpoint to gazebosim in microseconds
-
 void update_left_leg_state() {
 
     // High resolution clocks used for measuring execution time of loop iteration.
-
     high_resolution_clock::time_point start = high_resolution_clock::now();
     high_resolution_clock::time_point end = high_resolution_clock::now();
 
@@ -276,22 +384,22 @@ void calculate_left_leg_torques() {
         perror("socket creation failed"); 
         exit(EXIT_FAILURE);
     }
-      
+    
     memset(&servaddr, 0, sizeof(servaddr)); 
     memset(&cliaddr, 0, sizeof(cliaddr)); 
-    
+
     // Filling server information 
     servaddr.sin_family    = AF_INET; // IPv4 
     servaddr.sin_addr.s_addr = inet_addr("127.0.0.1"); 
     servaddr.sin_port = htons(left_leg_torque_port); 
-      
+    
     // Bind the socket with the server address 
     if ( bind(sockfd, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0 ) 
     { 
         perror("bind failed"); 
         exit(EXIT_FAILURE);
-    } 
-      
+    }
+    
     int msg_length; 
     socklen_t len;
 
@@ -310,8 +418,6 @@ void calculate_left_leg_torques() {
 
     while(true) {
         start = high_resolution_clock::now();
-
-        double t = iteration_counter * dt;
 
         //Declaring angle and angular velocity variables for updating matrices
         
@@ -378,93 +484,6 @@ void calculate_left_leg_torques() {
         // If swing, leg trajectory should be followed, if not, foot is in contact with the ground and MPC forces should be converted into torques and applied
         if(swing_left) {
             
-            // pos_desired_left_leg << 0, 0, 0.1*sin(2*t) - 0.9, 0, 0;
-
-            // vel_desired_left_leg << 0, 0, 0.2*cos(2*t), 0, 0;
-
-            // accel_desired_left_leg << 0, 0, -0.4*sin(2*t);
-
-            // if(iteration_counter % 1500 == 0) {
-            //     time_switch = !time_switch;
-            //     iteration_counter = 0;
-            // }
-
-            double x_pos_t = 0; // Current desired cartesian x position
-            double x_vel_t = 0; // Current desired cartesian x velocity
-            double x_accel_t = 0; // Current desired cartesian x acceleration
-
-            double y_pos_t = 0; // Current desired cartesian y position
-            double y_vel_t = 0; // Current desired cartesian y velocity
-            double y_accel_t = 0; // Current desired cartesian y acceleration
-
-            double z_pos_t = 0; // Current desired cartesian z position
-            double z_vel_t = 0; // Current desired cartesian z velocity
-            double z_accel_t = 0; // Current desired cartesain z acceleration
-
-            double phi_t_left_leg = 0; // Current desired roll orientation for the foot described as an Euler Angle
-            double phi_dot_t_left_leg = 0; // Current desired roll angular velocity for the foot described as an Euler Angle
-
-            double psi_t_left_leg = 0; // Current desired yaw orientation for the foot described as an Euler Angle
-            double psi_dot_t_left_leg = 0; // Current desired yaw angular velocity for the foot described as an Euler Angle
-            
-            t_stance_remainder_left_mutex.lock();
-            // Get setpoint from trajectory
-            
-            t_stance_remainder_left_mutex.unlock();
-
-            foot_trajectory_left_mutex.lock();
-
-            pos_desired_left_leg << foot_trajectory_left(0, 0) + hip_offset_left_leg, foot_trajectory_left(0, 2), foot_trajectory_left(0, 4), 0, 0;
-            vel_desired_left_leg << foot_trajectory_left(0, 1), foot_trajectory_left(0, 3), foot_trajectory_left(0, 5), 0, 0;
-
-            foot_trajectory_left_mutex.unlock();
-
-            std::cout << "pos_desired_left_leg: " << pos_desired_left_leg(0, 0) << "," << pos_desired_left_leg(1, 0) << pos_desired_left_leg(2, 0) << std::endl;
-            std::cout << "left_foot_pos_desired_world: " << left_foot_pos_desired_world(0, 0) << "," << left_foot_pos_desired_world(1, 0) << "," << left_foot_pos_desired_world(2, 0) << std::endl;
-
-            // Eigen::Matrix<double, 3,1> pos_desired_left_leg_cartesian = (H_world_hip * (Eigen::Matrix<double, 4, 1>() << left_foot_pos_world, 1).finished()).block<3,1>(0, 0);
-
-            // pos_desired_left_leg << pos_desired_left_leg_cartesian, 0, 0;
-
-            // std::cout << "pos_desired_left_leg: " << pos_desired_left_leg(0, 0) << "," << pos_desired_left_leg(1, 0) << "," << pos_desired_left_leg(2, 0) << std::endl;
-            // std::cout << "left_foot_pos_world: " << left_foot_pos_world(0, 0) << "," << left_foot_pos_world(1, 0) << "," << left_foot_pos_world(2, 0) << std::endl;
-            // std::cout << "pos_z_com:" << pos_z_com << std::endl;
-
-            // Updating desired trajectory
-
-            // x_pos_t = 0;
-            // x_vel_t = 0;
-            // x_accel_t = 0;
-            
-            // double omega = 8.0; // Frequency for sinusoidal Trajectory in rad/s
-
-            // // X:
-
-            // //x_pos_t = 0.200000000000000011102L*cosl(2*t);
-            // x_pos_t = 0.1 * sin(omega*t);
-            // x_vel_t = 0.1*omega*cos(omega*t);
-            // x_accel_t = -0.1*omega*omega*sin(omega*t);
-
-            // // Y:
-
-            // y_pos_t = 0.200000000000000011102L*cosl(omega*t);
-            // y_vel_t = -0.200000000000000011102L*omega*sinl(omega*t);
-            // y_accel_t = -0.200000000000000011102L*powl(omega, 2)*cosl(omega*t);
-
-            // // Z:
-
-            // z_pos_t = 0.100000000000000005551L*sinl(omega*t) - 0.800000000000000044409L;
-            // z_vel_t = 0.100000000000000005551L*omega*cosl(omega*t);
-            // z_accel_t = -0.100000000000000005551L*powl(omega, 2)*sinl(omega*t);
-
-            // pos_desired_left_leg << x_pos_t, y_pos_t, z_pos_t, phi_t_left_leg, psi_t_left_leg;
-            // vel_desired_left_leg << x_vel_t, y_vel_t, z_vel_t, psi_t_left_leg, psi_dot_t_left_leg;
-            // accel_desired_left_leg << x_accel_t, y_accel_t, z_accel_t;
-
-            // std::cout << "pos: " << pos_desired_left_leg(0) << ", " << pos_desired_left_leg(1) << ", " << pos_desired_left_leg(2) << ", vel: " << vel_desired_left_leg(0)
-            //             << ", " << vel_desired_left_leg(1) << ", " << vel_desired_left_leg(2) 
-            //             << ", accel: " << accel_desired_left_leg(0) << ", " << accel_desired_left_leg(1) << ", " << accel_desired_left_leg(2) << std::endl;
-
             //TODO: Maybe rework to only use q and q_dot
 
             // Update matrices based on received angles and angular velocities
@@ -525,12 +544,43 @@ void calculate_left_leg_torques() {
             update_Kd_left_leg();
 
             update_foot_pos_left_leg(theta1, theta2, theta3, theta4, theta5);
-
-            //std::cout << "Foot Position: " << foot_pos_left_leg(0) << ", " << foot_pos_left_leg(1) << ", " << foot_pos_left_leg(2) << std::endl;
-
-            //std::cout << '\r' << std::setw(2) << std::setfill('0') << h << ':' << std::setw(2) << m << ':' << std::setw(2) << s << std::flush;
-
+            
             update_foot_vel_left_leg(q_dot_temp);
+
+            double x_pos_t = 0; // Current desired cartesian x position
+            double x_vel_t = 0; // Current desired cartesian x velocity
+            double x_accel_t = 0; // Current desired cartesian x acceleration
+
+            double y_pos_t = 0; // Current desired cartesian y position
+            double y_vel_t = 0; // Current desired cartesian y velocity
+            double y_accel_t = 0; // Current desired cartesian y acceleration
+
+            double z_pos_t = 0; // Current desired cartesian z position
+            double z_vel_t = 0; // Current desired cartesian z velocity
+            double z_accel_t = 0; // Current desired cartesain z acceleration
+
+            double phi_t_left_leg = 0; // Current desired roll orientation for the foot described as an Euler Angle
+            double phi_dot_t_left_leg = 0; // Current desired roll angular velocity for the foot described as an Euler Angle
+
+            double psi_t_left_leg = 0; // Current desired yaw orientation for the foot described as an Euler Angle
+            double psi_dot_t_left_leg = 0; // Current desired yaw angular velocity for the foot described as an Euler Angle
+            
+            trajectory_start_time_left_leg_mutex.lock();
+            double current_trajectory_time = get_time() - trajectory_start_time_left_leg;
+            trajectory_start_time_left_leg_mutex.unlock();
+
+            foot_trajectory_left_mutex.lock();
+            int traj_index = current_trajectory_time / (1.0 / 334.0);
+            pos_desired_left_leg << foot_trajectory_left(traj_index, 0) + hip_offset_x_left_leg, foot_trajectory_left(traj_index, 2), foot_trajectory_left(traj_index, 4), 0, 0;
+            vel_desired_left_leg << foot_trajectory_left(traj_index, 1), foot_trajectory_left(traj_index, 3), foot_trajectory_left(traj_index, 5), 0, 0;
+
+            // stringstream temp;
+            // temp << "traj_index: " << traj_index
+            //      << "\npos_desired: " << pos_desired_left_leg(0, 0) << "," << pos_desired_left_leg(1, 0) << "," << pos_desired_left_leg(2, 0);
+
+            // print_threadsafe(temp.str(), "left_leg_torque_thread");
+
+            foot_trajectory_left_mutex.unlock();
 
             update_tau_setpoint_left_leg();
 
@@ -552,7 +602,7 @@ void calculate_left_leg_torques() {
                 
                 ofstream data_file;
                 data_file.open(".././plot_data/" + filename + "_left.csv", ios::app); // Open csv file in append mode
-                data_file << t // Write plot values to csv file
+                data_file << get_time() // Write plot values to csv file
                             << "," << theta1 << "," << theta2 << "," << theta3 << "," << theta4 << "," << theta5
                             << "," << theta1_dot << "," << theta2_dot << "," << theta3_dot << "," << theta4_dot << "," << theta5_dot
                             << "," << tau_setpoint_left_leg(0) << "," << tau_setpoint_left_leg(1) << "," << tau_setpoint_left_leg(2) << "," << tau_setpoint_left_leg(3) << "," << tau_setpoint_left_leg(4)
@@ -564,8 +614,12 @@ void calculate_left_leg_torques() {
                 data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
             }
 
+            for(int i = 0; i < 5; ++i) {
+                tau_setpoint_left_leg(i, 0) = 0;
+            }
+
             stringstream s;
-            s << tau_setpoint_left_leg(0) << "|" << tau_setpoint_left_leg(1) << "|" << tau_setpoint_left_leg(2) << "|" << tau_setpoint_left_leg(3) << "|" << tau_setpoint_left_leg(4); // Write torque setpoints to stringstream
+            s << tau_setpoint_left_leg(0, 0) << "|" << tau_setpoint_left_leg(1, 0) << "|" << tau_setpoint_left_leg(2, 0) << "|" << tau_setpoint_left_leg(3, 0) << "|" << tau_setpoint_left_leg(4, 0); // Write torque setpoints to stringstream
             sendto(sockfd, (const char *)s.str().c_str(), strlen(s.str().c_str()), 
                 MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len); // Send the torque setpoint string to the simulation
         }
@@ -576,21 +630,26 @@ void calculate_left_leg_torques() {
                 constrain(tau_setpoint(i ,0), lower_torque_limit, upper_torque_limit);
             }
 
+            for(int i = 0; i < 5; ++i) {
+                tau_setpoint_left_leg(i, 0) = 0;
+            }
+
             stringstream s;
             s << tau_setpoint(0, 0) << "|" << tau_setpoint(1, 0) << "|" << tau_setpoint(2, 0) << "|" << tau_setpoint(3, 0) << "|" << tau_setpoint(4, 0);
             sendto(sockfd, (const char *)s.str().c_str(), strlen(s.str().c_str()), 
                 MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len); // Send the torque setpoint string to the simulation
             
-            std::cout << "tau_setpoint_left_leg: " << s.str() << std::endl;
+            // stringstream temp;
+            // temp << "tau_setpoint_left_leg: " << s.str();
+            // print_threadsafe(temp.str(), "left_leg_torque_thread");
         }
-
 
         iteration_counter++; // Increment iteration counter
         t_stance_remainder_left_mutex.lock();
         t_stance_remainder_left -= 1/torque_calculation_interval;
         constrain(t_stance_remainder_left, 0, 10000);
 
-        std::cout << "t_stance_remainder_left: " << t_stance_remainder_left << std::endl;
+        // std::cout << "t_stance_remainder_left: " << t_stance_remainder_left << std::endl;
         t_stance_remainder_left_mutex.unlock();
 
         end = high_resolution_clock::now();
@@ -730,84 +789,11 @@ void calculate_right_leg_torques() {
 
         // If swing, leg trajectory should be followed, if not, foot is in contact with the ground and MPC forces should be converted into torques and applied
         if(swing_right) {
-            
-            // pos_desired_right_leg << 0, 0, 0.1*sin(2*t) - 0.9, 0, 0;
-
-            // vel_desired_right_leg << 0, 0, 0.2*cos(2*t), 0, 0;
-
-            // accel_desired_right_leg << 0, 0, -0.4*sin(2*t);
-
-            // if(iteration_counter % 1500 == 0) {
-            //     time_switch = !time_switch;
-            //     iteration_counter = 0;
-            // }
-
-            double x_pos_t = 0; // Current desired cartesian x position
-            double x_vel_t = 0; // Current desired cartesian x velocity
-            double x_accel_t = 0; // Current desired cartesian x acceleration
-
-            double y_pos_t = 0; // Current desired cartesian y position
-            double y_vel_t = 0; // Current desired cartesian y velocity
-            double y_accel_t = 0; // Current desired cartesian y acceleration
-
-            double z_pos_t = 0; // Current desired cartesian z position
-            double z_vel_t = 0; // Current desired cartesian z velocity
-            double z_accel_t = 0; // Current desired cartesain z acceleration
-
-            double phi_t_left_leg = 0; // Current desired roll orientation for the foot described as an Euler Angle
-            double phi_dot_t_left_leg = 0; // Current desired roll angular velocity for the foot described as an Euler Angle
-
-            double psi_t_left_leg = 0; // Current desired yaw orientation for the foot described as an Euler Angle
-            double psi_dot_t_left_leg = 0; // Current desired yaw angular velocity for the foot described as an Euler Angle
-
-            // Updating desired trajectory
-
-            Eigen::Matrix<double, 4, 4> H_world_hip = (Eigen::Matrix<double, 4, 4>() << cos(psi_com)*cos(theta_com), sin(psi_com)*cos(theta_com), -sin(theta_com), -pos_y_com*sin(psi_com)*cos(theta_com) + pos_z_com*sin(theta_com) - (hip_offset_right_leg + pos_x_com)*cos(psi_com)*cos(theta_com),
-                                                        sin(phi_com)*sin(theta_com)*cos(psi_com) - sin(psi_com)*cos(phi_com), sin(phi_com)*sin(psi_com)*sin(theta_com) + cos(phi_com)*cos(psi_com), sin(phi_com)*cos(theta_com), -pos_y_com*sin(phi_com)*sin(psi_com)*sin(theta_com) - pos_y_com*cos(phi_com)*cos(psi_com) - pos_z_com*sin(phi_com)*cos(theta_com) - (hip_offset_right_leg + pos_x_com)*sin(phi_com)*sin(theta_com)*cos(psi_com) + (hip_offset_right_leg + pos_x_com)*sin(psi_com)*cos(phi_com), 
-                                                        sin(phi_com)*sin(psi_com) + sin(theta_com)*cos(phi_com)*cos(psi_com), -sin(phi_com)*cos(psi_com) + sin(psi_com)*sin(theta_com)*cos(phi_com), cos(phi_com)*cos(theta_com), pos_y_com*sin(phi_com)*cos(psi_com) - pos_y_com*sin(psi_com)*sin(theta_com)*cos(phi_com) - pos_z_com*cos(phi_com)*cos(theta_com) - (hip_offset_right_leg + pos_x_com)*sin(phi_com)*sin(psi_com) - (hip_offset_right_leg + pos_x_com)*sin(theta_com)*cos(phi_com)*cos(psi_com),
-                                                        0, 0, 0, 1).finished();
-            right_foot_pos_world_mutex.lock();
-            Eigen::Matrix<double, 3,1> pos_desired_right_leg_cartesian = (H_world_hip * (Eigen::Matrix<double, 4, 1>() << right_foot_pos_world, 1).finished()).block<3,1>(0, 0);
-            right_foot_pos_world_mutex.unlock();
-            pos_desired_right_leg << pos_desired_right_leg_cartesian, 0, 0;
-
-            // x_pos_t = 0;
-            // x_vel_t = 0;
-            // x_accel_t = 0;
-            
-            // double omega = 8.0; // Frequency for sinusoidal Trajectory in rad/s
-
-            // // X:
-
-            // //x_pos_t = 0.200000000000000011102L*cosl(2*t);
-            // x_pos_t = 0.1 * sin(omega*t);
-            // x_vel_t = 0.1*omega*cos(omega*t);
-            // x_accel_t = -0.1*omega*omega*sin(omega*t);
-
-            // // Y:
-
-            // y_pos_t = 0.200000000000000011102L*cosl(omega*t);
-            // y_vel_t = -0.200000000000000011102L*omega*sinl(omega*t);
-            // y_accel_t = -0.200000000000000011102L*powl(omega, 2)*cosl(omega*t);
-
-            // // Z:
-
-            // z_pos_t = 0.100000000000000005551L*sinl(omega*t) - 0.800000000000000044409L;
-            // z_vel_t = 0.100000000000000005551L*omega*cosl(omega*t);
-            // z_accel_t = -0.100000000000000005551L*powl(omega, 2)*sinl(omega*t);
-
-            // pos_desired_right_leg << x_pos_t, y_pos_t, z_pos_t, phi_t_left_leg, psi_t_left_leg;
-            // vel_desired_right_leg << x_vel_t, y_vel_t, z_vel_t, psi_t_left_leg, psi_dot_t_left_leg;
-            // accel_desired_right_leg << x_accel_t, y_accel_t, z_accel_t;
-
-            // std::cout << "pos: " << pos_desired_right_leg(0) << ", " << pos_desired_right_leg(1) << ", " << pos_desired_right_leg(2) << ", vel: " << vel_desired_right_leg(0)
-            //             << ", " << vel_desired_right_leg(1) << ", " << vel_desired_right_leg(2) 
-            //             << ", accel: " << accel_desired_right_leg(0) << ", " << accel_desired_right_leg(1) << ", " << accel_desired_right_leg(2) << std::endl;
 
             //TODO: Maybe rework to only use q and q_dot
 
             // Update matrices based on received angles and angular velocities
-
+            
             update_orientation_right_leg(theta1, theta2, theta3, theta4, theta5);
 
             update_B_right_leg(theta1, theta2, theta3, theta4, theta5, theta1_dot, theta2_dot, theta3_dot, theta4_dot, theta5_dot);
@@ -865,11 +851,36 @@ void calculate_right_leg_torques() {
 
             update_foot_pos_right_leg(theta1, theta2, theta3, theta4, theta5);
 
-            //std::cout << "Foot Position: " << foot_pos_right_leg(0) << ", " << foot_pos_right_leg(1) << ", " << foot_pos_right_leg(2) << std::endl;
-
-            //std::cout << '\r' << std::setw(2) << std::setfill('0') << h << ':' << std::setw(2) << m << ':' << std::setw(2) << s << std::flush;
-
             update_foot_vel_right_leg(q_dot_temp);
+
+            double x_pos_t = 0; // Current desired cartesian x position
+            double x_vel_t = 0; // Current desired cartesian x velocity
+            double x_accel_t = 0; // Current desired cartesian x acceleration
+
+            double y_pos_t = 0; // Current desired cartesian y position
+            double y_vel_t = 0; // Current desired cartesian y velocity
+            double y_accel_t = 0; // Current desired cartesian y acceleration
+
+            double z_pos_t = 0; // Current desired cartesian z position
+            double z_vel_t = 0; // Current desired cartesian z velocity
+            double z_accel_t = 0; // Current desired cartesain z acceleration
+
+            double phi_t_left_leg = 0; // Current desired roll orientation for the foot described as an Euler Angle
+            double phi_dot_t_left_leg = 0; // Current desired roll angular velocity for the foot described as an Euler Angle
+
+            double psi_t_left_leg = 0; // Current desired yaw orientation for the foot described as an Euler Angle
+            double psi_dot_t_left_leg = 0; // Current desired yaw angular velocity for the foot described as an Euler Angle
+
+            // Updating desired trajectory
+
+            Eigen::Matrix<double, 4, 4> H_world_hip = (Eigen::Matrix<double, 4, 4>() << cos(psi_com)*cos(theta_com), sin(psi_com)*cos(theta_com), -sin(theta_com), -pos_y_com*sin(psi_com)*cos(theta_com) + pos_z_com*sin(theta_com) - (hip_offset_x_right_leg + pos_x_com)*cos(psi_com)*cos(theta_com),
+                                                        sin(phi_com)*sin(theta_com)*cos(psi_com) - sin(psi_com)*cos(phi_com), sin(phi_com)*sin(psi_com)*sin(theta_com) + cos(phi_com)*cos(psi_com), sin(phi_com)*cos(theta_com), -pos_y_com*sin(phi_com)*sin(psi_com)*sin(theta_com) - pos_y_com*cos(phi_com)*cos(psi_com) - pos_z_com*sin(phi_com)*cos(theta_com) - (hip_offset_x_right_leg + pos_x_com)*sin(phi_com)*sin(theta_com)*cos(psi_com) + (hip_offset_x_right_leg + pos_x_com)*sin(psi_com)*cos(phi_com), 
+                                                        sin(phi_com)*sin(psi_com) + sin(theta_com)*cos(phi_com)*cos(psi_com), -sin(phi_com)*cos(psi_com) + sin(psi_com)*sin(theta_com)*cos(phi_com), cos(phi_com)*cos(theta_com), pos_y_com*sin(phi_com)*cos(psi_com) - pos_y_com*sin(psi_com)*sin(theta_com)*cos(phi_com) - pos_z_com*cos(phi_com)*cos(theta_com) - (hip_offset_x_right_leg + pos_x_com)*sin(phi_com)*sin(psi_com) - (hip_offset_x_right_leg + pos_x_com)*sin(theta_com)*cos(phi_com)*cos(psi_com),
+                                                        0, 0, 0, 1).finished();
+            right_foot_pos_world_mutex.lock();
+            Eigen::Matrix<double, 3,1> pos_desired_right_leg_cartesian = (H_world_hip * (Eigen::Matrix<double, 4, 1>() << right_foot_pos_world, 1).finished()).block<3,1>(0, 0);
+            right_foot_pos_world_mutex.unlock();
+            pos_desired_right_leg << pos_desired_right_leg_cartesian, 0, 0;
 
             update_tau_setpoint_right_leg();
 
@@ -914,13 +925,15 @@ void calculate_right_leg_torques() {
             for(int i = 0; i < 5; ++i) {
                 constrain(tau_setpoint(i ,0), lower_torque_limit, upper_torque_limit);
             }
-
+            
             stringstream s;
             s << tau_setpoint(0, 0) << "|" << tau_setpoint(1, 0) << "|" << tau_setpoint(2, 0) << "|" << tau_setpoint(3, 0) << "|" << tau_setpoint(4, 0);
             sendto(sockfd, (const char *)s.str().c_str(), strlen(s.str().c_str()), 
                 MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len); // Send the torque setpoint string to the simulation
             
-            std::cout << "tau_setpoint_right_leg: " << s.str() << std::endl;
+            stringstream temp;
+            temp << "tau_setpoint_right_leg: " << s.str();
+            print_threadsafe(temp.str(), "left_leg_torque_thread");
         }
 
         iteration_counter++; // Increment iteration counter
@@ -1055,7 +1068,6 @@ void run_mpc() {
 
 int main()
 {
-
     t_stance_remainder_left = t_stance_remainder_right = t_stance;
     // Find largest index in plot_data and use the next one as file name for log files
     std::string path = "/home/loukas/Documents/cpp/walking_controller/plot_data/";
@@ -1122,17 +1134,20 @@ int main()
     // traj_log_file.close();
     
     // Bind functions to threads
-    //left_leg_state_thread = std::thread(std::bind(update_left_leg_state));
+    // left_leg_state_thread = std::thread(std::bind(update_left_leg_state));
     left_leg_torque_thread = std::thread(std::bind(calculate_left_leg_torques));
     // right_leg_torque_thread = std::thread(std::bind(calculate_right_leg_torques));
     //mpc_thread = std::thread(std::bind(run_mpc));
+    time_thread = std::thread(std::bind(update_time));
 
     // while(true) { }
-    std::cout << "\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
-    std::cout << "If you're running this in a docker container, make sure to use the --net=host option when running it." << std::endl;
-    std::cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n" << std::endl;
+    stringstream temp;
+    temp << "\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
+            << "If you're running this in a docker container, make sure to use the --net=host option when running it.\n"
+            << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
+    print_threadsafe(temp.str(), "main()");
 
-    std::cout << "omega_desired is currently:" << omega_desired(0) << ", " << omega_desired(1) << ", " << omega_desired(2) << std::endl; // Print out current natural frequency
+    std::cout << "omega_desired is currently: " << omega_desired(0) << ", " << omega_desired(1) << ", " << omega_desired(2) << std::endl; // Print out current natural frequency
     std::cout << std::endl;
 
     int sockfd;
@@ -1351,7 +1366,10 @@ int main()
             }
         }
 
-        std::cout << "x_t:" << x_t(0, 0) << "," << x_t(1, 0) << "," << x_t(2, 0) << "," << x_t(3, 0) << "," << x_t(4, 0) << "," << x_t(5, 0) << "," << x_t(6, 0) << "," << x_t(7, 0) << "," << x_t(8, 0) << "," << x_t(9, 0) << "," << x_t(10, 0) << "," << x_t(11, 0) << "," << x_t(12, 0) << std::endl;
+        stringstream temp;
+        temp << "x_t:" << x_t(0, 0) << "," << x_t(1, 0) << "," << x_t(2, 0) << "," << x_t(3, 0) << "," << x_t(4, 0) << "," << x_t(5, 0) << "," << x_t(6, 0) << "," << x_t(7, 0) << "," << x_t(8, 0) << "," << x_t(9, 0) << "," << x_t(10, 0) << "," << x_t(11, 0) << "," << x_t(12, 0);
+        print_threadsafe(temp.str(), "mpc_thread");
+
         // Alternate contacts if contact_swap_interval iterations have passed
         if (total_iterations % contact_swap_interval == 0 && alternate_contacts) {
             t_stance_remainder_left_mutex.lock();
@@ -1365,12 +1383,16 @@ int main()
 
             if(!swing_left) { // Left foot will now be in swing phase so we need to save lift off position for swing trajectory planning
                 t_stance_remainder_left = t_stance;
-                lift_off_pos_left = foot_pos_left_leg.block<3, 1>(0, 0);
+                
+                update_foot_pos_left_leg_body_frame();
+                foot_pos_left_leg_body_frame_mutex.lock();
+                lift_off_pos_left = foot_pos_left_leg_body_frame;
+                foot_pos_left_leg_body_frame_mutex.unlock();
+
                 lift_off_vel_left = x_t.block<3, 1>(9, 0);
             }
             if(!swing_right) { // Right foot will now be in swing phase so we need to save lift off position for swing trajectory planning
                 t_stance_remainder_right = t_stance;
-                lift_off_pos_right = foot_pos_right_leg.block<3,1>(0, 0);
                 lift_off_vel_right = x_t.block<3, 1>(9, 0);
             }
 
@@ -1470,8 +1492,6 @@ int main()
             left_foot_pos_world = adjusted_pos_vector_left + (t_stance/2) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(P_param(5, 0)) / 9.81) * vel_vector.cross(omega_desired_vector);
             right_foot_pos_world = adjusted_pos_vector_right + (t_stance/2) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(P_param(5, 0)) / 9.81) * vel_vector.cross(omega_desired_vector);
 
-            left_foot_pos_world(2, 0) = right_foot_pos_world(2, 0) = 0; // This is needed because the formula above doesn't make sense for Z, and the foot naturally touches the ground at Z = 0 in the world frame
-
             //TODO: Instead of using inverse, either solve the inverse symbolically in python or just ues Transpose as shown in Modern Robotics Video
             // Find foot position in body frame to limit it in order to account for leg reachability, collision with other leg and reasonable values
             //H_body_world.inverse() is H_world_body
@@ -1496,8 +1516,11 @@ int main()
                 right_foot_pos_body(0, 0) = -r_x_limit + hip_offset;
                 right_foot_pos_world = (H_body_world * (Eigen::Matrix<double, 4, 1>() << right_foot_pos_body, 1).finished()).block<3,1>(0, 0);
             }
-
-            std::cout << "left_foot_pos_world: " << left_foot_pos_world(0, 0) << "," << left_foot_pos_world(1, 0) << "," << left_foot_pos_world(2, 0) << std::endl;
+            left_foot_pos_world(2, 0) = right_foot_pos_world(2, 0) = 0; // This is needed because the formula above doesn't make sense for Z, and the foot naturally touches the ground at Z = 0 in the world frame
+            
+            // stringstream temp;
+            // temp << "left_foot_pos_world_desired: " << left_foot_pos_world(0, 0) << "," << left_foot_pos_world(1, 0) << "," << left_foot_pos_world(2, 0);
+            // print_threadsafe(temp.str(), "mpc_thread");
         }
 
         // Calculate r from foot world position
@@ -1658,7 +1681,6 @@ int main()
                 left_foot_pos_world_discretization = adjusted_pos_vector_left + (t_stance/2) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(pos_z_t) / 9.81) * vel_vector.cross(omega_desired_vector);
                 right_foot_pos_world_discretization = adjusted_pos_vector_right + (t_stance/2) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(pos_z_t) / 9.81) * vel_vector.cross(omega_desired_vector);
 
-                left_foot_pos_world_discretization(2, 0) = right_foot_pos_world_discretization(2, 0) = 0; // This is needed because the formula above doesn't make sense for Z, and the foot naturally touches the ground at Z = 0 in the world frame
                 
                 //TODO: Instead of using inverse, either solve the inverse symbolically in python or just ues Transpose as shown in Modern Robotics Video
                 Eigen::Matrix<double, 3, 1> left_foot_pos_body = (H_body_world.inverse() * (Eigen::Matrix<double, 4, 1>() << left_foot_pos_world_discretization, 1).finished()).block<3,1>(0, 0);
@@ -1682,6 +1704,8 @@ int main()
                     right_foot_pos_body(0, 0) = -r_x_limit + hip_offset;
                     right_foot_pos_world_discretization = (H_body_world * (Eigen::Matrix<double, 4, 1>() << right_foot_pos_body, 1).finished()).block<3,1>(0, 0);
                 }
+
+                left_foot_pos_world_discretization(2, 0) = right_foot_pos_world_discretization(2, 0) = 0; // This is needed because the formula above doesn't make sense for Z, and the foot naturally touches the ground at Z = 0 in the world frame
                 
                 if(swap_counter < 1) {
                     left_foot_pos_desired_world_mutex.lock();
@@ -1844,7 +1868,7 @@ int main()
         // Use this solution for the next iteration as a hotstart, only shifted one timestep
         X_t.block<n*N, 1>(0, 0) = solution_variables.block<n*N, 1>(n, 0);
         X_t.block<n, 1>(n*N, 0) = solution_variables.block<n, 1>(n*N, 0);
-
+        
         U_t.block<m*(N-1), 1>(0, 0) = solution_variables.block<m*(N-1), 1>(n*(N+1) + m, 0);
         U_t.block<m, 1>(m*(N-1), 0) = solution_variables.block<m, 1>(n*(N+1)+m*(N-1), 0);
 

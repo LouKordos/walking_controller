@@ -1,3 +1,4 @@
+- FIX VARIBABLE NAMING!!!!!!
 - 2 DOF ankle
 - Make every dependency in setup.sh build from source so that it works on any OS
 - Test more distros and their versions, then update README.md to mention that every version starting from Ubuntu 18.04 LTS and up will work
