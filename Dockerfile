@@ -16,9 +16,9 @@ RUN yay -Syu --noconfirm casadi eigen-git
 RUN rm -rf /home/build/.cache/yay/*
 USER root
 
-COPY . /src
+COPY ./src /src
 
-WORKDIR /src/ 
+WORKDIR /src
 
 RUN rm -rf ./build && mkdir ./build
 WORKDIR /src/build

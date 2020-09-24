@@ -1197,7 +1197,7 @@ int main()
     opts["ipopt"] = ipopt_opts;
     opts["expand"] = false;
 
-    Function solver = nlpsol("solver", "ipopt", "../nlp.so", opts); // Initialize solver with precompiled C code binary
+    Function solver = nlpsol("solver", "ipopt", "../../nlp.so", opts); // Initialize solver with precompiled C code binary
 
     static std::map<std::string, DM> solver_arguments, solution;
     
