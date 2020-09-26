@@ -12,10 +12,13 @@ add_definitions(-std=c++17 -Wpedantic -I .. -I /usr/local/include/ -L /usr/local
 add_executable(controller controller.cpp)
 add_executable(nlp_test nlp_test.cpp)
 add_executable(eigen_test eigen_test.cpp)
+#add_executable(header_test header_test.cpp)
 
 #target_link_libraries (controller ${CMAKE_THREAD_LIBS_INIT} ${COMMUNICATIONS_LIBS} casadi)
 
-target_link_libraries (controller ${CMAKE_THREAD_LIBS_INIT} casadi)
+add_library(model_functions SHARED model_functions.cpp)
+
+target_link_libraries (controller ${CMAKE_THREAD_LIBS_INIT} casadi model_functions)
 target_link_libraries (nlp_test ${CMAKE_THREAD_LIBS_INIT} casadi)
 
 message("CMAKE_CXX_FLAGS_DEBUG is ${CMAKE_CXX_FLAGS_DEBUG}")

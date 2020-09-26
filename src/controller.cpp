@@ -18,13 +18,9 @@
 #include <stdlib.h>
 
 #include <boost/algorithm/string.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
 
 #include <unistd.h>
-// #include <zcm/zcm-cpp.hpp>
-//#include <sys/types .h>
-
-//#include "leg_state.hpp"
-//#include "torque_setpoint.hpp"
 
 #include <errno.h> //It defines macros for reporting and retrieving error conditions through error codes
 #include <time.h> //contains various functions for manipulating date and time
@@ -40,7 +36,7 @@
 
 using namespace casadi;
 
-#include "model_functions.cpp"
+#include "model_functions.hpp"
 
 using namespace std;
 using namespace std::chrono;
@@ -106,10 +102,11 @@ std::thread right_leg_torque_thread;
 std::thread mpc_thread;
 std::thread time_thread;
 
-static const double state_update_interval = 1000.0; // Interval for fetching and parsing the leg state from gazebosim in microseconds
-static const double torque_calculation_interval = 1000.0; // Interval for calculating and sending the torque setpoint to gazebosim in microseconds
+//should be running at 1kHz but communication overhead is adding ~80µS, that's why it's reduced a bit
+static const double state_update_interval = 900.0; // Interval for fetching and parsing the leg state from gazebosim in microseconds
+static const double torque_calculation_interval = 900.0; // Interval for calculating and sending the torque setpoint to gazebosim in microseconds
 static const double time_update_interval = 1000.0;
-
+        
 std::mutex x_mutex, u_mutex,
             left_foot_pos_world_mutex, right_foot_pos_world_mutex, 
             left_foot_pos_desired_world_mutex, right_foot_pos_desired_world_mutex,
@@ -126,14 +123,35 @@ static double current_time = 0;
 static double trajectory_start_time_left_leg;
 
 // Setting up debugging and plotting csv file
-
 int largest_index = 0;
 std::string filename;
 
+enum LogType {DEBUG, INFO, WARN, ERROR};
+std::string getLogTypeString(LogType type) {
+    static const std::string LogTypeNames[] = {"DEBUG", "INFO", "WARN", "ERROR"};
+    return LogTypeNames[type];
+}
 
-void print_threadsafe(std::string str, std::string sender) {
+void log(std::string message, LogType type) {
+    ofstream log_file;
+    log_file.open("../../controller_log.txt", ios::app);
+
+    log_file << "[" << boost::posix_time::second_clock::local_time().time_of_day() << "] [" << getLogTypeString(type) << "]" << ": " << message << std::endl;
+    
+    log_file.close();
+}
+
+
+void print_threadsafe(std::string str, std::string sender, LogType type, bool log_to_file = true) {
     std::string prepared_string = "\033[1;36m[From '" + sender + "']:\033[0m \033[1;33m'" + str + "'\033[0m\n";
     std::cout << prepared_string;
+
+    if(log_to_file) {
+        std::string log_string = "[From '" + sender + "']: '" + str + "'";
+        std::replace(log_string.begin(), log_string.end(), '\n', '\t');
+
+        log(log_string, type);
+    }
 }
 
 void update_foot_pos_left_leg_body_frame() {
@@ -171,11 +189,11 @@ void update_foot_pos_left_leg_body_frame() {
 
     stringstream temp;
     temp << foot_pos_left_leg_body_frame;
-    print_threadsafe(temp.str(), "foot_pos_body_frame in update function");
+    print_threadsafe(temp.str(), "foot_pos_body_frame in update function", INFO);
 
     temp.str(std::string());
     temp << (H_world_body.inverse() * (Eigen::Matrix<double, 4, 1>() << foot_pos_left_leg_body_frame.block<3,1>(0, 0), 1).finished()).block<3,1>(0, 0);
-    print_threadsafe(temp.str(), "foot_pos_left_world in update function");
+    print_threadsafe(temp.str(), "foot_pos_left_world in update function", INFO);
 }
 
 double get_time() {
@@ -216,6 +234,11 @@ void update_time() {
         // This timed loop approach calculates the execution time of the current iteration,
         // then calculates the remaining time for the loop to run at the desired frequency and waits this duration.
         duration = duration_cast<microseconds>(end - start).count();
+
+        stringstream temp;
+        // temp << "Time thread loop duration: " << duration << "µS";
+        // log(temp.str(), INFO);
+
         long long remainder = (time_update_interval - duration) * 1e+3;
         deadline.tv_nsec = remainder;
         deadline.tv_sec = 0;
@@ -234,6 +257,18 @@ std::vector<std::string> split_string(std::string str, char delimiter) {
 
 // Helper function for constraining a double precision float to limits and filtering out "nan" and "inf"
 void constrain(double &value, double lower_limit, double upper_limit) {
+    if(isnan(value) || isinf(value)) {
+        value = 0;
+    }
+    else if(value > upper_limit) {
+        value = upper_limit;
+    }
+    else if(value < lower_limit) {
+        value = lower_limit;
+    }
+}
+
+void constrain_int(int &value, int lower_limit, int upper_limit) {
     if(isnan(value) || isinf(value)) {
         value = 0;
     }
@@ -319,7 +354,7 @@ void update_left_leg_foot_trajectory() {
                 << "\nleft_foot_pos_world_desired: " << left_foot_pos_world(0, 0) << "," << left_foot_pos_world(1, 0) << "," << left_foot_pos_world(2, 0)
                 << "\ntarget_foot_pos_body: " << pos_desired_left_leg_body_frame(0, 0) << "," << pos_desired_left_leg_body_frame(1, 0) << "," << pos_desired_left_leg_body_frame(2, 0) 
                 << "\ntarget_foot_pos_world: " << left_foot_pos_desired_world(0, 0) << "," << left_foot_pos_desired_world(1, 0) << "," << left_foot_pos_desired_world(2, 0);
-    print_threadsafe(temp.str(), "mpc_thread");
+    print_threadsafe(temp.str(), "mpc_thread", INFO);
     
     foot_trajectory_left_mutex.unlock();
     next_body_vel_mutex.unlock();
@@ -571,6 +606,7 @@ void calculate_left_leg_torques() {
 
             foot_trajectory_left_mutex.lock();
             int traj_index = current_trajectory_time / (1.0 / 334.0);
+            constrain_int(traj_index, 0, 334 - 1);
             pos_desired_left_leg << foot_trajectory_left(traj_index, 0) + hip_offset_x_left_leg, foot_trajectory_left(traj_index, 2), foot_trajectory_left(traj_index, 4), 0, 0;
             vel_desired_left_leg << foot_trajectory_left(traj_index, 1), foot_trajectory_left(traj_index, 3), foot_trajectory_left(traj_index, 5), 0, 0;
 
@@ -578,7 +614,7 @@ void calculate_left_leg_torques() {
             // temp << "traj_index: " << traj_index
             //      << "\npos_desired: " << pos_desired_left_leg(0, 0) << "," << pos_desired_left_leg(1, 0) << "," << pos_desired_left_leg(2, 0);
 
-            // print_threadsafe(temp.str(), "left_leg_torque_thread");
+            // print_threadsafe(temp.str(), "left_leg_torque_thread", INFO);
 
             foot_trajectory_left_mutex.unlock();
 
@@ -641,7 +677,7 @@ void calculate_left_leg_torques() {
             
             // stringstream temp;
             // temp << "tau_setpoint_left_leg: " << s.str();
-            // print_threadsafe(temp.str(), "left_leg_torque_thread");
+            // print_threadsafe(temp.str(), "left_leg_torque_thread", INFO);
         }
 
         iteration_counter++; // Increment iteration counter
@@ -658,11 +694,16 @@ void calculate_left_leg_torques() {
         // then calculates the remaining time for the loop to run at the desired frequency and waits this duration.
 
         duration = duration_cast<microseconds>(end - start).count();
+
+        stringstream temp;
+        temp << "Left leg torque thread loop duration: " << duration << "µS";
+        log(temp.str(), INFO);
+
         // std::cout << "Loop duration: " << duration << "µS, iteration_counter: " << iteration_counter - 1 << std::endl;
         long long remainder = (torque_calculation_interval - duration) * 1e+03;
         deadline.tv_nsec = remainder;
         deadline.tv_sec = 0;
-        clock_nanosleep(CLOCK_REALTIME, 0, &deadline, NULL);
+        // clock_nanosleep(CLOCK_REALTIME, 0, &deadline, NULL);
     }
 }
 
@@ -933,7 +974,7 @@ void calculate_right_leg_torques() {
             
             stringstream temp;
             temp << "tau_setpoint_right_leg: " << s.str();
-            print_threadsafe(temp.str(), "left_leg_torque_thread");
+            print_threadsafe(temp.str(), "right_leg_torque_thread", INFO);
         }
 
         iteration_counter++; // Increment iteration counter
@@ -949,6 +990,11 @@ void calculate_right_leg_torques() {
         // then calculates the remaining time for the loop to run at the desired frequency and waits this duration.
 
         duration = duration_cast<microseconds>(end - start).count();
+
+        stringstream temp;
+        temp << "Left leg torque thread loop duration: " << duration << "µS";
+        log(temp.str(), INFO);
+
         // std::cout << "Loop duration: " << duration << "µS, iteration_counter: " << iteration_counter - 1 << std::endl;
         long long remainder = (torque_calculation_interval - duration) * 1e+03;
         deadline.tv_nsec = remainder;
@@ -956,7 +1002,6 @@ void calculate_right_leg_torques() {
         clock_nanosleep(CLOCK_REALTIME, 0, &deadline, NULL);
     }
 }
-
 
 unsigned long long factorial(long n) {
     unsigned long long temp = 1;
@@ -1068,6 +1113,15 @@ void run_mpc() {
 
 int main()
 {
+    log("--------------------------------", INFO);
+    log("--------------------------------", INFO);
+    log("--------------------------------", INFO);
+    log("Starting walking controller...", INFO);
+    log("--------------------------------", INFO);
+    log("--------------------------------", INFO);
+    log("--------------------------------", INFO);
+
+
     t_stance_remainder_left = t_stance_remainder_right = t_stance;
     // Find largest index in plot_data and use the next one as file name for log files
     std::string path = "/home/loukas/Documents/cpp/walking_controller/plot_data/";
@@ -1145,7 +1199,7 @@ int main()
     temp << "\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
             << "If you're running this in a docker container, make sure to use the --net=host option when running it.\n"
             << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
-    print_threadsafe(temp.str(), "main()");
+    print_threadsafe(temp.str(), "main()", WARN);
 
     std::cout << "omega_desired is currently: " << omega_desired(0) << ", " << omega_desired(1) << ", " << omega_desired(2) << std::endl; // Print out current natural frequency
     std::cout << std::endl;
@@ -1368,7 +1422,7 @@ int main()
 
         stringstream temp;
         temp << "x_t:" << x_t(0, 0) << "," << x_t(1, 0) << "," << x_t(2, 0) << "," << x_t(3, 0) << "," << x_t(4, 0) << "," << x_t(5, 0) << "," << x_t(6, 0) << "," << x_t(7, 0) << "," << x_t(8, 0) << "," << x_t(9, 0) << "," << x_t(10, 0) << "," << x_t(11, 0) << "," << x_t(12, 0);
-        print_threadsafe(temp.str(), "mpc_thread");
+        print_threadsafe(temp.str(), "mpc_thread", INFO);
 
         // Alternate contacts if contact_swap_interval iterations have passed
         if (total_iterations % contact_swap_interval == 0 && alternate_contacts) {
@@ -1520,7 +1574,7 @@ int main()
             
             // stringstream temp;
             // temp << "left_foot_pos_world_desired: " << left_foot_pos_world(0, 0) << "," << left_foot_pos_world(1, 0) << "," << left_foot_pos_world(2, 0);
-            // print_threadsafe(temp.str(), "mpc_thread");
+            // print_threadsafe(temp.str(), "mpc_thread", INFO);
         }
 
         // Calculate r from foot world position
@@ -1879,11 +1933,18 @@ int main()
 
         // std::cout << "Solver preparation took " << duration_before + duration_after << " microseconds" << std::endl;
 
+        temp.str(std::string());
+        temp << "Solver preparation in MPC thread duration: " << duration_before + duration_after << "µS";
+        log(temp.str(), INFO);
+
         auto end_total = high_resolution_clock::now();
         double full_iteration_duration = duration_cast<microseconds> (end_total - start_total).count();
 
-        // std::cout << "Full iteration took " << full_iteration_du ration << " microseconds" << std::endl;
-        
+        // std::cout << "Full iteration took " << full_iteration_duration << " microseconds" << std::endl;
+        temp.str(std::string());
+        temp << "Full MPC iteration loop duration: " << full_iteration_duration << "µS";
+        log(temp.str(), INFO);
+
         u_mutex.lock();
         x_mutex.lock();
 
