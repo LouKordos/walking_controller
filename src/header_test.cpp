@@ -37,11 +37,19 @@
 
 using Eigen::MatrixXd;
 
-#include "leg_model_functions/C_matrix.hpp"
+// #include "leg_model_functions/C_matrix.hpp"
 // #include "model_functions.cpp"
 
+#include "include/Leg.hpp"
+
 int main() {
-    update_C_left_leg(0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0);
-    std::cout << "this ran" << std::endl;
-    std::cout << C << std::endl;
+    // update_C_left_leg(0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0);
+    // std::cout << "this ran" << std::endl;
+    // std::cout << C << std::endl;
+    Leg* test_leg = new Leg(-0.15, 0, -0.065);
+    test_leg->theta1 = 0.3;
+    test_leg->theta2 = 0.1;
+    test_leg->theta3 = 0.5;
+    std::cout << test_leg->theta3;
+    std::cout << test_leg->G << std::endl;
 }
