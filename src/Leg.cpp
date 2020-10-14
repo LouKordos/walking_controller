@@ -41,7 +41,7 @@ double t_stance_remainder;
 bool swing_phase;
 
 std::mutex q_mutex, q_dot_mutex, foot_pos_world_mutex, foot_pos_world_desired_mutex, lift_off_pos_mutex, lift_off_vel_mutex, t_stance_remainder_mutex, foot_pos_body_frame_mutex,
-                    trajectory_start_time_mutex, foot_trajectory_mutex, foot_pos_desired_world_mutex;
+                    trajectory_start_time_mutex, foot_trajectory_mutex, foot_pos_desired_world_mutex, foot_pos_desired_body_frame_mutex;
 
 Eigen::Matrix<double, 5, 1> q; // Leg angle vector / Model state
 Eigen::Matrix<double, 5, 1> q_dot; // Leg angular velocity vector / Differentiated model state
@@ -102,8 +102,8 @@ void Leg::update_torque_setpoint() {
 
     for(int i = 0; i < 5; ++i) { // Loop through each torque setpoint vector element
             constrain(tau_setpoint(i), config.lower_torque_limit, config.upper_torque_limit); // constrain element based on global torque limits
-        }
-        constrain(tau_setpoint(4), -5, 5);
+    }
+    constrain(tau_setpoint(4, 0), -5, 5);
 }
 
 void Leg::update_foot_pos_body_frame(Eigen::Matrix<double, 13, 1> &com_state) {
@@ -136,12 +136,12 @@ void Leg::update_foot_pos_body_frame(Eigen::Matrix<double, 13, 1> &com_state) {
     Leg::foot_pos_body_frame_mutex.unlock();
 
     stringstream temp;
-    temp << foot_pos_body_frame;
-    print_threadsafe(temp.str(), "foot_pos_body_frame in update function", INFO);
+    temp << "foot_pos_body_frame: " << foot_pos_body_frame;
+    print_threadsafe(temp.str(), "Leg::update_foot_pos_body_frame", INFO);
 
     temp.str(std::string());
     temp << (H_world_body.inverse() * (Eigen::Matrix<double, 4, 1>() << foot_pos_body_frame.block<3,1>(0, 0), 1).finished()).block<3,1>(0, 0);
-    print_threadsafe(temp.str(), "foot_pos_left_world in update function", INFO);
+    print_threadsafe(temp.str(), "foot_pos_world_frame in update function", INFO);
 }
 
 void Leg::update_foot_trajectory(Eigen::Matrix<double, 13, 1> &com_state, Eigen::Matrix<double, 3, 1> next_body_vel, double t_stance, double time) {
@@ -164,7 +164,9 @@ void Leg::update_foot_trajectory(Eigen::Matrix<double, 13, 1> &com_state, Eigen:
                                             0, 0, 0, 1).finished();
     
     foot_pos_world_desired_mutex.lock();
-    Eigen::Matrix<double, 3, 1> pos_desired_left_leg_body_frame = (H_world_body * (Eigen::Matrix<double, 4, 1>() << foot_pos_desired_world, 1).finished()).block<3, 1>(0, 0);
+    foot_pos_desired_body_frame_mutex.lock();
+    foot_pos_desired_body_frame = (H_world_body * (Eigen::Matrix<double, 4, 1>() << foot_pos_desired_world, 1).finished()).block<3, 1>(0, 0);
+    foot_pos_desired_body_frame_mutex.unlock();
     foot_pos_world_desired_mutex.unlock();
     
     update_foot_pos_body_frame(com_state);
@@ -176,6 +178,8 @@ void Leg::update_foot_trajectory(Eigen::Matrix<double, 13, 1> &com_state, Eigen:
     lift_off_vel_mutex.lock();
     foot_trajectory_mutex.lock();
     
+    foot_pos_desired_body_frame_mutex.lock();
+
     foot_trajectory = get_swing_trajectory(lift_off_pos,
         (Eigen::Matrix<double, 3, 1>() << (lift_off_pos(0, 0) - foot_pos_desired_body_frame(0, 0)) / 2, (lift_off_pos(1, 0) - foot_pos_desired_body_frame(1, 0)) / 2, step_height_body).finished(), foot_pos_desired_body_frame, 
         lift_off_vel, -next_body_vel,
@@ -187,16 +191,16 @@ void Leg::update_foot_trajectory(Eigen::Matrix<double, 13, 1> &com_state, Eigen:
     
     std::stringstream temp;
     temp << "lift_off_pos: " << lift_off_pos(0, 0) << "," << lift_off_pos(1, 0) << "," << lift_off_pos(2, 0)
-                << "\nleft_foot_pos_world_desired: " << foot_pos_world(0, 0) << "," << foot_pos_world(1, 0) << "," << foot_pos_world(2, 0)
+                << "\foot_pos_world: " << foot_pos_world(0, 0) << "," << foot_pos_world(1, 0) << "," << foot_pos_world(2, 0)
                 << "\ntarget_foot_pos_body: " << foot_pos_desired_body_frame(0, 0) << "," << foot_pos_desired_body_frame(1, 0) << "," << foot_pos_desired_body_frame(2, 0) 
                 << "\ntarget_foot_pos_world: " << foot_pos_desired_world(0, 0) << "," << foot_pos_desired_world(1, 0) << "," << foot_pos_desired_world(2, 0);
     print_threadsafe(temp.str(), "mpc_thread", INFO);
-    
+
+    foot_pos_desired_body_frame_mutex.unlock();
     foot_trajectory_mutex.unlock();
     lift_off_pos_mutex.unlock();
     lift_off_vel_mutex.unlock();
 }
-
 
 void Leg::update() {
     q_mutex.lock();
