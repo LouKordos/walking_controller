@@ -30,6 +30,6 @@ message("CMAKE_CXX_FLAGS_RELEASE is ${CMAKE_CXX_FLAGS_RELEASE}")
 message("PROJECT_SOURCE_DIR: " ${PROJECT_SOURCE_DIR})
 
 # Commands to manually link so far:
-# g++ -fPIC -O3 -c -Wall c++_filename.cpp 
+# g++ -fPIC -O3 -c -Wall c++_filename.cpp
 # g++ -shared -o libfilename.so c++_filename.o
-#g++ -O3 -Wall -L$(pwd) -Wl,-rpath=$(pwd) ../main_c++_filename.cpp -lfilename -o main_c++_filename.cpp
+#g++ -O3 -Wall -L$(pwd) -Wl,-rpath=$(pwd) ../main_c++_filename.cpp -lfilename -o main_c++_filename
