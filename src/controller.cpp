@@ -348,6 +348,10 @@ void calculate_left_leg_torques() {
                 data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
             }
 
+            for(int i = 0; i < 5; ++i) {
+                tau_setpoint(i, 0) = 0;
+            }
+
             stringstream s;
             s << left_leg->tau_setpoint(0, 0) << "|" << left_leg->tau_setpoint(1, 0) << "|" << left_leg->tau_setpoint(2, 0) << "|" << left_leg->tau_setpoint(3, 0) << "|" << left_leg->tau_setpoint(4, 0); // Write torque setpoints to stringstream
             sendto(sockfd, (const char *)s.str().c_str(), strlen(s.str().c_str()), 
@@ -356,6 +360,10 @@ void calculate_left_leg_torques() {
         else {
             Eigen::Matrix<double, 5, 1> tau_setpoint = Eigen::ArrayXXd::Zero(5, 1); // get_joint_torques(u.block<3,1>(0, 0), theta1, theta2, theta3, theta4, theta5, x(0, 0), x(1, 0), x(2, 0));
             
+            for(int i = 0; i < 5; ++i) {
+                tau_setpoint(i, 0) = 0;
+            }
+
             left_leg->tau_setpoint = tau_setpoint;
 
             stringstream s;
@@ -755,7 +763,7 @@ int main()
 
     left_leg->foot_pos_world << -0.15, 0, 0.6;
     right_leg->foot_pos_world << 0.15, 0, 0.6;
-    bool alternate_contacts = false;
+    bool alternate_contacts = true;
 
     // auto start_test = high_resolution_clock::now();
 
