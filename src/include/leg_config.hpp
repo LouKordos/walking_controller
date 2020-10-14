@@ -2,142 +2,146 @@
 #define LEG_CONFIG_H
 
 struct leg_config {
-    double Ixx_hip3;
-    double Ixy_hip3;
-    double Ixz_hip3;
+    //Inertia tensors for each link around CoM
 
-    double Iyx_hip3;
-    double Iyy_hip3;
-    double Iyz_hip3;
+    double Ixx_hip3 = 1.249e-04;
+    double Ixy_hip3 = 0;
+    double Ixz_hip3 = 0;
 
-    double Izx_hip3;
-    double Izy_hip3;
-    double Izz_hip3;
+    double Iyx_hip3 = 0;
+    double Iyy_hip3 = 9.250e-05;
+    double Iyz_hip3 = 0;
 
-    double Ixx_hip2;
-    double Ixy_hip2;
-    double Ixz_hip2;
+    double Izx_hip3 = 0;
+    double Izy_hip3 = 0;
+    double Izz_hip3 = 9.250e-05;
 
-    double Iyx_hip2;
-    double Iyy_hip2;
-    double Iyz_hip2;
+    double Ixx_hip2 = 1.249e-04;
+    double Ixy_hip2 = 0;
+    double Ixz_hip2 = 0;
 
-    double Izx_hip2;
-    double Izy_hip2;
-    double Izz_hip2;
+    double Iyx_hip2 = 0;
+    double Iyy_hip2 = 9.250e-05;
+    double Iyz_hip2 = 0;
+
+    double Izx_hip2 = 0;
+    double Izy_hip2 = 0;
+    double Izz_hip2 = 9.250e-05;
 
 
-    double Ixx_hip1;
-    double Ixy_hip1;
-    double Ixz_hip1;
+    double Ixx_hip1 = 1.249e-04;
+    double Ixy_hip1 = 0;
+    double Ixz_hip1 = 0;
 
-    double Iyx_hip1;
-    double Iyy_hip1;
-    double Iyz_hip1;
+    double Iyx_hip1 = 0;
+    double Iyy_hip1 = 9.250e-05;
+    double Iyz_hip1 = 0;
 
-    double Izx_hip1;
-    double Izy_hip1;
-    double Izz_hip1;
+    double Izx_hip1 = 0;
+    double Izy_hip1 = 0;
+    double Izz_hip1 = 9.250e-05;
 
     // "ul" is upper leg
 
-    double Ixx_ul;
-    double Ixy_ul;
-    double Ixz_ul;
+    double Ixx_ul = 8.5e-04;
+    double Ixy_ul = 0;
+    double Ixz_ul = 0;
 
-    double Iyx_ul;
-    double Iyy_ul;
-    double Iyz_ul;
+    double Iyx_ul = 0;
+    double Iyy_ul = 8.5e-04;
+    double Iyz_ul = 0;
 
-    double Izx_ul;
-    double Izy_ul;
-    double Izz_ul;
+    double Izx_ul = 0;
+    double Izy_ul = 0;
+    double Izz_ul = 1e-04;
 
     //"ll" is lower leg
 
-    double Ixx_ll;
-    double Ixy_ll;
-    double Ixz_ll;
+    double Ixx_ll = 7.982e-04;
+    double Ixy_ll = 0;
+    double Ixz_ll = 0;
 
-    double Iyx_ll;
-    double Iyy_ll;
-    double Iyz_ll;
+    double Iyx_ll = 0;
+    double Iyy_ll = 7.982e-04;
+    double Iyz_ll = 0;
 
-    double Izx_ll;
-    double Izy_ll;
-    double Izz_ll;
+    double Izx_ll = 0;
+    double Izy_ll = 0;
+    double Izz_ll = 9.378e-05;
 
-    double Ixx_foot;
-    double Ixy_foot;
-    double Ixz_foot;
+    double Ixx_foot = 1.42e-04;
+    double Ixy_foot = 0;
+    double Ixz_foot = 0;
 
-    double Iyx_foot;
-    double Iyy_foot;
-    double Iyz_foot;
+    double Iyx_foot = 0;
+    double Iyy_foot = 2.8e-05;
+    double Iyz_foot = 0;
 
-    double Izx_foot;
-    double Izy_foot;
-    double Izz_foot;
+    double Izx_foot = 0;
+    double Izy_foot = 0;
+    double Izz_foot = 1.6e-04;
 
     // Masses of each link in kg
 
-    double m_hip3;
-    double m_hip2;
-    double m_hip1;
-    double m_ul;
-    double m_ll;
-    double m_foot;
+    double m_hip3 = 0.1;
+    double m_hip2 = 0.1;
+    double m_hip1 = 0.1;
+    double m_ul = 0.11;
+    double m_ll = 0.1;
+    double m_foot = 0.05;
 
     // Distances from joint to joint (l1 is 0 because bas frame is at the same place as hip3 so there is only rotation) in m
 
-    double l1_x;
-    double l2_x;
-    double l3_x;
-    double l4_x;
-    double l5_x;
-    double l6_x;
+    double l1_x = 0;
+    double l2_x = 0;
+    double l3_x = 0;
+    double l4_x = 0;
+    double l5_x = 0;
+    double l6_x = 0;
 
-    double l1_y;
-    double l2_y;
-    double l3_y;
-    double l4_y;
-    double l5_y;
-    double l6_y;
+    double l1_y = 0;
+    double l2_y = 0;
+    double l3_y = 0;
+    double l4_y = 0;
+    double l5_y = 0;
+    double l6_y = 0;
 
-    double l1_z;
-    double l2_z;
-    double l3_z;
-    double l4_z;
-    double l5_z;
-    double l6_z;
+    double l1_z = 0;
+    double l2_z = 0.145;
+    double l3_z = 0.145;
+    double l4_z = 0.41;
+    double l5_z = 0.375;
+    double l6_z = 0.04;
 
     // Distances from joint n-1 to CoM of link n
 
-    double l1_x_com;
-    double l2_x_com;
-    double l3_x_com;
-    double l4_x_com;
-    double l5_x_com;
-    double l6_x_com;
+    double l1_x_com = 0;
+    double l2_x_com = 0;
+    double l3_x_com = 0;
+    double l4_x_com = 0;
+    double l5_x_com = 0;
+    double l6_x_com = 0;
 
-    double l1_y_com;
-    double l2_y_com;
-    double l3_y_com;
-    double l4_y_com;
-    double l5_y_com;
-    double l6_y_com;
+    double l1_y_com = 0;
+    double l2_y_com = 0;
+    double l3_y_com = 0;
+    double l4_y_com = 0;
+    double l5_y_com = 0;
+    double l6_y_com = 0;
 
-    double l1_z_com;
-    double l2_z_com;
-    double l3_z_com;
-    double l4_z_com;
-    double l5_z_com;
-    double l6_z_com;
+    double l1_z_com = 0;
+    double l2_z_com = 0.145;
+    double l3_z_com = 0;
+    double l4_z_com = l4_z / 2 + 0.03716;
+    double l5_z_com = l5_z / 2;
+    double l6_z_com = l6_z - 0.01;
 
-    double g;
+    // Gravity constant in m/s²
 
-    double upper_torque_limit;
-    double lower_torque_limit;
+    double g = 9.81;
+
+    double upper_torque_limit = 60;
+    double lower_torque_limit = -60;
 };
 
 #endif
