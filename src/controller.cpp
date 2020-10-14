@@ -349,7 +349,7 @@ void calculate_left_leg_torques() {
             }
 
             for(int i = 0; i < 5; ++i) {
-                tau_setpoint(i, 0) = 0;
+                left_leg->tau_setpoint(i, 0) = 0;
             }
 
             stringstream s;
@@ -361,7 +361,7 @@ void calculate_left_leg_torques() {
             Eigen::Matrix<double, 5, 1> tau_setpoint = Eigen::ArrayXXd::Zero(5, 1); // get_joint_torques(u.block<3,1>(0, 0), theta1, theta2, theta3, theta4, theta5, x(0, 0), x(1, 0), x(2, 0));
             
             for(int i = 0; i < 5; ++i) {
-                tau_setpoint(i, 0) = 0;
+                left_leg->tau_setpoint(i, 0) = 0;
             }
 
             left_leg->tau_setpoint = tau_setpoint;
@@ -1377,6 +1377,12 @@ int main()
 
                     left_leg->foot_pos_desired_world = left_leg->foot_pos_world_discretization;
                     right_leg->foot_pos_desired_world = right_leg->foot_pos_world_discretization;
+
+                    //TEMPORARY FOR TESTING WITH LEGS HANGING:
+                    left_leg->foot_pos_desired_world(2, 0) += 0.31;
+                    right_leg->foot_pos_desired_world(2, 0) += 0.31; 
+                    /////////////////////////////////////////
+
                     next_body_vel = (Eigen::Matrix<double, 3, 1>() << vel_x_t, vel_y_t, vel_z_t).finished();
                     
                     left_leg->foot_pos_desired_world_mutex.unlock();
