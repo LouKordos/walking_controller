@@ -971,9 +971,9 @@ int main()
         auto start = high_resolution_clock::now();
         auto start_total = high_resolution_clock::now();
 
-        // if (vel_y_desired < 0.2) {
-        //     vel_y_desired += 0.01;
-        // }
+        if (vel_y_desired < 0.2) {
+            vel_y_desired += 0.01;
+        }
 
         // if(omega_z_desired < 0.8) {
         //     omega_z_desired += 0.02;
@@ -1024,7 +1024,6 @@ int main()
 
             if(!left_leg->swing_phase) { // Left foot will now be in swing phase so we need to save lift off position for swing trajectory planning
                 left_leg->t_stance_remainder = t_stance;
-<<<<<<< Updated upstream
 
                 x_mutex.lock();
                 Eigen::Matrix<double, n, 1> x_temp = x_t;
@@ -1035,18 +1034,6 @@ int main()
                 left_leg->lift_off_pos = left_leg->foot_pos_body_frame;
                 left_leg->foot_pos_body_frame_mutex.unlock();
 
-=======
-
-                x_mutex.lock();
-                Eigen::Matrix<double, n, 1> x_temp = x_t;
-                x_mutex.unlock();
-
-                left_leg->update_foot_pos_body_frame(x_temp);
-                left_leg->foot_pos_body_frame_mutex.lock();
-                left_leg->lift_off_pos = left_leg->foot_pos_body_frame;
-                left_leg->foot_pos_body_frame_mutex.unlock();
-
->>>>>>> Stashed changes
                 left_leg->lift_off_vel = x_temp.block<3, 1>(9, 0);
             }
             if(!right_leg->swing_phase) { // Right foot will now be in swing phase so we need to save lift off position for swing trajectory planning
@@ -1206,7 +1193,7 @@ int main()
 
         double pos_x_desired_temp = pos_x_desired;
         double pos_y_desired_temp = pos_y_desired;
-        double vel_y_desired_temp = vel_y_desired;// - 0.01;
+        double vel_y_desired_temp = vel_y_desired - 0.01;
         double pos_z_desired_temp = pos_z_desired;
 
         double phi_desired_temp = phi_desired;
@@ -1217,9 +1204,9 @@ int main()
         //Update reference trajectory
 
         for(int i = 0; i < N; ++i) {
-            // if (vel_y_desired_temp < 0.2) {
-            //     vel_y_desired_temp += 0.02;
-            // }
+            if (vel_y_desired_temp < 0.2) {
+                vel_y_desired_temp += 0.02;
+            }
 
             // if (omega_z_desired_temp < 0.8) {
             //     omega_z_desired_temp += 0.02;
