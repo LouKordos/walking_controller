@@ -4,6 +4,7 @@
 #include <eigen3/Eigen/Dense>
 #include <eigen3/Eigen/QR>
 #include <mutex>
+#include <iostream>
 using Eigen::MatrixXd;
 
 #include "leg_config.hpp"
