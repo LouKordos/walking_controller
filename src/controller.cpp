@@ -1024,6 +1024,7 @@ int main()
 
             if(!left_leg->swing_phase) { // Left foot will now be in swing phase so we need to save lift off position for swing trajectory planning
                 left_leg->t_stance_remainder = t_stance;
+<<<<<<< Updated upstream
 
                 x_mutex.lock();
                 Eigen::Matrix<double, n, 1> x_temp = x_t;
@@ -1034,6 +1035,18 @@ int main()
                 left_leg->lift_off_pos = left_leg->foot_pos_body_frame;
                 left_leg->foot_pos_body_frame_mutex.unlock();
 
+=======
+
+                x_mutex.lock();
+                Eigen::Matrix<double, n, 1> x_temp = x_t;
+                x_mutex.unlock();
+
+                left_leg->update_foot_pos_body_frame(x_temp);
+                left_leg->foot_pos_body_frame_mutex.lock();
+                left_leg->lift_off_pos = left_leg->foot_pos_body_frame;
+                left_leg->foot_pos_body_frame_mutex.unlock();
+
+>>>>>>> Stashed changes
                 left_leg->lift_off_vel = x_temp.block<3, 1>(9, 0);
             }
             if(!right_leg->swing_phase) { // Right foot will now be in swing phase so we need to save lift off position for swing trajectory planning
