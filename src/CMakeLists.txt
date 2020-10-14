@@ -7,7 +7,7 @@ find_package(casadi)
 
 #set(COMMUNICATIONS_LIBS zcm)
 
-add_compile_options(-std=c++17 -Wpedantic -I .. -I /usr/local/include/ -L /usr/local/lib -O3)
+add_compile_options(-std=c++17 -Wpedantic -I /usr/local/include/ -L /usr/local/lib -O3)
 
 add_executable(controller controller.cpp)
 add_executable(nlp_test nlp_test.cpp)
@@ -18,8 +18,7 @@ set(SOURCES ${PROJECT_SOURCE_DIR}/Helpers.cpp ${PROJECT_SOURCE_DIR}/Leg.cpp ${PR
 
 include_directories("${PROJECT_SOURCE_DIR}/include")
 
-#add_library(model_functions SHARED model_functions.cpp)
-add_library(Sources SHARED ${SOURCES})
+add_library(Sources STATIC ${SOURCES})
 
 #target_link_libraries (controller ${CMAKE_THREAD_LIBS_INIT} casadi model_functions helpers leg)
 target_link_libraries(controller ${CMAKE_THREAD_LIBS_INIT} casadi ${SOURCES})
