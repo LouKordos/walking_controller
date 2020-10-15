@@ -763,8 +763,8 @@ int main()
     filename = std::to_string(largest_index + 1);
     std::cout << "filename: " << filename << std::endl;
 
-    left_leg->foot_pos_world << -0.15, 0, 0.6;
-    right_leg->foot_pos_world << 0.15, 0, 0.6;
+    left_leg->foot_pos_world_desired << -0.15, 0, 0.6;
+    right_leg->foot_pos_world_desired << 0.15, 0, 0.6;
     bool alternate_contacts = true;
 
     // auto start_test = high_resolution_clock::now();
@@ -1152,36 +1152,36 @@ int main()
             Eigen::Matrix<double, 3, 1> vel_desired_vector = (Eigen::Matrix<double, 3, 1>() << vel_x_desired, vel_y_desired, vel_z_desired).finished();
             Eigen::Matrix<double, 3, 1> omega_desired_vector = (Eigen::Matrix<double, 3, 1>() << omega_x_desired, omega_y_desired, omega_z_desired).finished();
             
-            left_leg->foot_pos_world_mutex.lock();
-            right_leg->foot_pos_world_mutex.lock();
-            left_leg->foot_pos_world = adjusted_pos_vector_left + (t_stance/2) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(P_param(5, 0)) / 9.81) * vel_vector.cross(omega_desired_vector);
-            right_leg->foot_pos_world = adjusted_pos_vector_right + (t_stance/2) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(P_param(5, 0)) / 9.81) * vel_vector.cross(omega_desired_vector);
+            left_leg->foot_pos_world_desired_mutex.lock();
+            right_leg->foot_pos_world_desired_mutex.lock();
+            left_leg->foot_pos_world_desired = adjusted_pos_vector_left + (t_stance/2) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(P_param(5, 0)) / 9.81) * vel_vector.cross(omega_desired_vector);
+            right_leg->foot_pos_world_desired = adjusted_pos_vector_right + (t_stance/2) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(P_param(5, 0)) / 9.81) * vel_vector.cross(omega_desired_vector);
 
             //TODO: Instead of using inverse, either solve the inverse symbolically in python or just ues Transpose as shown in Modern Robotics Video
             // Find foot position in body frame to limit it in order to account for leg reachability, collision with other leg and reasonable values
             //H_body_world.inverse() is H_world_body
-            Eigen::Matrix<double, 3, 1> left_foot_pos_body = (H_body_world.inverse() * (Eigen::Matrix<double, 4, 1>() << left_leg->foot_pos_world, 1).finished()).block<3,1>(0, 0);
-            Eigen::Matrix<double, 3, 1> right_foot_pos_body = (H_body_world.inverse() * (Eigen::Matrix<double, 4, 1>() << right_leg->foot_pos_world, 1).finished()).block<3,1>(0,0);
+            Eigen::Matrix<double, 3, 1> left_foot_pos_body = (H_body_world.inverse() * (Eigen::Matrix<double, 4, 1>() << left_leg->foot_pos_world_desired, 1).finished()).block<3,1>(0, 0);
+            Eigen::Matrix<double, 3, 1> right_foot_pos_body = (H_body_world.inverse() * (Eigen::Matrix<double, 4, 1>() << right_leg->foot_pos_world_desired, 1).finished()).block<3,1>(0,0);
             
             // Constrain X value of foot position in body coordinates
             if (left_foot_pos_body(0, 0) > r_x_limit - hip_offset) {
                 left_foot_pos_body(0, 0) = r_x_limit - hip_offset;
-                left_leg->foot_pos_world = (H_body_world * (Eigen::Matrix<double, 4, 1>() << left_foot_pos_body, 1).finished()).block<3,1>(0, 0);
+                left_leg->foot_pos_world_desired = (H_body_world * (Eigen::Matrix<double, 4, 1>() << left_foot_pos_body, 1).finished()).block<3,1>(0, 0);
             }
             else if (left_foot_pos_body(0, 0) < -r_x_limit - hip_offset) {
                 left_foot_pos_body(0, 0) = -r_x_limit - hip_offset;
-                left_leg->foot_pos_world = (H_body_world * (Eigen::Matrix<double, 4, 1>() << left_foot_pos_body, 1).finished()).block<3,1>(0, 0);
+                left_leg->foot_pos_world_desired = (H_body_world * (Eigen::Matrix<double, 4, 1>() << left_foot_pos_body, 1).finished()).block<3,1>(0, 0);
             }
 
             if (right_foot_pos_body(0, 0) > r_x_limit + hip_offset) {
                 right_foot_pos_body(0, 0) = r_x_limit + hip_offset;
-                right_leg->foot_pos_world = (H_body_world * (Eigen::Matrix<double, 4, 1>() << right_foot_pos_body, 1).finished()).block<3,1>(0, 0);
+                right_leg->foot_pos_world_desired = (H_body_world * (Eigen::Matrix<double, 4, 1>() << right_foot_pos_body, 1).finished()).block<3,1>(0, 0);
             }
             else if (right_foot_pos_body(0, 0) < -r_x_limit + hip_offset) {
                 right_foot_pos_body(0, 0) = -r_x_limit + hip_offset;
-                right_leg->foot_pos_world = (H_body_world * (Eigen::Matrix<double, 4, 1>() << right_foot_pos_body, 1).finished()).block<3,1>(0, 0);
+                right_leg->foot_pos_world_desired = (H_body_world * (Eigen::Matrix<double, 4, 1>() << right_foot_pos_body, 1).finished()).block<3,1>(0, 0);
             }
-            left_leg->foot_pos_world(2, 0) = right_leg->foot_pos_world(2, 0) = 0; // This is needed because the formula above doesn't make sense for Z, and the foot naturally touches the ground at Z = 0 in the world frame
+            left_leg->foot_pos_world_desired(2, 0) = right_leg->foot_pos_world_desired(2, 0) = 0; // This is needed because the formula above doesn't make sense for Z, and the foot naturally touches the ground at Z = 0 in the world frame
             
             // stringstream temp;
             // temp << "left_foot_pos_world_desired: " << left_foot_pos_world(0, 0) << "," << left_foot_pos_world(1, 0) << "," << left_foot_pos_world(2, 0);
@@ -1189,14 +1189,14 @@ int main()
         }
 
         // Calculate r from foot world position
-        r_x_left = left_leg->foot_pos_world(0, 0) - (double)P_param(3, 0);
-        r_x_right = right_leg->foot_pos_world(0, 0) - (double)P_param(3, 0);
+        r_x_left = left_leg->foot_pos_world_desired(0, 0) - (double)P_param(3, 0);
+        r_x_right = right_leg->foot_pos_world_desired(0, 0) - (double)P_param(3, 0);
 
-        r_y_left = left_leg->foot_pos_world(1, 0) - (double)P_param(4, 0);
-        r_y_right = right_leg->foot_pos_world(1, 0) - (double)P_param(4, 0);
+        r_y_left = left_leg->foot_pos_world_desired(1, 0) - (double)P_param(4, 0);
+        r_y_right = right_leg->foot_pos_world_desired(1, 0) - (double)P_param(4, 0);
 
-        left_leg->foot_pos_world_mutex.unlock();
-        right_leg->foot_pos_world_mutex.unlock();
+        left_leg->foot_pos_world_desired_mutex.unlock();
+        right_leg->foot_pos_world_desired_mutex.unlock();
 
         r_z_left = -P_param(5, 0);
         r_z_right = -P_param(5, 0);
@@ -1261,12 +1261,12 @@ int main()
         double r_y_left_prev = r_y_left;
         double r_y_right_prev = r_y_right;
 
-        left_leg->foot_pos_world_mutex.lock();
-        right_leg->foot_pos_world_mutex.lock();
-        left_leg->foot_pos_world_discretization = left_leg->foot_pos_world;
-        right_leg->foot_pos_world_discretization = right_leg->foot_pos_world;
-        left_leg->foot_pos_world_mutex.unlock();
-        right_leg->foot_pos_world_mutex.unlock();
+        left_leg->foot_pos_world_desired_mutex.lock();
+        right_leg->foot_pos_world_desired_mutex.lock();
+        left_leg->foot_pos_world_discretization = left_leg->foot_pos_world_desired;
+        right_leg->foot_pos_world_discretization = right_leg->foot_pos_world_desired;
+        left_leg->foot_pos_world_desired_mutex.unlock();
+        right_leg->foot_pos_world_desired_mutex.unlock();
 
         double phi_t = 0.0;
         double theta_t = 0.0;
@@ -1373,22 +1373,22 @@ int main()
                 left_leg->foot_pos_world_discretization(2, 0) = right_leg->foot_pos_world_discretization(2, 0) = 0; // This is needed because the formula above doesn't make sense for Z, and the foot naturally touches the ground at Z = 0 in the world frame
                 
                 if(swap_counter < 1) {
-                    left_leg->foot_pos_desired_world_mutex.lock();
-                    right_leg->foot_pos_desired_world_mutex.lock();
+                    left_leg->next_foot_pos_world_desired_mutex.lock();
+                    right_leg->next_foot_pos_world_desired_mutex.lock();
                     next_body_vel_mutex.lock();
 
-                    left_leg->foot_pos_desired_world = left_leg->foot_pos_world_discretization;
-                    right_leg->foot_pos_desired_world = right_leg->foot_pos_world_discretization;
+                    left_leg->next_foot_pos_world_desired = left_leg->foot_pos_world_discretization;
+                    right_leg->next_foot_pos_world_desired = right_leg->foot_pos_world_discretization;
 
                     //TEMPORARY FOR TESTING WITH LEGS HANGING:
-                    left_leg->foot_pos_desired_world(2, 0) += 0.3;
-                    right_leg->foot_pos_desired_world(2, 0) += 0.3; 
+                    left_leg->next_foot_pos_world_desired(2, 0) += 0.3;
+                    right_leg->next_foot_pos_world_desired(2, 0) += 0.3; 
                     /////////////////////////////////////////
 
                     next_body_vel = (Eigen::Matrix<double, 3, 1>() << vel_x_t, vel_y_t, vel_z_t).finished();
                     
-                    left_leg->foot_pos_desired_world_mutex.unlock();
-                    right_leg->foot_pos_desired_world_mutex.unlock();
+                    left_leg->next_foot_pos_world_desired_mutex.unlock();
+                    right_leg->next_foot_pos_world_desired_mutex.unlock();
                     next_body_vel_mutex.unlock();
                 }
 

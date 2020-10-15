@@ -1,6 +1,6 @@
 #include "include/Leg.hpp"
 
-Leg::Leg(double hip_offset_x, double hip_offset_y, double hip_offset_z) {
+Leg::Leg(double hip_offset_x_param, double hip_offset_y_param, double hip_offset_z_param) {
     // Initiate damping ratio matrix, desired natural frequency, orientation gains as well as desired trajectory to avoid null pointer
     h << 0.6, 0, 0,
         0, 0.6, 0,
@@ -14,6 +14,10 @@ Leg::Leg(double hip_offset_x, double hip_offset_y, double hip_offset_z) {
 
     Kp_orientation = 9;
     Kd_orientation = 0.15;
+
+    hip_offset_x = hip_offset_x_param;
+    hip_offset_y = hip_offset_y_param;
+    hip_offset_z = hip_offset_z_param;
 }
 
 long long iteration_counter = 0;
@@ -40,8 +44,8 @@ double t_stance_remainder;
 // Boolean representing foot state. True means foot is in the air, i.e. no contact, false means foot is in stance phase. i.e. contact
 bool swing_phase;
 
-std::mutex q_mutex, q_dot_mutex, foot_pos_world_mutex, foot_pos_world_desired_mutex, lift_off_pos_mutex, lift_off_vel_mutex, t_stance_remainder_mutex, foot_pos_body_frame_mutex,
-                    trajectory_start_time_mutex, foot_trajectory_mutex, foot_pos_desired_world_mutex, foot_pos_desired_body_frame_mutex;
+std::mutex q_mutex, q_dot_mutex, foot_pos_world_desired_mutex, foot_pos_world_desired_mutex, lift_off_pos_mutex, lift_off_vel_mutex, t_stance_remainder_mutex, foot_pos_body_frame_mutex,
+                    trajectory_start_time_mutex, foot_trajectory_mutex, next_foot_pos_world_desired_mutex, foot_pos_desired_body_frame_mutex;
 
 Eigen::Matrix<double, 5, 1> q; // Leg angle vector / Model state
 Eigen::Matrix<double, 5, 1> q_dot; // Leg angular velocity vector / Differentiated model state
@@ -65,8 +69,8 @@ Eigen::Matrix<double, 5, 1> tau_setpoint; // Final torque setpoint calculated fr
 Eigen::Matrix<double, 5, 1> foot_pos; // Cartesian foot / end-effector position, hip frame
 Eigen::Matrix<double, 3, 1> foot_pos_body_frame; // Body frame
 Eigen::Matrix<double, 3, 1> foot_pos_desired_body_frame; // Body frame
-Eigen::Matrix<double, 3, 1> foot_pos_desired_world; // World frame
-Eigen::Matrix<double, 3, 1> foot_pos_world; // foot position in world frame
+Eigen::Matrix<double, 3, 1> next_foot_pos_world_desired; // Next desired foot position in world frame, obtained from the MPC prediction horizon (at the next contact swap. It is also the target position for the trajectory calculator.
+Eigen::Matrix<double, 3, 1> foot_pos_world_desired; // Most recent desired foot position in world frame, calculated by the MPC formula using Raibert heuristic etc.
 Eigen::Matrix<double, 3, 1> lift_off_pos; // Body frame
 Eigen::Matrix<double, 3, 1> foot_pos_world_discretization; // World frame
 
@@ -81,7 +85,6 @@ Eigen::Matrix<double, 3, 3> h; // Damping ratio matrix
 Eigen::Matrix<double, 3, 1> omega_desired; // Desired natural frequency of the leg
 
 Eigen::Matrix<double, 334, 6> foot_trajectory;
-
 
 double Kp_orientation;
 double Kd_orientation;
@@ -115,7 +118,7 @@ void Leg::update_foot_pos_body_frame(Eigen::Matrix<double, 13, 1> &com_state) {
     double pos_x_com = com_state(3, 0);
     double pos_y_com = com_state(4, 0);
     double pos_z_com = com_state(5, 0);
-
+    
     double vel_x_com = com_state(9, 0);
     double vel_y_com = com_state(10, 0);
     double vel_z_com = com_state(11, 0);
@@ -125,7 +128,7 @@ void Leg::update_foot_pos_body_frame(Eigen::Matrix<double, 13, 1> &com_state) {
                                             sin(phi_com)*sin(psi_com) + sin(theta_com)*cos(phi_com)*cos(psi_com), -sin(phi_com)*cos(psi_com) + sin(psi_com)*sin(theta_com)*cos(phi_com), cos(phi_com)*cos(theta_com), -pos_x_com*sin(phi_com)*sin(psi_com) - pos_x_com*sin(theta_com)*cos(phi_com)*cos(psi_com) + pos_y_com*sin(phi_com)*cos(psi_com) - pos_y_com*sin(psi_com)*sin(theta_com)*cos(phi_com) - pos_z_com*cos(phi_com)*cos(theta_com), 
                                             0, 0, 0, 1).finished();
 
-    // Convert from hip to body frame
+    // Convert from hip to body frame, look at Leg Class Instantiation
     Eigen::Matrix<double, 4, 4> H_hip_body = (Eigen::Matrix<double, 4, 4>() << 1, 0, 0, Leg::hip_offset_x,
                                                                                 0, 1, 0, 0,
                                                                                 0, 0, 1, Leg::hip_offset_z, // Torso Z - Hip Z in Gazebo SDF
@@ -145,7 +148,7 @@ void Leg::update_foot_pos_body_frame(Eigen::Matrix<double, 13, 1> &com_state) {
 }
 
 void Leg::update_foot_trajectory(Eigen::Matrix<double, 13, 1> &com_state, Eigen::Matrix<double, 3, 1> next_body_vel, double t_stance, double time) {
-
+    
     double phi_com = com_state(0, 0);
     double theta_com = com_state(1, 0);
     double psi_com = com_state(2, 0);
@@ -165,7 +168,7 @@ void Leg::update_foot_trajectory(Eigen::Matrix<double, 13, 1> &com_state, Eigen:
     
     foot_pos_world_desired_mutex.lock();
     foot_pos_desired_body_frame_mutex.lock();
-    foot_pos_desired_body_frame = (H_world_body * (Eigen::Matrix<double, 4, 1>() << foot_pos_desired_world, 1).finished()).block<3, 1>(0, 0);
+    foot_pos_desired_body_frame = (H_world_body * (Eigen::Matrix<double, 4, 1>() << next_foot_pos_world_desired, 1).finished()).block<3, 1>(0, 0);
     foot_pos_desired_body_frame_mutex.unlock();
     foot_pos_world_desired_mutex.unlock();
     
@@ -191,9 +194,9 @@ void Leg::update_foot_trajectory(Eigen::Matrix<double, 13, 1> &com_state, Eigen:
     
     std::stringstream temp;
     temp << "lift_off_pos: " << lift_off_pos(0, 0) << "," << lift_off_pos(1, 0) << "," << lift_off_pos(2, 0)
-                << "\foot_pos_world: " << foot_pos_world(0, 0) << "," << foot_pos_world(1, 0) << "," << foot_pos_world(2, 0)
+                << "\nfoot_pos_world: " << foot_pos_world_desired(0, 0) << "," << foot_pos_world_desired(1, 0) << "," << foot_pos_world_desired(2, 0)
                 << "\ntarget_foot_pos_body: " << foot_pos_desired_body_frame(0, 0) << "," << foot_pos_desired_body_frame(1, 0) << "," << foot_pos_desired_body_frame(2, 0) 
-                << "\ntarget_foot_pos_world: " << foot_pos_desired_world(0, 0) << "," << foot_pos_desired_world(1, 0) << "," << foot_pos_desired_world(2, 0);
+                << "\ntarget_foot_pos_world: " << next_foot_pos_world_desired(0, 0) << "," << next_foot_pos_world_desired(1, 0) << "," << next_foot_pos_world_desired(2, 0);
     print_threadsafe(temp.str(), "mpc_thread", INFO);
 
     foot_pos_desired_body_frame_mutex.unlock();
