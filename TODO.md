@@ -1,3 +1,4 @@
+- Make internal class variables private, then only use get() and set() methods to make threadsafe
 - Add seperate log directory
 - FIX VARIBABLE NAMING!!!!!!
 - 2 DOF ankle
