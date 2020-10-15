@@ -7,11 +7,7 @@ find_package(casadi)
 
 #set(COMMUNICATIONS_LIBS zcm)
 
-<<<<<<< Updated upstream
 add_compile_options(-std=c++17 -Wpedantic -I /usr/local/include/ -L /usr/local/lib -O3)
-=======
-add_compile_options(-std=c++17 -Wpedantic -I .. -I /usr/local/include/ -L /usr/local/lib -O3)
->>>>>>> Stashed changes
 
 add_executable(controller controller.cpp)
 add_executable(nlp_test nlp_test.cpp)
@@ -22,12 +18,7 @@ set(SOURCES ${PROJECT_SOURCE_DIR}/Helpers.cpp ${PROJECT_SOURCE_DIR}/Leg.cpp ${PR
 
 include_directories("${PROJECT_SOURCE_DIR}/include")
 
-<<<<<<< Updated upstream
 add_library(Sources STATIC ${SOURCES})
-=======
-#add_library(model_functions SHARED model_functions.cpp)
-add_library(Sources SHARED ${SOURCES})
->>>>>>> Stashed changes
 
 #target_link_libraries (controller ${CMAKE_THREAD_LIBS_INIT} casadi model_functions helpers leg)
 target_link_libraries(controller ${CMAKE_THREAD_LIBS_INIT} casadi ${SOURCES})
@@ -38,12 +29,6 @@ message("CMAKE_CXX_FLAGS_RELEASE is ${CMAKE_CXX_FLAGS_RELEASE}")
 message("PROJECT_SOURCE_DIR: " ${PROJECT_SOURCE_DIR})
 
 # Commands to manually link so far:
-<<<<<<< Updated upstream
 # g++ -fPIC -O3 -c -Wall c++_filename.cpp
 # g++ -shared -o libfilename.so c++_filename.o
-#g++ -O3 -Wall -L$(pwd) -Wl,-rpath=$(pwd) ../main_c++_filename.cpp -lfilename -o main_c++_filename
-=======
-# g++ -fPIC -O3 -c -Wall c++_filename.cpp 
-# g++ -shared -o libfilename.so c++_filename.o
-#g++ -O3 -Wall -L$(pwd) -Wl,-rpath=$(pwd) ../main_c++_filename.cpp -lfilename -o main_c++_filename.cpp
->>>>>>> Stashed changes
+# g++ -O3 -Wall -L$(pwd) -Wl,-rpath=$(pwd) ../main_c++_filename.cpp -lfilename -o main_c++_filename
