@@ -730,6 +730,8 @@ int main()
     log("--------------------------------", INFO);
     log("--------------------------------", INFO);
 
+    // is 0.065 because it's the difference between torso COM height and Hip Actuator Center Height, negative because just think about it or just calculate an example value with negative and positive z displacement. 
+    // A point expressed in hip frame (i.e. [0, 0 0]) will obviously be at negative Z in a frame that is located above the hip frame, meaning you need negative Z displacement in the transformation matrix.
     left_leg = new Leg(-0.15, 0, -0.065);
     right_leg = new Leg(0.15, 0, -0.065);
 
@@ -1379,8 +1381,8 @@ int main()
                     right_leg->foot_pos_desired_world = right_leg->foot_pos_world_discretization;
 
                     //TEMPORARY FOR TESTING WITH LEGS HANGING:
-                    left_leg->foot_pos_desired_world(2, 0) += 0.31;
-                    right_leg->foot_pos_desired_world(2, 0) += 0.31; 
+                    left_leg->foot_pos_desired_world(2, 0) += 0.3;
+                    right_leg->foot_pos_desired_world(2, 0) += 0.3; 
                     /////////////////////////////////////////
 
                     next_body_vel = (Eigen::Matrix<double, 3, 1>() << vel_x_t, vel_y_t, vel_z_t).finished();
