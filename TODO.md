@@ -1,3 +1,4 @@
+- Add seperate log directory
 - FIX VARIBABLE NAMING!!!!!!
 - 2 DOF ankle
 - Make every dependency in setup.sh build from source so that it works on any OS
