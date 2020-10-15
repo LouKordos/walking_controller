@@ -70,8 +70,8 @@ class Leg {
     // Boolean representing foot state. True means foot is in the air, i.e. no contact, false means foot is in stance phase. i.e. contact
     public: bool swing_phase;
     
-    public: std::mutex q_mutex, q_dot_mutex, foot_pos_world_desired_mutex, foot_pos_world_desired_mutex, lift_off_pos_mutex, lift_off_vel_mutex, t_stance_remainder_mutex, foot_pos_body_frame_mutex,
-                        trajectory_start_time_mutex, foot_trajectory_mutex, next_foot_pos_world_desired_mutex;
+    public: std::mutex q_mutex, q_dot_mutex, foot_pos_world_desired_mutex, lift_off_pos_mutex, lift_off_vel_mutex, t_stance_remainder_mutex, foot_pos_body_frame_mutex,
+                        trajectory_start_time_mutex, foot_trajectory_mutex, next_foot_pos_world_desired_mutex, foot_pos_desired_body_frame_mutex;
 
     public: Eigen::Matrix<double, 5, 1> q; // Leg angle vector / Model state
     public: Eigen::Matrix<double, 5, 1> q_dot; // Leg angular velocity vector / Differentiated model state
@@ -93,10 +93,10 @@ class Leg {
     public: Eigen::Matrix<double, 5, 1> tau_setpoint; // Final torque setpoint calculated from above matrices and feedforward torque added.
 
     public: Eigen::Matrix<double, 5, 1> foot_pos; // Cartesian foot / end-effector position, hip frame
-    public: Eigen::Matrix<double, 3, 1> foot_pos_body_frame; // Body frame
+    public: Eigen::Matrix<double, 3, 1> foot_pos_body_frame; // Foot / end-effector position in body frame
     public: Eigen::Matrix<double, 3, 1> foot_pos_desired_body_frame; // Body frame
-    public: Eigen::Matrix<double, 3, 1> next_foot_pos_world_desired; // World frame
-    public: Eigen::Matrix<double, 3, 1> foot_pos_world_desired; // foot position in world frame
+    public: Eigen::Matrix<double, 3, 1> next_foot_pos_world_desired; // Next desired foot position in world frame, obtained from the MPC prediction horizon (at the next contact swap. It is also the target position for the trajectory calculator.
+    public: Eigen::Matrix<double, 3, 1> foot_pos_world_desired; // Most recent desired foot position in world frame, calculated by the MPC formula using Raibert heuristic etc.
     public: Eigen::Matrix<double, 3, 1> lift_off_pos; // Body frame
     public: Eigen::Matrix<double, 3, 1> foot_pos_world_discretization; // World frame
 
@@ -111,7 +111,6 @@ class Leg {
     public: Eigen::Matrix<double, 3, 1> omega_desired; // Desired natural frequency of the leg
 
     public: Eigen::Matrix<double, 334, 6> foot_trajectory;
-
 
     public: double Kp_orientation;
     public: double Kd_orientation;
