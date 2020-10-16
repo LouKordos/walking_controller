@@ -294,6 +294,18 @@ void calculate_left_leg_torques() {
             left_leg->q_dot_mutex.lock();
             left_leg->q_dot << theta1_dot, theta2_dot, theta3_dot, theta4_dot, theta5_dot;
             left_leg->q_dot_mutex.unlock();
+
+            left_leg->theta1 = theta1;
+            left_leg->theta2 = theta2;
+            left_leg->theta3 = theta3;
+            left_leg->theta4 = theta4;
+            left_leg->theta5 = theta5;
+
+            left_leg->theta1dot = theta1_dot;
+            left_leg->theta2dot = theta2_dot;
+            left_leg->theta3dot = theta3_dot;
+            left_leg->theta4dot = theta4_dot;
+            left_leg->theta5dot = theta5_dot;
         }
 
         // If swing, leg trajectory should be followed, if not, foot is in contact with the ground and MPC forces should be converted into torques and applied
