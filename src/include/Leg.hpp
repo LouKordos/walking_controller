@@ -72,7 +72,7 @@ class Leg {
     
     public: std::mutex q_mutex, q_dot_mutex, foot_pos_world_desired_mutex, lift_off_pos_mutex, lift_off_vel_mutex, t_stance_remainder_mutex, foot_pos_body_frame_mutex,
                         trajectory_start_time_mutex, foot_trajectory_mutex, next_foot_pos_world_desired_mutex, foot_pos_desired_body_frame_mutex;
-
+    
     public: Eigen::Matrix<double, 5, 1> q; // Leg angle vector / Model state
     public: Eigen::Matrix<double, 5, 1> q_dot; // Leg angular velocity vector / Differentiated model state
 

@@ -16,8 +16,11 @@ using Eigen::MatrixXd;
 using namespace std;
 
 void constrain(double &value, double lower_limit, double upper_limit);
+
 void constrain_int(int &value, int lower_limit, int upper_limit);
+
 unsigned long long factorial(long n);
+
 Eigen::Matrix<double, 334, 6> get_swing_trajectory(const Eigen::Matrix<double, 3, 1> initial_pos, const Eigen::Matrix<double, 3, 1> middle_pos, const Eigen::Matrix<double, 3, 1> target_pos, 
                                                     const Eigen::Matrix<double, 3, 1> initial_vel, const Eigen::Matrix<double, 3, 1> target_vel, const double duration);
 

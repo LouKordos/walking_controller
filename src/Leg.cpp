@@ -4,7 +4,7 @@ Leg::Leg(double hip_offset_x_param, double hip_offset_y_param, double hip_offset
     // Initiate damping ratio matrix, desired natural frequency, orientation gains as well as desired trajectory to avoid null pointer
     h << 0.6, 0, 0,
         0, 0.6, 0,
-        0, 0, 0.6;
+        0, 0, 0.6;  
     
     omega_desired << 8.0 * M_PI, 16.0 * M_PI, 8.0 * M_PI;
 
@@ -33,21 +33,12 @@ double psi = 0; // Yaw, rotation arond Z, gamma
 
 static leg_config config;
 
-void Leg::update_torque_setpoint() {
-    update_tau_setpoint(J_foot_combined, Kp, pos_desired, foot_pos, Kd, vel_desired, foot_vel, tau_ff, tau_setpoint);
-
-    for(int i = 0; i < 5; ++i) { // Loop through each torque setpoint vector element
-            constrain(tau_setpoint(i), config.lower_torque_limit, config.upper_torque_limit); // constrain element based on global torque limits
-    }
-    constrain(tau_setpoint(4, 0), -5, 5);
-}
-
 void Leg::update_foot_pos_body_frame(Eigen::Matrix<double, 13, 1> &com_state) {
 
     double phi_com = com_state(0, 0);
     double theta_com = com_state(1, 0);
     double psi_com = com_state(2, 0);
-
+    
     double pos_x_com = com_state(3, 0);
     double pos_y_com = com_state(4, 0);
     double pos_z_com = com_state(5, 0);
@@ -147,7 +138,6 @@ void Leg::update() {
     update_q_dot(theta1dot, theta2dot, theta3dot, theta4dot, theta5dot, q_dot, config);
     q_dot_mutex.unlock();
 
-
     update_orientation(theta1, theta2, theta3, theta4, theta5, phi, theta, psi);
 
     update_B(theta1, theta2, theta3, theta4, theta5, theta1dot, theta2dot, theta3dot, theta4dot, theta5dot, B, config);
@@ -211,10 +201,14 @@ void Leg::update() {
     update_foot_vel(J_foot_combined, Leg::q_dot, foot_vel);
     Leg::q_dot_mutex.unlock();
 
-    for(int i = 0; i < 5; ++i) { // Loop through each torque setpoint vector element
-        constrain(tau_setpoint(i), Leg::config.lower_torque_limit, Leg::config.upper_torque_limit); // constrain element based on global torque limits
-    }
-    constrain(tau_setpoint(4), -5, 5);
-
     Leg::iteration_counter++;
+}
+
+void Leg::update_torque_setpoint() {
+    update_tau_setpoint(J_foot_combined, Kp, pos_desired, foot_pos, Kd, vel_desired, foot_vel, tau_ff, tau_setpoint);
+
+    for(int i = 0; i < 5; ++i) { // Loop through each torque setpoint vector element
+            constrain(tau_setpoint(i), config.lower_torque_limit, config.upper_torque_limit); // constrain element based on global torque limits
+    }
+    constrain(tau_setpoint(4, 0), -5, 5);
 }
