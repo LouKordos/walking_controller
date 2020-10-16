@@ -1053,7 +1053,8 @@ int main()
 
                 left_leg->update_foot_pos_body_frame(x_temp);
                 left_leg->foot_pos_body_frame_mutex.lock();
-                left_leg->lift_off_pos = left_leg->foot_pos_body_frame;
+                // TEMPORARY FOR TESTING WITH LEGS HANGING:
+                left_leg->lift_off_pos = left_leg->foot_pos_body_frame + (Eigen::Matrix<double, 3, 1>() << 0, 0, 0.2).finished();
                 left_leg->foot_pos_body_frame_mutex.unlock();
 
                 left_leg->lift_off_vel = x_temp.block<3, 1>(9, 0);
@@ -1393,8 +1394,8 @@ int main()
                     right_leg->next_foot_pos_world_desired = right_leg->foot_pos_world_discretization;
 
                     //TEMPORARY FOR TESTING WITH LEGS HANGING:
-                    left_leg->next_foot_pos_world_desired(2, 0) += 0.3;
-                    right_leg->next_foot_pos_world_desired(2, 0) += 0.3; 
+                    left_leg->next_foot_pos_world_desired(2, 0) += 0.5;
+                    right_leg->next_foot_pos_world_desired(2, 0) += 0.5; 
                     /////////////////////////////////////////
 
                     next_body_vel = (Eigen::Matrix<double, 3, 1>() << vel_x_t, vel_y_t, vel_z_t).finished();
