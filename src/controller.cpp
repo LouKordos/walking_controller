@@ -179,9 +179,6 @@ void calculate_left_leg_torques() {
 
     struct timespec deadline; // timespec struct for storing time that execution thread should sleep for
 
-    Eigen::Matrix<double, 5, 1> q_temp; // Temporary leg angle vector used for thread-safe updating of matrices
-    Eigen::Matrix<double, 5, 1> q_dot_temp; // Temporary leg angular velocity vector used for thread-safe updating of matrices
-
     long long iteration_counter = 0; // Iteration counter of the timed loop used for calculating current loop "time" and debugging
     double dt = torque_calculation_interval / 1000 / 1000; // Loop update interval in seconds for calculation current loop "time" based on iteration counter
 
@@ -310,28 +307,38 @@ void calculate_left_leg_torques() {
 
         // If swing, leg trajectory should be followed, if not, foot is in contact with the ground and MPC forces should be converted into torques and applied
         if(left_leg->swing_phase) {
-            
+            // left_leg->pos_desired << 0, 0, 0.1*sin(16*get_time()) - 0.95, 0, 0;
+            // left_leg->vel_desired << 0, 0, 1.6*cos(16*get_time()), 0, 0;
+            // left_leg->accel_desired << 0, 0, -25.6*sin(16*get_time());
+
+            // left_leg->pos_desired << 0, 0, -1, 0, 0;
+            // left_leg->vel_desired << 0, 0, 0, 0, 0;
+            // left_leg->accel_desired << 0, 0, 0;
+
             //TODO: Maybe rework to only use q and q_dot
-
             left_leg->update();
+
+            // std::cout << "q: " << left_leg->q << std::endl;
+            // std::cout << "q_dot: " << left_leg->q_dot << std::endl;
+     
+            // left_leg->trajectory_start_time_mutex.lock();
+            // double current_trajectory_time = get_time() - left_leg->trajectory_start_time;
+            // left_leg->trajectory_start_time_mutex.unlock();
+
+            // left_leg->foot_trajectory_mutex.lock();
+            // int traj_index = current_trajectory_time / (1.0 / 334.0);
+            // constrain_int(traj_index, 0, 334 - 1);
+            // left_leg->pos_desired << left_leg->foot_trajectory(traj_index, 0) + left_leg->hip_offset_x, left_leg->foot_trajectory(traj_index, 2), left_leg->foot_trajectory(traj_index, 4), 0, 0;
+            // left_leg->vel_desired << left_leg->foot_trajectory(traj_index, 1), left_leg->foot_trajectory(traj_index, 3), left_leg->foot_trajectory(traj_index, 5), 0, 0;
             
-            left_leg->trajectory_start_time_mutex.lock();
-            double current_trajectory_time = get_time() - left_leg->trajectory_start_time;
-            left_leg->trajectory_start_time_mutex.unlock();
-
-            left_leg->foot_trajectory_mutex.lock();
-            int traj_index = current_trajectory_time / (1.0 / 334.0);
-            constrain_int(traj_index, 0, 334 - 1);
-            left_leg->pos_desired << left_leg->foot_trajectory(traj_index, 0) + left_leg->hip_offset_x, left_leg->foot_trajectory(traj_index, 2), left_leg->foot_trajectory(traj_index, 4), 0, 0;
-            left_leg->vel_desired << left_leg->foot_trajectory(traj_index, 1), left_leg->foot_trajectory(traj_index, 3), left_leg->foot_trajectory(traj_index, 5), 0, 0;
-
             // stringstream temp;
-            // temp << "traj_index: " << traj_index
-            //      << "\npos_desired: " << pos_desired_left_leg(0, 0) << "," << pos_desired_left_leg(1, 0) << "," << pos_desired_left_leg(2, 0);
+            // temp /*<< "traj_index: " << traj_index*/
+            //      << "\nfoot_pos_desired: " << left_leg->pos_desired(0, 0) << "," << left_leg->pos_desired(1, 0) << "," << left_leg->pos_desired(2, 0)
+            //      << "\nfoot_pos_actual: " << left_leg->foot_pos(0, 0) << "," << left_leg->foot_pos(1, 0) << "," << left_leg->foot_pos(2, 0);
 
             // print_threadsafe(temp.str(), "left_leg_torque_thread", INFO);
 
-            left_leg->foot_trajectory_mutex.unlock();
+            // left_leg->foot_trajectory_mutex.unlock();
 
             left_leg->update_torque_setpoint();
 
@@ -360,9 +367,13 @@ void calculate_left_leg_torques() {
                 data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
             }
 
-            for(int i = 0; i < 5; ++i) {
-                left_leg->tau_setpoint(i, 0) = 0;
-            }
+            // for(int i = 0; i < 5; ++i) {
+            //     left_leg->tau_setpoint(i, 0) = 0;
+            // }
+
+            // temp.str(std::string());
+            // temp << left_leg->tau_setpoint;
+            // print_threadsafe(temp.str(), "tau_setpoint_left_leg in stance phase", INFO);
 
             stringstream s;
             s << left_leg->tau_setpoint(0, 0) << "|" << left_leg->tau_setpoint(1, 0) << "|" << left_leg->tau_setpoint(2, 0) << "|" << left_leg->tau_setpoint(3, 0) << "|" << left_leg->tau_setpoint(4, 0); // Write torque setpoints to stringstream
@@ -425,9 +436,6 @@ void calculate_right_leg_torques() {
 
     struct timespec deadline; // timespec struct for storing time that execution thread should sleep for
 
-    Eigen::Matrix<double, 5, 1> q_temp; // Temporary leg angle vector used for thread-safe updating of matrices
-    Eigen::Matrix<double, 5, 1> q_dot_temp; // Temporary leg angular velocity vector used for thread-safe updating of matrices
-
     long long iteration_counter = 0; // Iteration counter of the timed loop used for calculating current loop "time" and debugging
     double dt = torque_calculation_interval / 1000 / 1000; // Loop update interval in seconds for calculation current loop "time" based on iteration counter
 
@@ -441,22 +449,22 @@ void calculate_right_leg_torques() {
         perror("socket creation failed"); 
         exit(EXIT_FAILURE);
     }
-      
+    
     memset(&servaddr, 0, sizeof(servaddr)); 
     memset(&cliaddr, 0, sizeof(cliaddr)); 
-    
+
     // Filling server information 
     servaddr.sin_family    = AF_INET; // IPv4 
     servaddr.sin_addr.s_addr = inet_addr("127.0.0.1"); 
     servaddr.sin_port = htons(right_leg_torque_port); 
-      
+    
     // Bind the socket with the server address 
     if ( bind(sockfd, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0 ) 
     { 
         perror("bind failed"); 
         exit(EXIT_FAILURE);
-    } 
-      
+    }
+    
     int msg_length; 
     socklen_t len;
 
@@ -473,29 +481,27 @@ void calculate_right_leg_torques() {
 
     bool time_switch = false; // used for running a two-phase trajectory, otherwise obsolete
 
-    double theta1 = 0;
-    double theta2 = 0;
-    double theta3 = 0;
-    double theta4 = 0;
-    double theta5 = 0;
-
-    double theta1_dot = 0;
-    double theta2_dot = 0;
-    double theta3_dot = 0;
-    double theta4_dot = 0;
-    double theta5_dot = 0;
-
     while(true) {
         start = high_resolution_clock::now();
-        
-        double t = iteration_counter * dt;
 
         //Declaring angle and angular velocity variables for updating matrices
+        
+        double theta1 = 0;
+        double theta2 = 0;
+        double theta3 = 0;
+        double theta4 = 0;
+        double theta5 = 0;
+
+        double theta1_dot = 0;
+        double theta2_dot = 0;
+        double theta3_dot = 0;
+        double theta4_dot = 0;
+        double theta5_dot = 0;
 
         u_mutex.lock();
         Eigen::Matrix<double, m, 1> u = u_t;
         u_mutex.unlock();
-        
+
         x_mutex.lock();
         Eigen::Matrix<double, n, 1> x = x_t;
         x_mutex.unlock();
@@ -508,7 +514,11 @@ void calculate_right_leg_torques() {
         double pos_y_com = x(4, 0);
         double pos_z_com = x(5, 0);
 
-        msg_length= recvfrom(sockfd, (char *)buffer, udp_buffer_size, 0, ( struct sockaddr *) &cliaddr, &len); // Receive message over UDP containing full leg state
+        double vel_x_com = x(9, 0);
+        double vel_y_com = x(10, 0);
+        double vel_z_com = x(11, 0);
+
+        msg_length = recvfrom(sockfd, (char *)buffer, udp_buffer_size, 0, ( struct sockaddr *) &cliaddr, &len); // Receive message over UDP containing full leg state
         buffer[msg_length] = '\0'; // Add string ending delimiter to end of string (n is length of message)
 
         std::string raw_state(buffer); // Create string from buffer char array to split
@@ -531,36 +541,61 @@ void calculate_right_leg_torques() {
             theta5_dot = atof(state[9].c_str());
 
             // Update states based on parsed angles
+            right_leg->q_mutex.lock();
+            right_leg->q << theta1, theta2, theta3, theta4, theta5;
+            right_leg->q_mutex.unlock();
 
-            q_temp << theta1, theta2, theta3, theta4, theta5;
-            q_dot_temp << theta1_dot, theta2_dot, theta3_dot, theta4_dot, theta5_dot;
+            right_leg->q_dot_mutex.lock();
+            right_leg->q_dot << theta1_dot, theta2_dot, theta3_dot, theta4_dot, theta5_dot;
+            right_leg->q_dot_mutex.unlock();
+
+            right_leg->theta1 = theta1;
+            right_leg->theta2 = theta2;
+            right_leg->theta3 = theta3;
+            right_leg->theta4 = theta4;
+            right_leg->theta5 = theta5;
+
+            right_leg->theta1dot = theta1_dot;
+            right_leg->theta2dot = theta2_dot;
+            right_leg->theta3dot = theta3_dot;
+            right_leg->theta4dot = theta4_dot;
+            right_leg->theta5dot = theta5_dot;
         }
 
         // If swing, leg trajectory should be followed, if not, foot is in contact with the ground and MPC forces should be converted into torques and applied
-        // If swing, leg trajectory should be followed, if not, foot is in contact with the ground and MPC forces should be converted into torques and applied
         if(right_leg->swing_phase) {
-            
+            right_leg->pos_desired << 0, 0, 0.1*sin(16*get_time()) - 0.95, 0, 0;
+            right_leg->vel_desired << 0, 0, 1.6*cos(16*get_time()), 0, 0;
+            right_leg->accel_desired << 0, 0, -25.6*sin(16*get_time());
+
+            // right_leg->pos_desired << 0, 0, -1, 0, 0;
+            // right_leg->vel_desired << 0, 0, 0, 0, 0;
+            // right_leg->accel_desired << 0, 0, 0;
+
             //TODO: Maybe rework to only use q and q_dot
-
             right_leg->update();
+
+            // std::cout << "q: " << right_leg->q << std::endl;
+            // std::cout << "q_dot: " << right_leg->q_dot << std::endl;
+     
+            // right_leg->trajectory_start_time_mutex.lock();
+            // double current_trajectory_time = get_time() - right_leg->trajectory_start_time;
+            // right_leg->trajectory_start_time_mutex.unlock();
+
+            // right_leg->foot_trajectory_mutex.lock();
+            // int traj_index = current_trajectory_time / (1.0 / 334.0);
+            // constrain_int(traj_index, 0, 334 - 1);
+            // right_leg->pos_desired << right_leg->foot_trajectory(traj_index, 0) + right_leg->hip_offset_x, right_leg->foot_trajectory(traj_index, 2), right_leg->foot_trajectory(traj_index, 4), 0, 0;
+            // right_leg->vel_desired << right_leg->foot_trajectory(traj_index, 1), right_leg->foot_trajectory(traj_index, 3), right_leg->foot_trajectory(traj_index, 5), 0, 0;
             
-            right_leg->trajectory_start_time_mutex.lock();
-            double current_trajectory_time = get_time() - right_leg->trajectory_start_time;
-            right_leg->trajectory_start_time_mutex.unlock();
-
-            right_leg->foot_trajectory_mutex.lock();
-            int traj_index = current_trajectory_time / (1.0 / 334.0);
-            constrain_int(traj_index, 0, 334 - 1);
-            right_leg->pos_desired << right_leg->foot_trajectory(traj_index, 0) + right_leg->hip_offset_x, right_leg->foot_trajectory(traj_index, 2), right_leg->foot_trajectory(traj_index, 4), 0, 0;
-            right_leg->vel_desired << right_leg->foot_trajectory(traj_index, 1), right_leg->foot_trajectory(traj_index, 3), right_leg->foot_trajectory(traj_index, 5), 0, 0;
-
             // stringstream temp;
-            // temp << "traj_index: " << traj_index
-            //      << "\npos_desired: " << pos_desired_right_leg(0, 0) << "," << pos_desired_right_leg(1, 0) << "," << pos_desired_right_leg(2, 0);
+            // temp /*<< "traj_index: " << traj_index*/
+            //      << "\nfoot_pos_desired: " << right_leg->pos_desired(0, 0) << "," << right_leg->pos_desired(1, 0) << "," << right_leg->pos_desired(2, 0)
+            //      << "\nfoot_pos_actual: " << right_leg->foot_pos(0, 0) << "," << right_leg->foot_pos(1, 0) << "," << right_leg->foot_pos(2, 0);
 
             // print_threadsafe(temp.str(), "right_leg_torque_thread", INFO);
 
-            right_leg->foot_trajectory_mutex.unlock();
+            // right_leg->foot_trajectory_mutex.unlock();
 
             right_leg->update_torque_setpoint();
 
@@ -580,14 +615,22 @@ void calculate_right_leg_torques() {
                 data_file << get_time() // Write plot values to csv file
                             << "," << theta1 << "," << theta2 << "," << theta3 << "," << theta4 << "," << theta5
                             << "," << theta1_dot << "," << theta2_dot << "," << theta3_dot << "," << theta4_dot << "," << theta5_dot
-                            << "," << right_leg->tau_setpoint(0) << "," << right_leg->tau_setpoint(1) << "," << right_leg->tau_setpoint(2) << "," << right_leg->tau_setpoint(3) << "," << right_leg->tau_setpoint(4)
-                            << "," << right_leg->foot_pos(0) << "," << right_leg->foot_pos(1) << "," << right_leg->foot_pos(2)
+                            << "," << right_leg->tau_setpoint(0, 0) << "," << right_leg->tau_setpoint(1) << "," << right_leg->tau_setpoint(2) << "," << right_leg->tau_setpoint(3) << "," << right_leg->tau_setpoint(4)
+                            << "," << right_leg->foot_pos(0, 0) << "," << right_leg->foot_pos(1) << "," << right_leg->foot_pos(2)
                             << "," << right_leg->pos_desired(0, 0) << "," << right_leg->pos_desired(1, 0) << "," << right_leg->pos_desired(2, 0)
-                            << "," << right_leg->foot_vel(0) << "," << right_leg->foot_vel(1) << "," << right_leg->foot_vel(2)
+                            << "," << right_leg->foot_vel(0, 0) << "," << right_leg->foot_vel(1) << "," << right_leg->foot_vel(2)
                             << "," << right_leg->vel_desired(0, 0) << "," << right_leg->vel_desired(1, 0) << "," << right_leg->vel_desired(2, 0) << std::endl;
                     
                 data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
             }
+
+            // for(int i = 0; i < 5; ++i) {
+            //     right_leg->tau_setpoint(i, 0) = 0;
+            // }
+
+            // temp.str(std::string());
+            // temp << right_leg->tau_setpoint;
+            // print_threadsafe(temp.str(), "tau_setpoint_right_leg in stance phase", INFO);
 
             stringstream s;
             s << right_leg->tau_setpoint(0, 0) << "|" << right_leg->tau_setpoint(1, 0) << "|" << right_leg->tau_setpoint(2, 0) << "|" << right_leg->tau_setpoint(3, 0) << "|" << right_leg->tau_setpoint(4, 0); // Write torque setpoints to stringstream
@@ -597,6 +640,10 @@ void calculate_right_leg_torques() {
         else {
             Eigen::Matrix<double, 5, 1> tau_setpoint = Eigen::ArrayXXd::Zero(5, 1); // get_joint_torques(u.block<3,1>(0, 0), theta1, theta2, theta3, theta4, theta5, x(0, 0), x(1, 0), x(2, 0));
             
+            for(int i = 0; i < 5; ++i) {
+                right_leg->tau_setpoint(i, 0) = 0;
+            }
+
             right_leg->tau_setpoint = tau_setpoint;
 
             stringstream s;
@@ -613,7 +660,8 @@ void calculate_right_leg_torques() {
         right_leg->t_stance_remainder_mutex.lock();
         right_leg->t_stance_remainder -= 1/torque_calculation_interval;
         constrain(right_leg->t_stance_remainder, 0, 10000);
-        std::cout << "t_stance_remainder_right: " << right_leg->t_stance_remainder << std::endl;
+
+        // std::cout << "t_stance_remainder_right: " << t_stance_remainder_right << std::endl;
         right_leg->t_stance_remainder_mutex.unlock();
 
         end = high_resolution_clock::now();
@@ -624,14 +672,14 @@ void calculate_right_leg_torques() {
         duration = duration_cast<microseconds>(end - start).count();
 
         stringstream temp;
-        temp << "Left leg torque thread loop duration: " << duration << "µS";
+        temp << "right leg torque thread loop duration: " << duration << "µS";
         log(temp.str(), INFO);
 
         // std::cout << "Loop duration: " << duration << "µS, iteration_counter: " << iteration_counter - 1 << std::endl;
         long long remainder = (torque_calculation_interval - duration) * 1e+03;
         deadline.tv_nsec = remainder;
         deadline.tv_sec = 0;
-        clock_nanosleep(CLOCK_REALTIME, 0, &deadline, NULL);
+        // clock_nanosleep(CLOCK_REALTIME, 0, &deadline, NULL);
     }
 }
 
@@ -691,34 +739,34 @@ Eigen::Matrix<double, n, 1> step_discrete_model(Eigen::Matrix<double, n, 1> x, E
     Eigen::Matrix<double, n, m> B_c = Eigen::ArrayXXd::Zero(n, m);
 
     A_c << 0, 0, 0, 0, 0, 0, cos(psi_t) / cos(theta_t), sin(psi_t) / cos(theta_t), 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, -sin(psi_t), cos(psi_t), 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, cos(psi_t) * tan(theta_t), sin(psi_t)*tan(theta_t), 1, 0, 0, 0, 0,
-                    
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
-                    
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-                    
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+            0, 0, 0, 0, 0, 0, -sin(psi_t), cos(psi_t), 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, cos(psi_t) * tan(theta_t), sin(psi_t)*tan(theta_t), 1, 0, 0, 0, 0,
+            
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
+            
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+            
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
 
     B_c << 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0,   
-                    I_world.inverse() * r_left_skew_symmetric_test, I_world.inverse() * r_right_skew_symmetric_test,
-                    1/m_value, 0, 0, 1/m_value, 0, 0,
-                    0, 1/m_value, 0, 0, 1/m_value, 0,
-                    0, 0, 1/m_value, 0, 0, 1/m_value,
-                    0, 0, 0, 0, 0, 0;
+        0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0,   
+        I_world.inverse() * r_left_skew_symmetric_test, I_world.inverse() * r_right_skew_symmetric_test,
+        1/m_value, 0, 0, 1/m_value, 0, 0,
+        0, 1/m_value, 0, 0, 1/m_value, 0,
+        0, 0, 1/m_value, 0, 0, 1/m_value,
+        0, 0, 0, 0, 0, 0;
 
     Eigen::Matrix<double, n, n> A_d = Eigen::ArrayXXd::Zero(n, n);
     Eigen::Matrix<double, n, m> B_d = Eigen::ArrayXXd::Zero(n, m);
@@ -777,7 +825,8 @@ int main()
 
     left_leg->foot_pos_world_desired << -0.15, 0, 0.6;
     right_leg->foot_pos_world_desired << 0.15, 0, 0.6;
-    bool alternate_contacts = true;
+    bool alternate_contacts = false;
+    left_leg->swing_phase = right_leg->swing_phase = true;
 
     // auto start_test = high_resolution_clock::now();
 

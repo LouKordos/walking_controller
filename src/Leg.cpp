@@ -6,7 +6,7 @@ Leg::Leg(double hip_offset_x_param, double hip_offset_y_param, double hip_offset
         0, 0.6, 0,
         0, 0, 0.6;  
     
-    omega_desired << 8.0 * M_PI, 16.0 * M_PI, 8.0 * M_PI;
+    omega_desired << 10.0 * M_PI, 16.0 * M_PI, 10.0 * M_PI;
 
     pos_desired << 0, 0, -1.115, 0, 0; // Cartesian xyz + euler roll and pitch
     vel_desired << 0, 0, 0, 0, 0; // Cartesian xyz + euler roll and pitch
@@ -131,11 +131,11 @@ void Leg::update_foot_trajectory(Eigen::Matrix<double, 13, 1> &com_state, Eigen:
 
 void Leg::update() {
     q_mutex.lock();
-    update_q(theta1, theta2, theta3, theta4, theta5, q, config);
+    update_q(theta1, theta2, theta3, theta4, theta5, q);
     q_mutex.unlock();
 
     q_dot_mutex.lock();
-    update_q_dot(theta1dot, theta2dot, theta3dot, theta4dot, theta5dot, q_dot, config);
+    update_q_dot(theta1dot, theta2dot, theta3dot, theta4dot, theta5dot, q_dot);
     q_dot_mutex.unlock();
 
     update_orientation(theta1, theta2, theta3, theta4, theta5, phi, theta, psi);
@@ -189,7 +189,7 @@ void Leg::update() {
     }
 
     q_dot_mutex.lock();
-    update_tau_ff(q_dot, C, J_foot, J_foot_dot, Lambda, accel_desired, q_dot, tau_ff);
+    update_tau_ff(G, C, J_foot, J_foot_dot, Lambda, accel_desired, q_dot, tau_ff);
     q_dot_mutex.unlock();
 
     update_Kp(Lambda, omega_desired, Kp_orientation, Kp);
@@ -208,7 +208,7 @@ void Leg::update_torque_setpoint() {
     update_tau_setpoint(J_foot_combined, Kp, pos_desired, foot_pos, Kd, vel_desired, foot_vel, tau_ff, tau_setpoint);
 
     for(int i = 0; i < 5; ++i) { // Loop through each torque setpoint vector element
-            constrain(tau_setpoint(i), config.lower_torque_limit, config.upper_torque_limit); // constrain element based on global torque limits
+            constrain(tau_setpoint(i, 0), config.lower_torque_limit, config.upper_torque_limit); // constrain element based on global torque limits
     }
     constrain(tau_setpoint(4, 0), -5, 5);
 }

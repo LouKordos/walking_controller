@@ -9,9 +9,9 @@ using Eigen::MatrixXd;
 
 #include "leg_config.hpp"
 
-void update_q(double theta1, double theta2, double theta3, double theta4, double theta5, Eigen::Matrix<double, 5, 1> &q, leg_config &config);
+void update_q(double theta1, double theta2, double theta3, double theta4, double theta5, Eigen::Matrix<double, 5, 1> &q);
 
-void update_q_dot(double theta1dot, double theta2dot, double theta3dot, double theta4dot, double theta5dot,  Eigen::Matrix<double, 5, 1> &q_dot, leg_config &config);
+void update_q_dot(double theta1dot, double theta2dot, double theta3dot, double theta4dot, double theta5dot,  Eigen::Matrix<double, 5, 1> &q_dot);
 
 void update_B(double theta_1, double theta_2, double theta_3, double theta_4, double theta_5, double thetadot1, double theta2dot, double theta3dot, double theta4dot, double theta5dot, Eigen::Matrix<double, 5, 5> &B, leg_config &config);
 
