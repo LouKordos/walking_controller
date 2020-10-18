@@ -307,9 +307,9 @@ void calculate_left_leg_torques() {
 
         // If swing, leg trajectory should be followed, if not, foot is in contact with the ground and MPC forces should be converted into torques and applied
         if(left_leg->swing_phase) {
-            // left_leg->pos_desired << 0, 0, 0.1*sin(16*get_time()) - 0.95, 0, 0;
-            // left_leg->vel_desired << 0, 0, 1.6*cos(16*get_time()), 0, 0;
-            // left_leg->accel_desired << 0, 0, -25.6*sin(16*get_time());
+            left_leg->pos_desired << 0, 0, 0.1*sin(16*get_time()) - 0.95, 0, 0;
+            left_leg->vel_desired << 0, 0, 1.6*cos(16*get_time()), 0, 0;
+            left_leg->accel_desired << 0, 0, -25.6*sin(16*get_time());
 
             // left_leg->pos_desired << 0, 0, -1, 0, 0;
             // left_leg->vel_desired << 0, 0, 0, 0, 0;
@@ -850,7 +850,7 @@ int main()
     // Bind functions to threads
     // left_leg_state_thread = std::thread(std::bind(update_left_leg_state));
     left_leg_torque_thread = std::thread(std::bind(calculate_left_leg_torques));
-    // right_leg_torque_thread = std::thread(std::bind(calculate_right_leg_torques));
+    right_leg_torque_thread = std::thread(std::bind(calculate_right_leg_torques));
     //mpc_thread = std::thread(std::bind(run_mpc));
     time_thread = std::thread(std::bind(update_time));
 
