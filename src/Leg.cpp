@@ -12,12 +12,21 @@ Leg::Leg(double hip_offset_x_param, double hip_offset_y_param, double hip_offset
     vel_desired << 0, 0, 0, 0, 0; // Cartesian xyz + euler roll and pitch
     accel_desired << 0, 0, 0; // Cartesian xyz
 
+    foot_pos << 0, 0, -1.115, 0, 0;
+    foot_vel << 0, 0, 0, 0, 0;
+
     Kp_orientation = 9;
     Kd_orientation = 0.15;
 
     hip_offset_x = hip_offset_x_param;
     hip_offset_y = hip_offset_y_param;
     hip_offset_z = hip_offset_z_param;
+
+    // Convert from hip to body frame, look at Leg Class Instantiation for explanation
+    H_hip_body = (Eigen::Matrix<double, 4, 4>() << 1, 0, 0, Leg::hip_offset_x,
+                                                    0, 1, 0, 0,
+                                                    0, 0, 1, Leg::hip_offset_z, // Torso Z - Hip Z in Gazebo SDF
+                                                    0, 0, 0, 1).finished();
 }
 
 long long iteration_counter = 0;
@@ -52,23 +61,17 @@ void Leg::update_foot_pos_body_frame(Eigen::Matrix<double, 13, 1> &com_state) {
                                             sin(phi_com)*sin(psi_com) + sin(theta_com)*cos(phi_com)*cos(psi_com), -sin(phi_com)*cos(psi_com) + sin(psi_com)*sin(theta_com)*cos(phi_com), cos(phi_com)*cos(theta_com), -pos_x_com*sin(phi_com)*sin(psi_com) - pos_x_com*sin(theta_com)*cos(phi_com)*cos(psi_com) + pos_y_com*sin(phi_com)*cos(psi_com) - pos_y_com*sin(psi_com)*sin(theta_com)*cos(phi_com) - pos_z_com*cos(phi_com)*cos(theta_com), 
                                             0, 0, 0, 1).finished();
 
-    // Convert from hip to body frame, look at Leg Class Instantiation
-    Eigen::Matrix<double, 4, 4> H_hip_body = (Eigen::Matrix<double, 4, 4>() << 1, 0, 0, Leg::hip_offset_x,
-                                                                                0, 1, 0, 0,
-                                                                                0, 0, 1, Leg::hip_offset_z, // Torso Z - Hip Z in Gazebo SDF
-                                                                                0, 0, 0, 1).finished();
-
     Leg::foot_pos_body_frame_mutex.lock();
     Leg::foot_pos_body_frame = (H_hip_body * (Eigen::Matrix<double, 4, 1>() << foot_pos.block<3,1>(0, 0), 1).finished()).block<3,1>(0, 0);
     Leg::foot_pos_body_frame_mutex.unlock();
 
-    stringstream temp;
-    temp << "foot_pos_body_frame: " << foot_pos_body_frame;
-    print_threadsafe(temp.str(), "Leg::update_foot_pos_body_frame", INFO);
+    // stringstream temp;
+    // temp << "foot_pos_body_frame: " << foot_pos_body_frame;
+    // print_threadsafe(temp.str(), "Leg::update_foot_pos_body_frame", INFO);
 
-    temp.str(std::string());
-    temp << (H_world_body.inverse() * (Eigen::Matrix<double, 4, 1>() << foot_pos_body_frame.block<3,1>(0, 0), 1).finished()).block<3,1>(0, 0);
-    print_threadsafe(temp.str(), "foot_pos_world_frame in update function", INFO);
+    // temp.str(std::string());
+    // temp << (H_world_body.inverse() * (Eigen::Matrix<double, 4, 1>() << foot_pos_body_frame.block<3,1>(0, 0), 1).finished()).block<3,1>(0, 0);
+    // print_threadsafe(temp.str(), "foot_pos_world_frame in update function", INFO);
 }
 
 void Leg::update_foot_trajectory(Eigen::Matrix<double, 13, 1> &com_state, Eigen::Matrix<double, 3, 1> next_body_vel, double t_stance, double time) {
@@ -98,7 +101,7 @@ void Leg::update_foot_trajectory(Eigen::Matrix<double, 13, 1> &com_state, Eigen:
     
     update_foot_pos_body_frame(com_state);
     
-    double step_height_world = 0.15;
+    double step_height_world = 0.2 + 0.3 + 0.2;
     double step_height_body = (H_world_body * (Eigen::Matrix<double, 4, 1>() << 0, 0, step_height_world, 1).finished())(2, 0);
 
     lift_off_pos_mutex.lock();
@@ -109,15 +112,19 @@ void Leg::update_foot_trajectory(Eigen::Matrix<double, 13, 1> &com_state, Eigen:
 
     foot_trajectory = get_swing_trajectory(lift_off_pos,
         (Eigen::Matrix<double, 3, 1>() << (lift_off_pos(0, 0) - foot_pos_desired_body_frame(0, 0)) / 2, (lift_off_pos(1, 0) - foot_pos_desired_body_frame(1, 0)) / 2, step_height_body).finished(), foot_pos_desired_body_frame, 
-        lift_off_vel, -next_body_vel,
+        -lift_off_vel, -next_body_vel,
         t_stance);
-    
-    trajectory_start_time_mutex.lock();
-    trajectory_start_time = time;
-    trajectory_start_time_mutex.unlock();
+
+    // TEMPORARY: Use 0 velocities for current and target for debugging, use above version for real testing when walking etc.
+        // foot_trajectory = get_swing_trajectory(lift_off_pos,
+        //     (Eigen::Matrix<double, 3, 1>() << (lift_off_pos(0, 0) - foot_pos_desired_body_frame(0, 0)) / 2, (lift_off_pos(1, 0) - foot_pos_desired_body_frame(1, 0)) / 2, step_height_body).finished(), foot_pos_desired_body_frame, 
+        //     lift_off_vel, -next_body_vel,
+        //     t_stance);
     
     std::stringstream temp;
     temp << "lift_off_pos: " << lift_off_pos(0, 0) << "," << lift_off_pos(1, 0) << "," << lift_off_pos(2, 0)
+                << "\nnext_body_vel: " << next_body_vel(0, 0) << "," << next_body_vel(1, 0) << "," << next_body_vel(2, 0)
+                << "\nnext_foot_pos_world_desired: " << next_foot_pos_world_desired(0, 0) << "," << next_foot_pos_world_desired(1, 0) << "," << next_foot_pos_world_desired(2, 0)
                 << "\nfoot_pos_world: " << foot_pos_world_desired(0, 0) << "," << foot_pos_world_desired(1, 0) << "," << foot_pos_world_desired(2, 0)
                 << "\ntarget_foot_pos_body: " << foot_pos_desired_body_frame(0, 0) << "," << foot_pos_desired_body_frame(1, 0) << "," << foot_pos_desired_body_frame(2, 0) 
                 << "\ntarget_foot_pos_world: " << next_foot_pos_world_desired(0, 0) << "," << next_foot_pos_world_desired(1, 0) << "," << next_foot_pos_world_desired(2, 0);

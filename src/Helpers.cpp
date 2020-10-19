@@ -37,6 +37,7 @@ unsigned long long factorial(long n) {
 }
 
 //TODO: Make trajectory matrix length dynamic, it is currently 1 second long, assuming 1ms time steps
+// First three columns are position in XYZ, last three columns are velocities in XYZ
 Eigen::Matrix<double, 334, 6> get_swing_trajectory(const Eigen::Matrix<double, 3, 1> initial_pos, const Eigen::Matrix<double, 3, 1> middle_pos, const Eigen::Matrix<double, 3, 1> target_pos, 
                                                     const Eigen::Matrix<double, 3, 1> initial_vel, const Eigen::Matrix<double, 3, 1> target_vel, const double duration) {
     Eigen::Matrix<double, 334, 6> trajectory;
@@ -50,9 +51,9 @@ Eigen::Matrix<double, 334, 6> get_swing_trajectory(const Eigen::Matrix<double, 3
 
         int index = 0;
         
-        for(double t = 0.0; t < duration; t += 1/334.0) {
-            trajectory(index, i*2+0) = a * pow(t, 4) + b * pow(t, 3) + c * pow(t, 2) + d * t + e;
-            trajectory(index, i*2+1) = 4 * a * pow(t, 3) + 3 * b * pow(t, 2) + 2 * c * t + d;
+        for(double t = 0.0; t < duration; t += duration/334.0) {
+            trajectory(index, i+0) = a * pow(t, 4) + b * pow(t, 3) + c * pow(t, 2) + d * t + e;
+            trajectory(index, i+3) = 4 * a * pow(t, 3) + 3 * b * pow(t, 2) + 2 * c * t + d;
             ++index;
         }
     }

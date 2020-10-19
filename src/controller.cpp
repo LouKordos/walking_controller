@@ -61,7 +61,7 @@ double f_max_z = 1200; // Max contact Force in Z direction for MPC constraint, l
 static const double m_value = 30.0; // Torso (and eventually leg) mass in kg
 
 const int contact_swap_interval = 10; // Interval at which the contact swaps from one foot to the other in Samples
-double t_stance = contact_swap_interval * dt; // Duration that the foot will be in stance phase
+const double t_stance = contact_swap_interval * dt; // Duration that the foot will be in stance phase
 
 static Eigen::Matrix<double, n, 1> x_t = (Eigen::Matrix<double, n, 1>() << 0., 0., 0., 0, 0, 0.8, 0, 0, 0, 0, 0, 0, -9.81).finished();
 static Eigen::Matrix<double, m, 1> u_t = (Eigen::Matrix<double, m, 1>() << 0, 0, m_value*9.81 / 2, 0, 0, m_value*9.81/2).finished();
@@ -212,12 +212,12 @@ void calculate_left_leg_torques() {
     socklen_t len;
 
     ofstream data_file;
-    data_file.open(".././plot_data/" + filename + "_left.csv");
+    data_file.open("../.././plot_data/" + filename + "_left.csv");
     data_file << "t,"
                 << "theta1,theta2,theta3,theta4,theta5,theta1_dot,theta2_dot,theta3_dot,theta4_dot,theta5_dot,"
                 << "tau_1,tau_2,tau_3,tau_4,tau_5,"
                 << "foot_pos_x,foot_pos_y,foot_pos_z,"
-                << "foot_pos_x_desired,foot_pos_y_desired,foot_pos_z_desired"
+                << "foot_pos_x_desired,foot_pos_y_desired,foot_pos_z_desired,"
                 << "foot_vel_x,foot_vel_y,foot_vel_z,"
                 << "foot_vel_x_desired,foot_vel_y_desired,foot_vel_z_desired" << std::endl; // Add header to csv file
     data_file.close();
@@ -306,39 +306,42 @@ void calculate_left_leg_torques() {
         }
 
         // If swing, leg trajectory should be followed, if not, foot is in contact with the ground and MPC forces should be converted into torques and applied
-        if(left_leg->swing_phase) {
-            left_leg->pos_desired << 0, 0, 0.1*sin(16*get_time()) - 0.95, 0, 0;
-            left_leg->vel_desired << 0, 0, 1.6*cos(16*get_time()), 0, 0;
-            left_leg->accel_desired << 0, 0, -25.6*sin(16*get_time());
+        if(/*left_leg->swing_phase*/ true) {
+            
+            // left_leg->pos_desired << 0, 0, 0.1*sin(16*get_time()) - 0.95, 0, 0;
+            // left_leg->vel_desired << 0, 0, 1.6*cos(16*get_time()), 0, 0;
+            // left_leg->accel_desired << 0, 0, -25.6*sin(16*get_time());
 
             // left_leg->pos_desired << 0, 0, -1, 0, 0;
             // left_leg->vel_desired << 0, 0, 0, 0, 0;
             // left_leg->accel_desired << 0, 0, 0;
-
+            
             //TODO: Maybe rework to only use q and q_dot
             left_leg->update();
 
             // std::cout << "q: " << left_leg->q << std::endl;
             // std::cout << "q_dot: " << left_leg->q_dot << std::endl;
-     
-            // left_leg->trajectory_start_time_mutex.lock();
-            // double current_trajectory_time = get_time() - left_leg->trajectory_start_time;
-            // left_leg->trajectory_start_time_mutex.unlock();
-
-            // left_leg->foot_trajectory_mutex.lock();
-            // int traj_index = current_trajectory_time / (1.0 / 334.0);
-            // constrain_int(traj_index, 0, 334 - 1);
-            // left_leg->pos_desired << left_leg->foot_trajectory(traj_index, 0) + left_leg->hip_offset_x, left_leg->foot_trajectory(traj_index, 2), left_leg->foot_trajectory(traj_index, 4), 0, 0;
-            // left_leg->vel_desired << left_leg->foot_trajectory(traj_index, 1), left_leg->foot_trajectory(traj_index, 3), left_leg->foot_trajectory(traj_index, 5), 0, 0;
             
-            // stringstream temp;
-            // temp /*<< "traj_index: " << traj_index*/
-            //      << "\nfoot_pos_desired: " << left_leg->pos_desired(0, 0) << "," << left_leg->pos_desired(1, 0) << "," << left_leg->pos_desired(2, 0)
-            //      << "\nfoot_pos_actual: " << left_leg->foot_pos(0, 0) << "," << left_leg->foot_pos(1, 0) << "," << left_leg->foot_pos(2, 0);
+            left_leg->trajectory_start_time_mutex.lock();
+            double current_trajectory_time = get_time() - left_leg->trajectory_start_time;
+            left_leg->trajectory_start_time_mutex.unlock();
 
-            // print_threadsafe(temp.str(), "left_leg_torque_thread", INFO);
+            left_leg->foot_trajectory_mutex.lock();
+            int traj_index = current_trajectory_time / (t_stance / 334.0);
+            constrain_int(traj_index, 0, 334 - 1);
 
-            // left_leg->foot_trajectory_mutex.unlock();
+            left_leg->pos_desired << (left_leg->H_hip_body.inverse() * (Eigen::Matrix<double, 4, 1>() << left_leg->foot_trajectory.block<1,3>(traj_index, 0).transpose(), 1).finished()).block<3, 1>(0, 0), 0, 0;
+            // left_leg->pos_desired << left_leg->foot_trajectory(traj_index, 0) + left_leg->hip_offset_x, left_leg->foot_trajectory(traj_index, 2), left_leg->foot_trajectory(traj_index, 4), 0, 0;
+            left_leg->vel_desired << left_leg->foot_trajectory.block<1, 3>(traj_index, 3).transpose(), 0, 0;
+            
+            stringstream temp;
+            temp << "traj_index: " << traj_index << ", current_traj_time: " << current_trajectory_time
+                 << "\nfoot_pos_desired: " << left_leg->pos_desired(0, 0) << "," << left_leg->pos_desired(1, 0) << "," << left_leg->pos_desired(2, 0)
+                 << "\nfoot_pos_actual: " << left_leg->foot_pos(0, 0) << "," << left_leg->foot_pos(1, 0) << "," << left_leg->foot_pos(2, 0);
+            
+            print_threadsafe(temp.str(), "left_leg_torque_thread", INFO);
+
+            left_leg->foot_trajectory_mutex.unlock();
 
             left_leg->update_torque_setpoint();
 
@@ -354,7 +357,7 @@ void calculate_left_leg_torques() {
                 */
                 
                 ofstream data_file;
-                data_file.open(".././plot_data/" + filename + "_left.csv", ios::app); // Open csv file in append mode
+                data_file.open("../.././plot_data/" + filename + "_left.csv", ios::app); // Open csv file in append mode
                 data_file << get_time() // Write plot values to csv file
                             << "," << theta1 << "," << theta2 << "," << theta3 << "," << theta4 << "," << theta5
                             << "," << theta1_dot << "," << theta2_dot << "," << theta3_dot << "," << theta4_dot << "," << theta5_dot
@@ -469,12 +472,12 @@ void calculate_right_leg_torques() {
     socklen_t len;
 
     ofstream data_file;
-    data_file.open(".././plot_data/" + filename + "_right.csv");
+    data_file.open("../.././plot_data/" + filename + "_right.csv");
     data_file << "t,"
                 << "theta1,theta2,theta3,theta4,theta5,theta1_dot,theta2_dot,theta3_dot,theta4_dot,theta5_dot,"
                 << "tau_1,tau_2,tau_3,tau_4,tau_5,"
                 << "foot_pos_x,foot_pos_y,foot_pos_z,"
-                << "foot_pos_x_desired,foot_pos_y_desired,foot_pos_z_desired"
+                << "foot_pos_x_desired,foot_pos_y_desired,foot_pos_z_desired,"
                 << "foot_vel_x,foot_vel_y,foot_vel_z,"
                 << "foot_vel_x_desired,foot_vel_y_desired,foot_vel_z_desired" << std::endl; // Add header to csv file
     data_file.close();
@@ -563,39 +566,42 @@ void calculate_right_leg_torques() {
         }
 
         // If swing, leg trajectory should be followed, if not, foot is in contact with the ground and MPC forces should be converted into torques and applied
-        if(right_leg->swing_phase) {
-            right_leg->pos_desired << 0, 0, 0.1*sin(16*get_time()) - 0.95, 0, 0;
-            right_leg->vel_desired << 0, 0, 1.6*cos(16*get_time()), 0, 0;
-            right_leg->accel_desired << 0, 0, -25.6*sin(16*get_time());
+        if(/*right_leg->swing_phase*/ true) {
+            
+            // right_leg->pos_desired << 0, 0, 0.1*sin(16*get_time()) - 0.95, 0, 0;
+            // right_leg->vel_desired << 0, 0, 1.6*cos(16*get_time()), 0, 0;
+            // right_leg->accel_desired << 0, 0, -25.6*sin(16*get_time());
 
             // right_leg->pos_desired << 0, 0, -1, 0, 0;
             // right_leg->vel_desired << 0, 0, 0, 0, 0;
             // right_leg->accel_desired << 0, 0, 0;
-
+            
             //TODO: Maybe rework to only use q and q_dot
             right_leg->update();
 
             // std::cout << "q: " << right_leg->q << std::endl;
             // std::cout << "q_dot: " << right_leg->q_dot << std::endl;
-     
-            // right_leg->trajectory_start_time_mutex.lock();
-            // double current_trajectory_time = get_time() - right_leg->trajectory_start_time;
-            // right_leg->trajectory_start_time_mutex.unlock();
-
-            // right_leg->foot_trajectory_mutex.lock();
-            // int traj_index = current_trajectory_time / (1.0 / 334.0);
-            // constrain_int(traj_index, 0, 334 - 1);
-            // right_leg->pos_desired << right_leg->foot_trajectory(traj_index, 0) + right_leg->hip_offset_x, right_leg->foot_trajectory(traj_index, 2), right_leg->foot_trajectory(traj_index, 4), 0, 0;
-            // right_leg->vel_desired << right_leg->foot_trajectory(traj_index, 1), right_leg->foot_trajectory(traj_index, 3), right_leg->foot_trajectory(traj_index, 5), 0, 0;
             
-            // stringstream temp;
-            // temp /*<< "traj_index: " << traj_index*/
-            //      << "\nfoot_pos_desired: " << right_leg->pos_desired(0, 0) << "," << right_leg->pos_desired(1, 0) << "," << right_leg->pos_desired(2, 0)
-            //      << "\nfoot_pos_actual: " << right_leg->foot_pos(0, 0) << "," << right_leg->foot_pos(1, 0) << "," << right_leg->foot_pos(2, 0);
+            right_leg->trajectory_start_time_mutex.lock();
+            double current_trajectory_time = get_time() - right_leg->trajectory_start_time;
+            right_leg->trajectory_start_time_mutex.unlock();
 
-            // print_threadsafe(temp.str(), "right_leg_torque_thread", INFO);
+            right_leg->foot_trajectory_mutex.lock();
+            int traj_index = current_trajectory_time / (t_stance / 334.0);
+            constrain_int(traj_index, 0, 334 - 1);
 
-            // right_leg->foot_trajectory_mutex.unlock();
+            right_leg->pos_desired << (right_leg->H_hip_body.inverse() * (Eigen::Matrix<double, 4, 1>() << right_leg->foot_trajectory.block<1,3>(traj_index, 0).transpose(), 1).finished()).block<3, 1>(0, 0), 0, 0;
+            // right_leg->pos_desired << right_leg->foot_trajectory(traj_index, 0) + right_leg->hip_offset_x, right_leg->foot_trajectory(traj_index, 2), right_leg->foot_trajectory(traj_index, 4), 0, 0;
+            right_leg->vel_desired << right_leg->foot_trajectory.block<1, 3>(traj_index, 3).transpose(), 0, 0;
+            
+            stringstream temp;
+            temp << "traj_index: " << traj_index << ", current_traj_time: " << current_trajectory_time
+                 << "\nfoot_pos_desired: " << right_leg->pos_desired(0, 0) << "," << right_leg->pos_desired(1, 0) << "," << right_leg->pos_desired(2, 0)
+                 << "\nfoot_pos_actual: " << right_leg->foot_pos(0, 0) << "," << right_leg->foot_pos(1, 0) << "," << right_leg->foot_pos(2, 0);
+            
+            print_threadsafe(temp.str(), "right_leg_torque_thread", INFO);
+
+            right_leg->foot_trajectory_mutex.unlock();
 
             right_leg->update_torque_setpoint();
 
@@ -611,14 +617,14 @@ void calculate_right_leg_torques() {
                 */
                 
                 ofstream data_file;
-                data_file.open(".././plot_data/" + filename + "_right.csv", ios::app); // Open csv file in append mode
+                data_file.open("../.././plot_data/" + filename + "_right.csv", ios::app); // Open csv file in append mode
                 data_file << get_time() // Write plot values to csv file
                             << "," << theta1 << "," << theta2 << "," << theta3 << "," << theta4 << "," << theta5
                             << "," << theta1_dot << "," << theta2_dot << "," << theta3_dot << "," << theta4_dot << "," << theta5_dot
-                            << "," << right_leg->tau_setpoint(0, 0) << "," << right_leg->tau_setpoint(1) << "," << right_leg->tau_setpoint(2) << "," << right_leg->tau_setpoint(3) << "," << right_leg->tau_setpoint(4)
-                            << "," << right_leg->foot_pos(0, 0) << "," << right_leg->foot_pos(1) << "," << right_leg->foot_pos(2)
+                            << "," << right_leg->tau_setpoint(0) << "," << right_leg->tau_setpoint(1) << "," << right_leg->tau_setpoint(2) << "," << right_leg->tau_setpoint(3) << "," << right_leg->tau_setpoint(4)
+                            << "," << right_leg->foot_pos(0) << "," << right_leg->foot_pos(1) << "," << right_leg->foot_pos(2)
                             << "," << right_leg->pos_desired(0, 0) << "," << right_leg->pos_desired(1, 0) << "," << right_leg->pos_desired(2, 0)
-                            << "," << right_leg->foot_vel(0, 0) << "," << right_leg->foot_vel(1) << "," << right_leg->foot_vel(2)
+                            << "," << right_leg->foot_vel(0) << "," << right_leg->foot_vel(1) << "," << right_leg->foot_vel(2)
                             << "," << right_leg->vel_desired(0, 0) << "," << right_leg->vel_desired(1, 0) << "," << right_leg->vel_desired(2, 0) << std::endl;
                     
                 data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
@@ -797,7 +803,7 @@ int main()
 
     left_leg->t_stance_remainder = right_leg->t_stance_remainder = t_stance;
     // Find largest index in plot_data and use the next one as file name for log files
-    std::string path = "/home/loukas/Documents/cpp/walking_controller/plot_data/";
+    std::string path = "../.././plot_data/";
     DIR *dir;
     struct dirent *ent;
     if ((dir = opendir (path.c_str())) != NULL) {
@@ -825,8 +831,8 @@ int main()
 
     left_leg->foot_pos_world_desired << -0.15, 0, 0.6;
     right_leg->foot_pos_world_desired << 0.15, 0, 0.6;
-    bool alternate_contacts = false;
-    left_leg->swing_phase = right_leg->swing_phase = true;
+    bool alternate_contacts = true;
+    // left_leg->swing_phase = right_leg->swing_phase = true;
 
     // auto start_test = high_resolution_clock::now();
 
@@ -838,7 +844,7 @@ int main()
     // std::cout << duration_cast<microseconds>(end_test - start_test).count() << std::endl;
 
     // ofstream traj_log_file;
-    // traj_log_file.open(".././plot_data/traj_log_test.csv");
+    // traj_log_file.open("../.././plot_data/traj_log_test.csv");
     // for(int row = 0; row < 1000; ++row) {
     //     for(int col = 0; col < 3; ++col) {
     //         traj_log_file << traj(row, col*2+0) << "," << traj(row, col*2+1) << ",";
@@ -850,7 +856,7 @@ int main()
     // Bind functions to threads
     // left_leg_state_thread = std::thread(std::bind(update_left_leg_state));
     left_leg_torque_thread = std::thread(std::bind(calculate_left_leg_torques));
-    right_leg_torque_thread = std::thread(std::bind(calculate_right_leg_torques));
+    // right_leg_torque_thread = std::thread(std::bind(calculate_right_leg_torques));
     //mpc_thread = std::thread(std::bind(run_mpc));
     time_thread = std::thread(std::bind(update_time));
 
@@ -1031,7 +1037,7 @@ int main()
 
     // Log file
     ofstream data_file;
-    data_file.open(".././plot_data/mpc_log.csv");
+    data_file.open("../.././plot_data/mpc_log.csv");
     data_file << "t,phi,theta,psi,pos_x,pos_y,pos_z,omega_x,omega_y,omega_z,vel_x,vel_y,vel_z,g,f_x_left,f_y_left,f_z_left,f_x_right,f_y_right,f_z_right,r_x_left,r_y_left,r_z_left,r_x_right,r_y_right,r_z_right,theta_delay_compensation,full_iteration_time,phi_delay_compensation" << std::endl; // Add header to csv file
     data_file.close();
 
@@ -1042,9 +1048,9 @@ int main()
         auto start = high_resolution_clock::now();
         auto start_total = high_resolution_clock::now();
 
-        if (vel_y_desired < 0.2) {
-            vel_y_desired += 0.01;
-        }
+        // if (vel_y_desired < 0.2) {
+        //     vel_y_desired += 0.01;
+        // }
 
         // if(omega_z_desired < 0.8) {
         //     omega_z_desired += 0.02;
@@ -1078,9 +1084,9 @@ int main()
             }
         }
 
-        stringstream temp;
-        temp << "x_t:" << x_t(0, 0) << "," << x_t(1, 0) << "," << x_t(2, 0) << "," << x_t(3, 0) << "," << x_t(4, 0) << "," << x_t(5, 0) << "," << x_t(6, 0) << "," << x_t(7, 0) << "," << x_t(8, 0) << "," << x_t(9, 0) << "," << x_t(10, 0) << "," << x_t(11, 0) << "," << x_t(12, 0);
-        print_threadsafe(temp.str(), "mpc_thread", INFO, true);
+        // stringstream temp;
+        // temp << "x_t:" << x_t(0, 0) << "," << x_t(1, 0) << "," << x_t(2, 0) << "," << x_t(3, 0) << "," << x_t(4, 0) << "," << x_t(5, 0) << "," << x_t(6, 0) << "," << x_t(7, 0) << "," << x_t(8, 0) << "," << x_t(9, 0) << "," << x_t(10, 0) << "," << x_t(11, 0) << "," << x_t(12, 0);
+        // print_threadsafe(temp.str(), "mpc_thread", INFO, true);
 
         // Alternate contacts if contact_swap_interval iterations have passed
         if (total_iterations % contact_swap_interval == 0 && alternate_contacts) {
@@ -1093,6 +1099,10 @@ int main()
             left_leg->lift_off_vel_mutex.lock();
             right_leg->lift_off_vel_mutex.lock();
 
+            left_leg->trajectory_start_time_mutex.lock();
+            left_leg->trajectory_start_time = get_time();
+            left_leg->trajectory_start_time_mutex.unlock();
+
             if(!left_leg->swing_phase) { // Left foot will now be in swing phase so we need to save lift off position for swing trajectory planning
                 left_leg->t_stance_remainder = t_stance;
 
@@ -1102,8 +1112,7 @@ int main()
 
                 left_leg->update_foot_pos_body_frame(x_temp);
                 left_leg->foot_pos_body_frame_mutex.lock();
-                // TEMPORARY FOR TESTING WITH LEGS HANGING:
-                left_leg->lift_off_pos = left_leg->foot_pos_body_frame + (Eigen::Matrix<double, 3, 1>() << 0, 0, 0.2).finished();
+                left_leg->lift_off_pos = left_leg->foot_pos_body_frame;
                 left_leg->foot_pos_body_frame_mutex.unlock();
 
                 left_leg->lift_off_vel = x_temp.block<3, 1>(9, 0);
@@ -1265,7 +1274,7 @@ int main()
 
         double pos_x_desired_temp = pos_x_desired;
         double pos_y_desired_temp = pos_y_desired;
-        double vel_y_desired_temp = vel_y_desired - 0.01;
+        double vel_y_desired_temp = vel_y_desired;// - 0.01;
         double pos_z_desired_temp = pos_z_desired;
 
         double phi_desired_temp = phi_desired;
@@ -1276,9 +1285,9 @@ int main()
         //Update reference trajectory
 
         for(int i = 0; i < N; ++i) {
-            if (vel_y_desired_temp < 0.2) {
-                vel_y_desired_temp += 0.02;
-            }
+            // if (vel_y_desired_temp < 0.2) {
+            //     vel_y_desired_temp += 0.02;
+            // }
 
             // if (omega_z_desired_temp < 0.8) {
             //     omega_z_desired_temp += 0.02;
@@ -1443,8 +1452,8 @@ int main()
                     right_leg->next_foot_pos_world_desired = right_leg->foot_pos_world_discretization;
 
                     //TEMPORARY FOR TESTING WITH LEGS HANGING:
-                    left_leg->next_foot_pos_world_desired(2, 0) += 0.5;
-                    right_leg->next_foot_pos_world_desired(2, 0) += 0.5; 
+                    left_leg->next_foot_pos_world_desired(2, 0) = 0.5;
+                    right_leg->next_foot_pos_world_desired(2, 0) = 0.5;
                     /////////////////////////////////////////
 
                     next_body_vel = (Eigen::Matrix<double, 3, 1>() << vel_x_t, vel_y_t, vel_z_t).finished();
@@ -1634,7 +1643,7 @@ int main()
 
         // Log data to csv file
         ofstream data_file;
-        data_file.open(".././plot_data/mpc_log.csv", ios::app); // Open csv file in append mode
+        data_file.open("../.././plot_data/mpc_log.csv", ios::app); // Open csv file in append mode
         data_file << total_iterations * dt << "," << x_t(0, 0) << "," << x_t(1, 0) << "," << x_t(2, 0) << "," << x_t(3, 0) << "," << x_t(4, 0) << "," << x_t(5, 0) << "," << x_t(6, 0) << "," << x_t(7, 0) << "," << x_t(8, 0) << "," << x_t(9, 0) << "," << x_t(10, 0) << "," << x_t(11, 0) << "," << x_t(12, 0)
                 << "," << u_t(0) << "," << u_t(1) << "," << u_t(2) << "," << u_t(3) << "," << u_t(4) << "," << u_t(5) 
                 << "," << r_x_left << "," << r_y_left << "," << r_z_left << "," << r_x_right << "," << r_y_right << "," << r_z_right << "," << P_param(1, 0) << "," << full_iteration_duration / 1000.0 << "," << solution_variables(n, 0) << std::endl; // Zero at the end has to be replace with predicted delay compensation state!
