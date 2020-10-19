@@ -3,8 +3,24 @@
     "tasks": [
       {
         "type": "shell",
-        "label": "Build using CMake",
-        "command": "make -j",
+        "label": "Build Release using CMake",
+        "command": "cmake .. -DCMAKE_BUILD_TYPE=Release; make -j",
+        "args": [],
+        "options": {
+          "cwd": "${workspaceFolder}/src/build"
+        },
+        "problemMatcher": [
+          "$gcc"
+        ],
+        "group": {
+          "kind": "build",
+          "isDefault": true
+        }
+      },
+      {
+        "type": "shell",
+        "label": "Build Debug using CMake",
+        "command": "cmake .. -DCMAKE_BUILD_TYPE=Debug; make -j",
         "args": [],
         "options": {
           "cwd": "${workspaceFolder}/src/build"
