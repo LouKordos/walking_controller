@@ -37,7 +37,7 @@
 
 #include "leg_config.hpp"
 #include "model_functions.hpp"
-// #include "../model_functions_old.cpp"
+#include "CartesianTrajectory.hpp"
 #include "Helpers.hpp"
 #include "log_type.hpp"
 
@@ -111,7 +111,7 @@ class Leg {
     public: Eigen::Matrix<double, 3, 3> h; // Damping ratio matrix
     public: Eigen::Matrix<double, 3, 1> omega_desired; // Desired natural frequency of the leg
 
-    public: Eigen::Matrix<double, 334, 6> foot_trajectory;
+    public: CartesianTrajectory foot_trajectory;
     
     public: Eigen::Matrix<double, 4, 4> H_hip_body; // Matrix for transforming a point from hip frame to body frame. Dependent on hip_offset values passed as arguments to Leg constructor
 

@@ -26,6 +26,8 @@ Leg::Leg(double hip_offset_x_param, double hip_offset_y_param, double hip_offset
                                                     0, 1, 0, 0,
                                                     0, 0, 1, Leg::hip_offset_z, // Torso Z - Hip Z in Gazebo SDF
                                                     0, 0, 0, 1).finished();
+
+    foot_trajectory = CartesianTrajectory();
 }
 
 long long iteration_counter = 0;
@@ -113,7 +115,7 @@ void Leg::update_foot_trajectory(Eigen::Matrix<double, 13, 1> &com_state, Eigen:
     Eigen::Matrix<double, 3, 1> middle_pos = (lift_off_pos + foot_pos_desired_body_frame) / 2;
     middle_pos(2, 0) = step_height_body;
 
-    foot_trajectory = get_swing_trajectory(lift_off_pos, middle_pos, foot_pos_desired_body_frame, -lift_off_vel, -next_body_vel, t_stance);
+    foot_trajectory.update(lift_off_pos, middle_pos, foot_pos_desired_body_frame, -lift_off_vel, -next_body_vel, t_stance);
 
     // TEMPORARY: Use 0 velocities for current and target for debugging, use above version for real testing when walking etc.
         // foot_trajectory = get_swing_trajectory(lift_off_pos,

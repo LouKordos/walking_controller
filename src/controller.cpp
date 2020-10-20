@@ -330,13 +330,12 @@ void calculate_left_leg_torques() {
             int traj_index = current_trajectory_time / (t_stance / 334.0);
             constrain_int(traj_index, 0, 334 - 1);
 
-            left_leg->pos_desired << (left_leg->H_hip_body.inverse() * (Eigen::Matrix<double, 4, 1>() << left_leg->foot_trajectory.block<1,3>(traj_index, 0).transpose(), 1).finished()).block<3, 1>(0, 0), 0, 0;
-            // left_leg->pos_desired << left_leg->foot_trajectory(traj_index, 0) + left_leg->hip_offset_x, left_leg->foot_trajectory(traj_index, 2), left_leg->foot_trajectory(traj_index, 4), 0, 0;
-            left_leg->vel_desired << left_leg->foot_trajectory.block<1, 3>(traj_index, 3).transpose(), 0, 0;
+            left_leg->pos_desired << (left_leg->H_hip_body.inverse() * (Eigen::Matrix<double, 4, 1>() << left_leg->foot_trajectory.get_trajectory_pos(current_trajectory_time), 1).finished()).block<3, 1>(0, 0), 0, 0;
+            left_leg->vel_desired << left_leg->foot_trajectory.get_trajectory_vel(current_trajectory_time), 0, 0;
+            left_leg->accel_desired << left_leg->foot_trajectory.get_trajectory_accel(current_trajectory_time);
             
             stringstream temp;
             temp << "traj_index: " << traj_index << ", current_traj_time: " << current_trajectory_time
-                 << "\nraw traj values: " << left_leg->foot_trajectory.block<1,3>(traj_index, 0)
                  << "\nfoot_pos_desired: " << left_leg->pos_desired(0, 0) << "," << left_leg->pos_desired(1, 0) << "," << left_leg->pos_desired(2, 0)
                  << "\nfoot_pos_actual: " << left_leg->foot_pos(0, 0) << "," << left_leg->foot_pos(1, 0) << "," << left_leg->foot_pos(2, 0);
 
@@ -591,15 +590,15 @@ void calculate_right_leg_torques() {
             int traj_index = current_trajectory_time / (t_stance / 334.0);
             constrain_int(traj_index, 0, 334 - 1);
 
-            right_leg->pos_desired << (right_leg->H_hip_body.inverse() * (Eigen::Matrix<double, 4, 1>() << right_leg->foot_trajectory.block<1,3>(traj_index, 0).transpose(), 1).finished()).block<3, 1>(0, 0), 0, 0;
-            // right_leg->pos_desired << right_leg->foot_trajectory(traj_index, 0) + right_leg->hip_offset_x, right_leg->foot_trajectory(traj_index, 2), right_leg->foot_trajectory(traj_index, 4), 0, 0;
-            right_leg->vel_desired << right_leg->foot_trajectory.block<1, 3>(traj_index, 3).transpose(), 0, 0;
+            right_leg->pos_desired << (right_leg->H_hip_body.inverse() * (Eigen::Matrix<double, 4, 1>() << right_leg->foot_trajectory.get_trajectory_pos(get_time()), 1).finished()).block<3, 1>(0, 0), 0, 0;
+            right_leg->vel_desired << right_leg->foot_trajectory.get_trajectory_vel(get_time()), 0, 0;
+            right_leg->accel_desired << right_leg->foot_trajectory.get_trajectory_accel(get_time());
             
             stringstream temp;
             temp << "traj_index: " << traj_index << ", current_traj_time: " << current_trajectory_time
                  << "\nfoot_pos_desired: " << right_leg->pos_desired(0, 0) << "," << right_leg->pos_desired(1, 0) << "," << right_leg->pos_desired(2, 0)
                  << "\nfoot_pos_actual: " << right_leg->foot_pos(0, 0) << "," << right_leg->foot_pos(1, 0) << "," << right_leg->foot_pos(2, 0);
-            
+
             print_threadsafe(temp.str(), "right_leg_torque_thread", INFO);
 
             right_leg->foot_trajectory_mutex.unlock();
