@@ -110,10 +110,11 @@ void Leg::update_foot_trajectory(Eigen::Matrix<double, 13, 1> &com_state, Eigen:
     
     foot_pos_desired_body_frame_mutex.lock();
 
-    foot_trajectory = get_swing_trajectory(lift_off_pos,
-        (Eigen::Matrix<double, 3, 1>() << (lift_off_pos(0, 0) - foot_pos_desired_body_frame(0, 0)) / 2, (lift_off_pos(1, 0) - foot_pos_desired_body_frame(1, 0)) / 2, step_height_body).finished(), foot_pos_desired_body_frame, 
-        -lift_off_vel, -next_body_vel,
-        t_stance);
+    // Eigen::Matrix<double, 3, 1> middle_pos = (Eigen::Matrix<double, 3, 1>() << (lift_off_pos(0, 0) - foot_pos_desired_body_frame(0, 0)) / 2, (lift_off_pos(1, 0) - foot_pos_desired_body_frame(1, 0)) / 2, step_height_body).finished();
+    Eigen::Matrix<double, 3, 1> middle_pos = (lift_off_pos + foot_pos_desired_body_frame) / 2;
+    middle_pos(2, 0) = step_height_body;
+
+    foot_trajectory = get_swing_trajectory(lift_off_pos, middle_pos, foot_pos_desired_body_frame, -lift_off_vel, -next_body_vel, t_stance);
 
     // TEMPORARY: Use 0 velocities for current and target for debugging, use above version for real testing when walking etc.
         // foot_trajectory = get_swing_trajectory(lift_off_pos,
