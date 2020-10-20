@@ -1084,7 +1084,9 @@ int main()
             right_leg->lift_off_vel_mutex.lock();
 
             left_leg->trajectory_start_time_mutex.lock();
-            left_leg->trajectory_start_time = get_time();
+            right_leg->trajectory_start_time_mutex.lock();
+            left_leg->trajectory_start_time = right_leg->trajectory_start_time = get_time();
+            right_leg->trajectory_start_time_mutex.lock();
             left_leg->trajectory_start_time_mutex.unlock();
 
             if(!left_leg->swing_phase) { // Left foot will now be in swing phase so we need to save lift off position for swing trajectory planning
