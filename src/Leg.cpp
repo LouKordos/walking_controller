@@ -12,8 +12,7 @@ Leg::Leg(double hip_offset_x_param, double hip_offset_y_param, double hip_offset
     vel_desired << 0, 0, 0, 0, 0; // Cartesian xyz + euler roll and pitch
     accel_desired << 0, 0, 0; // Cartesian xyz
 
-    foot_pos << 0, 0, -1.115, 0, 0;
-    foot_vel << 0, 0, 0, 0, 0;
+    update_foot_pos(theta1, theta2, theta3, theta4, theta5, phi, psi, foot_pos, config);
 
     Kp_orientation = 9;
     Kd_orientation = 0.15;
