@@ -336,9 +336,10 @@ void calculate_left_leg_torques() {
             
             stringstream temp;
             temp << "traj_index: " << traj_index << ", current_traj_time: " << current_trajectory_time
+                 << "\nraw traj values: " << left_leg->foot_trajectory.block<1,3>(traj_index, 0)
                  << "\nfoot_pos_desired: " << left_leg->pos_desired(0, 0) << "," << left_leg->pos_desired(1, 0) << "," << left_leg->pos_desired(2, 0)
                  << "\nfoot_pos_actual: " << left_leg->foot_pos(0, 0) << "," << left_leg->foot_pos(1, 0) << "," << left_leg->foot_pos(2, 0);
-            
+
             print_threadsafe(temp.str(), "left_leg_torque_thread", INFO);
 
             left_leg->foot_trajectory_mutex.unlock();
