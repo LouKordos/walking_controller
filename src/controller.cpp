@@ -77,6 +77,8 @@ std::thread time_thread;
 Leg *left_leg;
 Leg *right_leg;
 
+bool first_iteration_flag = false;
+
 //should be running at 1kHz but communication overhead is adding ~80µS, that's why it's reduced a bit
 static const double state_update_interval = 900.0; // Interval for fetching and parsing the leg state from gazebosim in microseconds
 static const double torque_calculation_interval = 900.0; // Interval for calculating and sending the torque setpoint to gazebosim in microseconds
@@ -224,6 +226,10 @@ void calculate_left_leg_torques() {
 
     bool time_switch = false; // used for running a two-phase trajectory, otherwise obsolete
 
+    while(first_iteration_flag) {
+
+    }
+
     while(true) {
         start = high_resolution_clock::now();
 
@@ -327,19 +333,17 @@ void calculate_left_leg_torques() {
             left_leg->trajectory_start_time_mutex.unlock();
 
             left_leg->foot_trajectory_mutex.lock();
-            int traj_index = current_trajectory_time / (t_stance / 334.0);
-            constrain_int(traj_index, 0, 334 - 1);
 
             left_leg->pos_desired << (left_leg->H_hip_body.inverse() * (Eigen::Matrix<double, 4, 1>() << left_leg->foot_trajectory.get_trajectory_pos(current_trajectory_time), 1).finished()).block<3, 1>(0, 0), 0, 0;
             left_leg->vel_desired << left_leg->foot_trajectory.get_trajectory_vel(current_trajectory_time), 0, 0;
             left_leg->accel_desired << left_leg->foot_trajectory.get_trajectory_accel(current_trajectory_time);
             
-            stringstream temp;
-            temp << "traj_index: " << traj_index << ", current_traj_time: " << current_trajectory_time
-                 << "\nfoot_pos_desired: " << left_leg->pos_desired(0, 0) << "," << left_leg->pos_desired(1, 0) << "," << left_leg->pos_desired(2, 0)
-                 << "\nfoot_pos_actual: " << left_leg->foot_pos(0, 0) << "," << left_leg->foot_pos(1, 0) << "," << left_leg->foot_pos(2, 0);
+            // stringstream temp;
+            // temp << "current_traj_time: " << current_trajectory_time
+            //      << "\nfoot_pos_desired: " << left_leg->pos_desired(0, 0) << "," << left_leg->pos_desired(1, 0) << "," << left_leg->pos_desired(2, 0)
+            //      << "\nfoot_pos_actual: " << left_leg->foot_pos(0, 0) << "," << left_leg->foot_pos(1, 0) << "," << left_leg->foot_pos(2, 0);
 
-            print_threadsafe(temp.str(), "left_leg_torque_thread", INFO);
+            // print_threadsafe(temp.str(), "left_leg_torque_thread", INFO);
 
             left_leg->foot_trajectory_mutex.unlock();
 
@@ -477,6 +481,10 @@ void calculate_right_leg_torques() {
 
     bool time_switch = false; // used for running a two-phase trajectory, otherwise obsolete
 
+    while(first_iteration_flag) {
+        
+    }
+
     while(true) {
         start = high_resolution_clock::now();
 
@@ -580,15 +588,15 @@ void calculate_right_leg_torques() {
             right_leg->trajectory_start_time_mutex.unlock();
 
             right_leg->foot_trajectory_mutex.lock();
-            int traj_index = current_trajectory_time / (t_stance / 334.0);
-            constrain_int(traj_index, 0, 334 - 1);
+
+            // std::cout << right_leg->foot_trajectory.get_trajectory_pos(current_trajectory_time) << std::endl;
 
             right_leg->pos_desired << (right_leg->H_hip_body.inverse() * (Eigen::Matrix<double, 4, 1>() << right_leg->foot_trajectory.get_trajectory_pos(current_trajectory_time), 1).finished()).block<3, 1>(0, 0), 0, 0;
             right_leg->vel_desired << right_leg->foot_trajectory.get_trajectory_vel(current_trajectory_time), 0, 0;
             right_leg->accel_desired << right_leg->foot_trajectory.get_trajectory_accel(current_trajectory_time);
             
             stringstream temp;
-            temp << "traj_index: " << traj_index << ", current_traj_time: " << current_trajectory_time
+            temp << "current_traj_time: " << current_trajectory_time
                  << "\nfoot_pos_desired: " << right_leg->pos_desired(0, 0) << "," << right_leg->pos_desired(1, 0) << "," << right_leg->pos_desired(2, 0)
                  << "\nfoot_pos_actual: " << right_leg->foot_pos(0, 0) << "," << right_leg->foot_pos(1, 0) << "," << right_leg->foot_pos(2, 0);
 
@@ -842,7 +850,8 @@ int main()
     // Bind functions to threads
     // left_leg_state_thread = std::thread(std::bind(update_left_leg_state));
     left_leg_torque_thread = std::thread(std::bind(calculate_left_leg_torques));
-    // right_leg_torque_thread = std::thread(std::bind(calculate_right_leg_torques));
+    right_leg_torque_thread = std::thread(std::bind(calculate_right_leg_torques));
+    
     //mpc_thread = std::thread(std::bind(run_mpc));
     time_thread = std::thread(std::bind(update_time));
 
@@ -1086,7 +1095,7 @@ int main()
             left_leg->trajectory_start_time_mutex.lock();
             right_leg->trajectory_start_time_mutex.lock();
             left_leg->trajectory_start_time = right_leg->trajectory_start_time = get_time();
-            right_leg->trajectory_start_time_mutex.lock();
+            right_leg->trajectory_start_time_mutex.unlock();
             left_leg->trajectory_start_time_mutex.unlock();
 
             if(!left_leg->swing_phase) { // Left foot will now be in swing phase so we need to save lift off position for swing trajectory planning
@@ -1522,7 +1531,9 @@ int main()
         x_mutex.unlock();
         next_body_vel_mutex.lock();
         left_leg->update_foot_trajectory(x_temp, next_body_vel, t_stance, get_time());
+        right_leg->update_foot_trajectory(x_temp, next_body_vel, t_stance, get_time());
         next_body_vel_mutex.unlock();
+
 
         // Copy all values from Eigen Matrices to casadi DM because that's what casadi accepts for the solver
         size_t rows_P_param = P_param.rows();
@@ -1598,7 +1609,11 @@ int main()
         
         U_t.block<m*(N-1), 1>(0, 0) = solution_variables.block<m*(N-1), 1>(n*(N+1) + m, 0);
         U_t.block<m, 1>(m*(N-1), 0) = solution_variables.block<m, 1>(n*(N+1)+m*(N-1), 0);
-
+        
+        if(total_iterations == 0) {
+            first_iteration_flag = true;
+        }
+        
         ++total_iterations;
 
         end = high_resolution_clock::now();
@@ -1609,7 +1624,7 @@ int main()
         temp.str(std::string());
         temp << "Solver preparation in MPC thread duration: " << duration_before + duration_after << "µS";
         log(temp.str(), INFO);
-
+        
         auto end_total = high_resolution_clock::now();
         double full_iteration_duration = duration_cast<microseconds> (end_total - start_total).count();
 
