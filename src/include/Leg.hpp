@@ -66,12 +66,11 @@ class Leg {
     public: double theta5dot;
 
     public: double trajectory_start_time;
-    public: double t_stance_remainder;
 
     // Boolean representing foot state. True means foot is in the air, i.e. no contact, false means foot is in stance phase. i.e. contact
     public: bool swing_phase;
     
-    public: std::mutex q_mutex, q_dot_mutex, foot_pos_world_desired_mutex, lift_off_pos_mutex, lift_off_vel_mutex, t_stance_remainder_mutex, foot_pos_body_frame_mutex,
+    public: std::mutex q_mutex, q_dot_mutex, foot_pos_world_desired_mutex, lift_off_pos_mutex, lift_off_vel_mutex, foot_pos_body_frame_mutex,
                         trajectory_start_time_mutex, foot_trajectory_mutex, next_foot_pos_world_desired_mutex, foot_pos_desired_body_frame_mutex;
     
     public: Eigen::Matrix<double, 5, 1> q; // Leg angle vector / Model state

@@ -403,12 +403,6 @@ void calculate_left_leg_torques() {
         }
 
         iteration_counter++; // Increment iteration counter
-        left_leg->t_stance_remainder_mutex.lock();
-        left_leg->t_stance_remainder -= 1/torque_calculation_interval;
-        constrain(left_leg->t_stance_remainder, 0, 10000);
-
-        // std::cout << "t_stance_remainder_left: " << t_stance_remainder_left << std::endl;
-        left_leg->t_stance_remainder_mutex.unlock();
 
         end = high_resolution_clock::now();
 
@@ -428,7 +422,6 @@ void calculate_left_leg_torques() {
         // clock_nanosleep(CLOCK_REALTIME, 0, &deadline, NULL);
     }
 }
-
 void calculate_right_leg_torques() {
 
     // High resolution clocks used for measuring execution time of loop iteration.
@@ -590,9 +583,9 @@ void calculate_right_leg_torques() {
             int traj_index = current_trajectory_time / (t_stance / 334.0);
             constrain_int(traj_index, 0, 334 - 1);
 
-            right_leg->pos_desired << (right_leg->H_hip_body.inverse() * (Eigen::Matrix<double, 4, 1>() << right_leg->foot_trajectory.get_trajectory_pos(get_time()), 1).finished()).block<3, 1>(0, 0), 0, 0;
-            right_leg->vel_desired << right_leg->foot_trajectory.get_trajectory_vel(get_time()), 0, 0;
-            right_leg->accel_desired << right_leg->foot_trajectory.get_trajectory_accel(get_time());
+            right_leg->pos_desired << (right_leg->H_hip_body.inverse() * (Eigen::Matrix<double, 4, 1>() << right_leg->foot_trajectory.get_trajectory_pos(current_trajectory_time), 1).finished()).block<3, 1>(0, 0), 0, 0;
+            right_leg->vel_desired << right_leg->foot_trajectory.get_trajectory_vel(current_trajectory_time), 0, 0;
+            right_leg->accel_desired << right_leg->foot_trajectory.get_trajectory_accel(current_trajectory_time);
             
             stringstream temp;
             temp << "traj_index: " << traj_index << ", current_traj_time: " << current_trajectory_time
@@ -663,12 +656,6 @@ void calculate_right_leg_torques() {
         }
 
         iteration_counter++; // Increment iteration counter
-        right_leg->t_stance_remainder_mutex.lock();
-        right_leg->t_stance_remainder -= 1/torque_calculation_interval;
-        constrain(right_leg->t_stance_remainder, 0, 10000);
-
-        // std::cout << "t_stance_remainder_right: " << t_stance_remainder_right << std::endl;
-        right_leg->t_stance_remainder_mutex.unlock();
 
         end = high_resolution_clock::now();
 
@@ -801,7 +788,6 @@ int main()
     left_leg = new Leg(-0.15, 0, -0.065);
     right_leg = new Leg(0.15, 0, -0.065);
 
-    left_leg->t_stance_remainder = right_leg->t_stance_remainder = t_stance;
     // Find largest index in plot_data and use the next one as file name for log files
     std::string path = "../.././plot_data/";
     DIR *dir;
@@ -1090,8 +1076,6 @@ int main()
 
         // Alternate contacts if contact_swap_interval iterations have passed
         if (total_iterations % contact_swap_interval == 0 && alternate_contacts) {
-            left_leg->t_stance_remainder_mutex.lock();
-            right_leg->t_stance_remainder_mutex.lock();
 
             // TODO: If I'm not missing anything, it should still work if reduced to only one variable, i.e. only lift_off_pos and lift_off_vel
             left_leg->lift_off_pos_mutex.lock();
@@ -1104,7 +1088,6 @@ int main()
             left_leg->trajectory_start_time_mutex.unlock();
 
             if(!left_leg->swing_phase) { // Left foot will now be in swing phase so we need to save lift off position for swing trajectory planning
-                left_leg->t_stance_remainder = t_stance;
 
                 x_mutex.lock();
                 Eigen::Matrix<double, n, 1> x_temp = x_t;
@@ -1118,7 +1101,6 @@ int main()
                 left_leg->lift_off_vel = x_temp.block<3, 1>(9, 0);
             }
             if(!right_leg->swing_phase) { // Right foot will now be in swing phase so we need to save lift off position for swing trajectory planning
-                right_leg->t_stance_remainder = t_stance;
 
                 x_mutex.lock();
                 Eigen::Matrix<double, n, 1> x_temp = x_t;
@@ -1139,10 +1121,6 @@ int main()
             
             left_leg->swing_phase = !left_leg->swing_phase;
             right_leg->swing_phase = !right_leg->swing_phase;
-            // t_stance_remainder_left = right_leg->t_stance_remainder = t_stance;
-            // std::cout << t_stance_remainder_left << std::endl;
-            left_leg->t_stance_remainder_mutex.unlock();
-            right_leg->t_stance_remainder_mutex.unlock();
         }
 
         // Temporary variable for "simulating" future contacts
