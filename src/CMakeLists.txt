@@ -14,7 +14,7 @@ include_directories("/usr/local/include/")
 
 set_source_files_properties(model_functions.cpp PROPERTIES COMPILE_FLAGS -O3)
 
-add_executable(controller controller.cpp model_functions.cpp Leg.cpp Helpers.cpp CartesianTrajectory.cpp PolyCoefficients4D.cpp)
+add_executable(controller controller.cpp model_functions.cpp Leg.cpp Helpers.cpp CartesianTrajectory.cpp PolyCoefficients4D.cpp SimState.cpp)
 
 add_executable(trajectory_test trajectory_test.cpp CartesianTrajectory.cpp PolyCoefficients4D.cpp)
 add_executable(nlp_test nlp_test.cpp)
@@ -22,7 +22,7 @@ add_executable(eigen_test eigen_test.cpp)
 #add_executable(header_test header_test.cpp)
 
 #target_link_libraries (controller ${CMAKE_THREAD_LIBS_INIT} casadi model_functions helpers leg)
-target_link_libraries(controller ${CMAKE_THREAD_LIBS_INIT} casadi   )
+target_link_libraries(controller ${CMAKE_THREAD_LIBS_INIT} casadi)
 target_link_libraries (nlp_test ${CMAKE_THREAD_LIBS_INIT} casadi)
 
 message("CMAKE_CXX_FLAGS_DEBUG is ${CMAKE_CXX_FLAGS_DEBUG}")

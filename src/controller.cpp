@@ -1,27 +1,27 @@
-#include <iostream>
-#include <dirent.h>
+#include <iostream> // << operator and such
+#include <dirent.h> // File system operations
 #include <typeinfo>
 
-#include <chrono>
-#include <thread>
+#include <chrono> // Execution time measurement
+#include <thread> // Threads
 #include <functional>
 
-#include <fstream>
+#include <fstream> // Logging
+ 
+#include "nameof.h" // Name of variables
 
-#include "nameof.h"
+#include <string> // std strings
+#include <random> // Random numbers
+#include <ctime> // Time for timestamps
+#include <cmath> // math functions (trigonometry and such)
 
-#include <string>
-#include <random>
-#include <ctime>
-#include <cmath>
+#include <stdlib.h> 
+#include <mutex> // mutexes for working with threads
 
-#include <stdlib.h>
-#include <mutex>
+#include <boost/algorithm/string.hpp> // Split strings
+#include <boost/date_time/posix_time/posix_time.hpp> // Also for timestamps
 
-#include <boost/algorithm/string.hpp>
-#include <boost/date_time/posix_time/posix_time.hpp>
-
-#include <unistd.h>
+#include <unistd.h> // POSIX base
 
 #include <errno.h> //It defines macros for reporting and retrieving error conditions through error codes
 #include <time.h> //contains various functions for manipulating date and time
@@ -31,14 +31,15 @@
 #include <sys/socket.h> // for socket creation
 #include <netinet/in.h> //contains constants and structures needed for internet domain addresses
 
-#include <iomanip>
-#include "casadi/casadi.hpp"
-#include <eigen3/unsupported/Eigen/MatrixFunctions>
+#include <iomanip> //   
+#include "casadi/casadi.hpp" // casADi for solving NLP's
+#include <eigen3/unsupported/Eigen/MatrixFunctions> // Officially unsupported matrix operations like matrix exponential
 
 using namespace casadi;
 
-#include "include/Leg.hpp"
-#include "include/Helpers.hpp"
+#include "include/Leg.hpp" // Leg object
+#include "include/Helpers.hpp" // Various Helper functions
+#include "include/SimState.hpp" // Gazebo Simulation State, mainly to synchronize Pause State of controller and Gazebo in order to avoid force "windup"
 
 using namespace std;
 using namespace std::chrono;
@@ -46,6 +47,7 @@ using namespace std::chrono;
 static const int left_leg_torque_port = 4200;
 static const int right_leg_torque_port = 4201;
 static const int mpc_port = 4801;
+static const int sim_state_port = 4202;
 
 static const int udp_buffer_size = 4096; // Buffer size for receiving leg state from gazebosim
 
@@ -58,7 +60,7 @@ static const int N = 20; // MPC Prediction Horizon Length in Number of Samples
 double f_min_z = 0; // Min contact Force in Z direction for MPC constraint, limits X and Y forces through friction constraint
 double f_max_z = 1200; // Max contact Force in Z direction for MPC constraint, limits X and Y forces through friction constraint
 
-static const double m_value = 30.0; // Torso (and eventually leg) mass in kg
+static const double m_value = 30.0; // Combined robot mass in kg
 
 const int contact_swap_interval = 10; // Interval at which the contact swaps from one foot to the other in Samples
 const double t_stance = contact_swap_interval * dt; // Duration that the foot will be in stance phase
@@ -76,6 +78,8 @@ std::thread time_thread;
 
 Leg *left_leg;
 Leg *right_leg;
+
+SimState *simState;
 
 bool first_iteration_flag = false;
 
@@ -95,6 +99,9 @@ int largest_index = 0;
 std::string filename;
 
 double get_time() {
+
+    return simState->getSimTime();
+
     time_mutex.lock();
     double t = current_time; // Store in temporary variable because return would exit the function, but the mutex still has to be unlocked
     time_mutex.unlock();
@@ -107,7 +114,7 @@ void update_time() {
     high_resolution_clock::time_point start = high_resolution_clock::now();
     high_resolution_clock::time_point end = high_resolution_clock::now();
 
-    double duration = 0.0f; // Duration double for storing execution duration
+    double duration = 0.0; // Duration double for storing execution duration
 
     struct timespec deadline; // timespec struct for storing time that execution thread should sleep for
 
@@ -150,7 +157,7 @@ void update_left_leg_state() {
     high_resolution_clock::time_point start = high_resolution_clock::now();
     high_resolution_clock::time_point end = high_resolution_clock::now();
 
-    double duration = 0.0f; // Duration double for storing execution duration
+    double duration = 0.0; // Duration double for storing execution duration
 
     struct timespec deadline; // timespec struct for storing time that execution thread should sleep for
 
@@ -177,7 +184,7 @@ void calculate_left_leg_torques() {
     high_resolution_clock::time_point start = high_resolution_clock::now();
     high_resolution_clock::time_point end = high_resolution_clock::now();
 
-    double duration = 0.0f; // Duration double for storing execution duration
+    double duration = 0.0; // Duration double for storing execution duration
 
     struct timespec deadline; // timespec struct for storing time that execution thread should sleep for
 
@@ -199,7 +206,7 @@ void calculate_left_leg_torques() {
     memset(&cliaddr, 0, sizeof(cliaddr)); 
 
     // Filling server information 
-    servaddr.sin_family    = AF_INET; // IPv4 
+    servaddr.sin_family = AF_INET; // IPv4 
     servaddr.sin_addr.s_addr = inet_addr("127.0.0.1"); 
     servaddr.sin_port = htons(left_leg_torque_port); 
     
@@ -226,7 +233,7 @@ void calculate_left_leg_torques() {
 
     bool time_switch = false; // used for running a two-phase trajectory, otherwise obsolete
 
-    while(first_iteration_flag) {
+    while(first_iteration_flag) { // Only start running Leg code after first MPC iteration to prevent problems with non-updated values
 
     }
 
@@ -312,7 +319,7 @@ void calculate_left_leg_torques() {
         }
 
         // If swing, leg trajectory should be followed, if not, foot is in contact with the ground and MPC forces should be converted into torques and applied
-        if(/*left_leg->swing_phase*/ true) {
+        if(left_leg->swing_phase) {
             
             // left_leg->pos_desired << 0, 0, 0.1*sin(16*get_time()) - 0.95, 0, 0;
             // left_leg->vel_desired << 0, 0, 1.6*cos(16*get_time()), 0, 0;
@@ -381,30 +388,21 @@ void calculate_left_leg_torques() {
             // temp.str(std::string());
             // temp << left_leg->tau_setpoint;
             // print_threadsafe(temp.str(), "tau_setpoint_left_leg in stance phase", INFO);
-
-            stringstream s;
-            s << left_leg->tau_setpoint(0, 0) << "|" << left_leg->tau_setpoint(1, 0) << "|" << left_leg->tau_setpoint(2, 0) << "|" << left_leg->tau_setpoint(3, 0) << "|" << left_leg->tau_setpoint(4, 0); // Write torque setpoints to stringstream
-            sendto(sockfd, (const char *)s.str().c_str(), strlen(s.str().c_str()), 
-                MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len); // Send the torque setpoint string to the simulation
         }
         else {
             Eigen::Matrix<double, 5, 1> tau_setpoint = Eigen::ArrayXXd::Zero(5, 1); // get_joint_torques(u.block<3,1>(0, 0), theta1, theta2, theta3, theta4, theta5, x(0, 0), x(1, 0), x(2, 0));
             
-            for(int i = 0; i < 5; ++i) {
-                left_leg->tau_setpoint(i, 0) = 0;
-            }
-
             left_leg->tau_setpoint = tau_setpoint;
-
-            stringstream s;
-            s << tau_setpoint(0, 0) << "|" << tau_setpoint(1, 0) << "|" << tau_setpoint(2, 0) << "|" << tau_setpoint(3, 0) << "|" << tau_setpoint(4, 0);
-            sendto(sockfd, (const char *)s.str().c_str(), strlen(s.str().c_str()), 
-                MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len); // Send the torque setpoint string to the simulation
-            
-            // stringstream temp;
-            // temp << "tau_setpoint_left_leg: " << s.str();
-            // print_threadsafe(temp.str(), "left_leg_torque_thread", INFO);
         }
+
+        // if(simState->isPaused()) {
+        //     left_leg->tau_setpoint = Eigen::ArrayXd::Zero(5, 1);
+        // }
+
+        stringstream s;
+        s << left_leg->tau_setpoint(0, 0) << "|" << left_leg->tau_setpoint(1, 0) << "|" << left_leg->tau_setpoint(2, 0) << "|" << left_leg->tau_setpoint(3, 0) << "|" << left_leg->tau_setpoint(4, 0); // Write torque setpoints to stringstream
+        sendto(sockfd, (const char *)s.str().c_str(), strlen(s.str().c_str()), 
+                MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len); // Send the torque setpoint string to the simulation
 
         iteration_counter++; // Increment iteration counter
 
@@ -412,7 +410,6 @@ void calculate_left_leg_torques() {
 
         // This timed loop approach calculates the execution time of the current iteration,
         // then calculates the remaining time for the loop to run at the desired frequency and waits this duration.
-
         duration = duration_cast<microseconds>(end - start).count();
 
         stringstream temp;
@@ -426,13 +423,14 @@ void calculate_left_leg_torques() {
         // clock_nanosleep(CLOCK_REALTIME, 0, &deadline, NULL);
     }
 }
+
 void calculate_right_leg_torques() {
 
     // High resolution clocks used for measuring execution time of loop iteration.
     high_resolution_clock::time_point start = high_resolution_clock::now();
     high_resolution_clock::time_point end = high_resolution_clock::now();
 
-    double duration = 0.0f; // Duration double for storing execution duration
+    double duration = 0.0; // Duration double for storing execution duration
 
     struct timespec deadline; // timespec struct for storing time that execution thread should sleep for
 
@@ -454,7 +452,7 @@ void calculate_right_leg_torques() {
     memset(&cliaddr, 0, sizeof(cliaddr)); 
 
     // Filling server information 
-    servaddr.sin_family    = AF_INET; // IPv4 
+    servaddr.sin_family = AF_INET; // IPv4 
     servaddr.sin_addr.s_addr = inet_addr("127.0.0.1"); 
     servaddr.sin_port = htons(right_leg_torque_port); 
     
@@ -481,8 +479,8 @@ void calculate_right_leg_torques() {
 
     bool time_switch = false; // used for running a two-phase trajectory, otherwise obsolete
 
-    while(first_iteration_flag) {
-        
+    while(first_iteration_flag) { // Only start running Leg code after first MPC iteration to prevent problems with non-updated values
+
     }
 
     while(true) {
@@ -567,7 +565,7 @@ void calculate_right_leg_torques() {
         }
 
         // If swing, leg trajectory should be followed, if not, foot is in contact with the ground and MPC forces should be converted into torques and applied
-        if(/*right_leg->swing_phase*/ true) {
+        if(right_leg->swing_phase) {
             
             // right_leg->pos_desired << 0, 0, 0.1*sin(16*get_time()) - 0.95, 0, 0;
             // right_leg->vel_desired << 0, 0, 1.6*cos(16*get_time()), 0, 0;
@@ -589,18 +587,16 @@ void calculate_right_leg_torques() {
 
             right_leg->foot_trajectory_mutex.lock();
 
-            // std::cout << right_leg->foot_trajectory.get_trajectory_pos(current_trajectory_time) << std::endl;
-
             right_leg->pos_desired << (right_leg->H_hip_body.inverse() * (Eigen::Matrix<double, 4, 1>() << right_leg->foot_trajectory.get_trajectory_pos(current_trajectory_time), 1).finished()).block<3, 1>(0, 0), 0, 0;
             right_leg->vel_desired << right_leg->foot_trajectory.get_trajectory_vel(current_trajectory_time), 0, 0;
             right_leg->accel_desired << right_leg->foot_trajectory.get_trajectory_accel(current_trajectory_time);
             
-            stringstream temp;
-            temp << "current_traj_time: " << current_trajectory_time
-                 << "\nfoot_pos_desired: " << right_leg->pos_desired(0, 0) << "," << right_leg->pos_desired(1, 0) << "," << right_leg->pos_desired(2, 0)
-                 << "\nfoot_pos_actual: " << right_leg->foot_pos(0, 0) << "," << right_leg->foot_pos(1, 0) << "," << right_leg->foot_pos(2, 0);
+            // stringstream temp;
+            // temp << "current_traj_time: " << current_trajectory_time
+            //      << "\nfoot_pos_desired: " << right_leg->pos_desired(0, 0) << "," << right_leg->pos_desired(1, 0) << "," << right_leg->pos_desired(2, 0)
+            //      << "\nfoot_pos_actual: " << right_leg->foot_pos(0, 0) << "," << right_leg->foot_pos(1, 0) << "," << right_leg->foot_pos(2, 0);
 
-            print_threadsafe(temp.str(), "right_leg_torque_thread", INFO);
+            // print_threadsafe(temp.str(), "right_leg_torque_thread", INFO);
 
             right_leg->foot_trajectory_mutex.unlock();
 
@@ -638,30 +634,21 @@ void calculate_right_leg_torques() {
             // temp.str(std::string());
             // temp << right_leg->tau_setpoint;
             // print_threadsafe(temp.str(), "tau_setpoint_right_leg in stance phase", INFO);
-
-            stringstream s;
-            s << right_leg->tau_setpoint(0, 0) << "|" << right_leg->tau_setpoint(1, 0) << "|" << right_leg->tau_setpoint(2, 0) << "|" << right_leg->tau_setpoint(3, 0) << "|" << right_leg->tau_setpoint(4, 0); // Write torque setpoints to stringstream
-            sendto(sockfd, (const char *)s.str().c_str(), strlen(s.str().c_str()), 
-                MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len); // Send the torque setpoint string to the simulation
         }
         else {
             Eigen::Matrix<double, 5, 1> tau_setpoint = Eigen::ArrayXXd::Zero(5, 1); // get_joint_torques(u.block<3,1>(0, 0), theta1, theta2, theta3, theta4, theta5, x(0, 0), x(1, 0), x(2, 0));
             
-            for(int i = 0; i < 5; ++i) {
-                right_leg->tau_setpoint(i, 0) = 0;
-            }
-
             right_leg->tau_setpoint = tau_setpoint;
-
-            stringstream s;
-            s << tau_setpoint(0, 0) << "|" << tau_setpoint(1, 0) << "|" << tau_setpoint(2, 0) << "|" << tau_setpoint(3, 0) << "|" << tau_setpoint(4, 0);
-            sendto(sockfd, (const char *)s.str().c_str(), strlen(s.str().c_str()), 
-                MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len); // Send the torque setpoint string to the simulation
-            
-            // stringstream temp;
-            // temp << "tau_setpoint_right_leg: " << s.str();
-            // print_threadsafe(temp.str(), "right_leg_torque_thread", INFO);
         }
+
+        // if(simState->isPaused()) {
+        //     right_leg->tau_setpoint = Eigen::ArrayXd::Zero(5, 1);
+        // }
+
+        stringstream s;
+        s << right_leg->tau_setpoint(0, 0) << "|" << right_leg->tau_setpoint(1, 0) << "|" << right_leg->tau_setpoint(2, 0) << "|" << right_leg->tau_setpoint(3, 0) << "|" << right_leg->tau_setpoint(4, 0); // Write torque setpoints to stringstream
+        sendto(sockfd, (const char *)s.str().c_str(), strlen(s.str().c_str()), 
+                MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len); // Send the torque setpoint string to the simulation
 
         iteration_counter++; // Increment iteration counter
 
@@ -669,7 +656,6 @@ void calculate_right_leg_torques() {
 
         // This timed loop approach calculates the execution time of the current iteration,
         // then calculates the remaining time for the loop to run at the desired frequency and waits this duration.
-
         duration = duration_cast<microseconds>(end - start).count();
 
         stringstream temp;
@@ -684,7 +670,7 @@ void calculate_right_leg_torques() {
     }
 }
 
-static const Eigen::MatrixXd I_body = (Eigen::Matrix<double, 3, 3>() << 0.15, 0.0, 0.0,
+static const Eigen::MatrixXd I_body = (Eigen::Matrix<double, 3, 3>() << 0.5, 0.0, 0.0,
                                                                         0.0, 0.62288, 0.0,
                                                                         0.0, 0.0, 0.68).finished(); // Inertia around CoM, meaning in Body Frame
 
@@ -778,10 +764,10 @@ Eigen::Matrix<double, n, 1> step_discrete_model(Eigen::Matrix<double, n, 1> x, E
 }
 
 void run_mpc() {
-    // Setting up UDP server socket...
+
 }
 
-int main()
+int main(int _argc, char **_argv)
 {
     log("--------------------------------", INFO);
     log("--------------------------------", INFO);
@@ -795,6 +781,8 @@ int main()
     // A point expressed in hip frame (i.e. [0, 0 0]) will obviously be at negative Z in a frame that is located above the hip frame, meaning you need negative Z displacement in the transformation matrix.
     left_leg = new Leg(-0.15, 0, -0.065);
     right_leg = new Leg(0.15, 0, -0.065);
+
+    simState = new SimState(sim_state_port);
 
     // Find largest index in plot_data and use the next one as file name for log files
     std::string path = "../.././plot_data/";
@@ -826,6 +814,7 @@ int main()
     left_leg->foot_pos_world_desired << -0.15, 0, 0.6;
     right_leg->foot_pos_world_desired << 0.15, 0, 0.6;
     bool alternate_contacts = true;
+    left_leg->swing_phase = true;
     // left_leg->swing_phase = right_leg->swing_phase = true;
 
     // auto start_test = high_resolution_clock::now();
@@ -987,7 +976,7 @@ int main()
     // Desired state values
     double pos_x_desired = 0;
     double pos_y_desired = 0.0;
-    double pos_z_desired = 1.48;
+    double pos_z_desired = 1.1;
 
     double vel_x_desired = 0.0;
     double vel_y_desired = 0.0;
@@ -1043,6 +1032,11 @@ int main()
         auto start = high_resolution_clock::now();
         auto start_total = high_resolution_clock::now();
 
+        // while(simState->isPaused() && total_iterations > 3) {
+        //     sendto(sockfd, (const char *)"0|0|0|0|0|0|0|0|0|0|0|0", strlen("0|0|0|0|0|0|0|0|0|0|0|0"), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
+        //     sleep(dt);
+        // }
+
         // if (vel_y_desired < 0.2) {
         //     vel_y_desired += 0.01;
         // }
@@ -1084,7 +1078,7 @@ int main()
         // print_threadsafe(temp.str(), "mpc_thread", INFO, true);
 
         // Alternate contacts if contact_swap_interval iterations have passed
-        if (total_iterations % contact_swap_interval == 0 && alternate_contacts) {
+        if (total_iterations % contact_swap_interval == 0 && alternate_contacts && !simState->isPaused()) { // If it's paused, the gait should obviously not change either
 
             // TODO: If I'm not missing anything, it should still work if reduced to only one variable, i.e. only lift_off_pos and lift_off_vel
             left_leg->lift_off_pos_mutex.lock();
@@ -1441,8 +1435,8 @@ int main()
                     right_leg->next_foot_pos_world_desired = right_leg->foot_pos_world_discretization;
 
                     //TEMPORARY FOR TESTING WITH LEGS HANGING:
-                    left_leg->next_foot_pos_world_desired(2, 0) = 0.5;
-                    right_leg->next_foot_pos_world_desired(2, 0) = 0.5;
+                    // left_leg->next_foot_pos_world_desired(2, 0) = 0.4;
+                    // right_leg->next_foot_pos_world_desired(2, 0) = 0.4;
                     /////////////////////////////////////////
 
                     next_body_vel = (Eigen::Matrix<double, 3, 1>() << vel_x_t, vel_y_t, vel_z_t).finished();
@@ -1534,7 +1528,6 @@ int main()
         right_leg->update_foot_trajectory(x_temp, next_body_vel, t_stance, get_time());
         next_body_vel_mutex.unlock();
 
-
         // Copy all values from Eigen Matrices to casadi DM because that's what casadi accepts for the solver
         size_t rows_P_param = P_param.rows();
         size_t cols_P_param = P_param.cols();
@@ -1586,7 +1579,11 @@ int main()
                 solution_variables(n*(N+1)+3),
                 solution_variables(n*(N+1)+4),
                 solution_variables(n*(N+1)+5);
-        
+
+        if(simState->isPaused()) {
+            u_t = Eigen::ArrayXd::Zero(6, 1);
+        }
+
         // Send optimal control over UDP, along with logging info for the gazebo plugin
         stringstream s;
         s << u_t(0, 0) << "|" << u_t(1, 0) << "|" << u_t(2, 0) << "|" << u_t(3, 0) << "|" << u_t(4, 0) << "|" << u_t(5, 0) << "|" << r_x_left << "|" << r_y_left << "|" << r_z_left << "|" << r_x_right << "|" << r_y_right << "|" << r_z_right << "|" << P_param(1, 0) << "|420|" << solution_variables(0, 0); // Write torque setpoints to stringstream
@@ -1613,8 +1610,10 @@ int main()
         if(total_iterations == 0) {
             first_iteration_flag = true;
         }
-        
-        ++total_iterations;
+
+        if(!simState->isPaused()) {
+            ++total_iterations;
+        }
 
         end = high_resolution_clock::now();
         double duration_after = duration_cast<microseconds> (end - start).count();
