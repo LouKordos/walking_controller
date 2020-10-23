@@ -14,7 +14,7 @@ include_directories("/usr/local/include/")
 
 set_source_files_properties(model_functions.cpp PROPERTIES COMPILE_FLAGS -O3)
 
-add_executable(controller controller.cpp model_functions.cpp Leg.cpp Helpers.cpp CartesianTrajectory.cpp PolyCoefficients4D.cpp SimState.cpp)
+add_executable(controller controller.cpp model_functions.cpp Leg.cpp Helpers.cpp CartesianTrajectory.cpp PolyCoefficients4D.cpp SimState.cpp ContactState.cpp)
 
 add_executable(trajectory_test trajectory_test.cpp CartesianTrajectory.cpp PolyCoefficients4D.cpp)
 add_executable(nlp_test nlp_test.cpp)

@@ -48,6 +48,8 @@ static const int left_leg_torque_port = 4200;
 static const int right_leg_torque_port = 4201;
 static const int mpc_port = 4801;
 static const int sim_state_port = 4202;
+static const int left_leg_contact_state_port = 4203;
+static const int right_leg_contact_state_port = 4204;
 
 static const int udp_buffer_size = 4096; // Buffer size for receiving leg state from gazebosim
 
@@ -390,14 +392,14 @@ void calculate_left_leg_torques() {
             // print_threadsafe(temp.str(), "tau_setpoint_left_leg in stance phase", INFO);
         }
         else {
-            Eigen::Matrix<double, 5, 1> tau_setpoint = Eigen::ArrayXXd::Zero(5, 1); // get_joint_torques(u.block<3,1>(0, 0), theta1, theta2, theta3, theta4, theta5, x(0, 0), x(1, 0), x(2, 0));
-            
-            left_leg->tau_setpoint = tau_setpoint;
+            // IMPORTANT AND DANGEROUS MISTAKE: WHEN COPYING LEFT_LEG CODE AND REPLACING ALL LEFT WITH RIGHT, INDEX IS NOT CHANGED AND LEFT LEG TORQUES WILL BE USED FOR BOTH LEGS
+            // left_leg->tau_setpoint = get_joint_torques(-u.block<3,1>(0, 0), left_leg->theta1, left_leg->theta2, left_leg->theta3, left_leg->theta4, left_leg->theta5, x(0, 0), x(1, 0), x(2, 0));
+            left_leg->tau_setpoint = get_joint_torques((Eigen::Matrix<double, 3, 1>() << 0, 0, u_t(2, 0)).finished(), left_leg->theta1, left_leg->theta2, left_leg->theta3, left_leg->theta4, left_leg->theta5, x(0, 0), x(1, 0), x(2, 0), left_leg->config);
         }
 
-        // if(simState->isPaused()) {
-        //     left_leg->tau_setpoint = Eigen::ArrayXd::Zero(5, 1);
-        // }
+        if(simState->isPaused()) {
+            left_leg->tau_setpoint = Eigen::ArrayXd::Zero(5, 1);
+        }
 
         stringstream s;
         s << left_leg->tau_setpoint(0, 0) << "|" << left_leg->tau_setpoint(1, 0) << "|" << left_leg->tau_setpoint(2, 0) << "|" << left_leg->tau_setpoint(3, 0) << "|" << left_leg->tau_setpoint(4, 0); // Write torque setpoints to stringstream
@@ -636,14 +638,14 @@ void calculate_right_leg_torques() {
             // print_threadsafe(temp.str(), "tau_setpoint_right_leg in stance phase", INFO);
         }
         else {
-            Eigen::Matrix<double, 5, 1> tau_setpoint = Eigen::ArrayXXd::Zero(5, 1); // get_joint_torques(u.block<3,1>(0, 0), theta1, theta2, theta3, theta4, theta5, x(0, 0), x(1, 0), x(2, 0));
-            
-            right_leg->tau_setpoint = tau_setpoint;
+            // IMPORTANT AND DANGEROUS MISTAKE: WHEN COPYING LEFT_LEG CODE AND REPLACING ALL LEFT WITH RIGHT, INDEX IS NOT CHANGED AND LEFT LEG TORQUES WILL BE USED FOR BOTH LEGS
+            // right_leg->tau_setpoint = get_joint_torques(-u.block<3,1>(3, 0), right_leg->theta1, right_leg->theta2, right_leg->theta3, right_leg->theta4, right_leg->theta5, x(0, 0), x(1, 0), x(2, 0));
+            right_leg->tau_setpoint = get_joint_torques((Eigen::Matrix<double, 3, 1>() << 0, 0, u_t(5, 0)).finished(), right_leg->theta1, right_leg->theta2, right_leg->theta3, right_leg->theta4, right_leg->theta5, x(0, 0), x(1, 0), x(2, 0), right_leg->config);
         }
-
-        // if(simState->isPaused()) {
-        //     right_leg->tau_setpoint = Eigen::ArrayXd::Zero(5, 1);
-        // }
+        
+        if(simState->isPaused()) {
+            right_leg->tau_setpoint = Eigen::ArrayXd::Zero(5, 1);
+        }
 
         stringstream s;
         s << right_leg->tau_setpoint(0, 0) << "|" << right_leg->tau_setpoint(1, 0) << "|" << right_leg->tau_setpoint(2, 0) << "|" << right_leg->tau_setpoint(3, 0) << "|" << right_leg->tau_setpoint(4, 0); // Write torque setpoints to stringstream
@@ -779,8 +781,8 @@ int main(int _argc, char **_argv)
 
     // is 0.065 because it's the difference between torso COM height and Hip Actuator Center Height, negative because just think about it or just calculate an example value with negative and positive z displacement. 
     // A point expressed in hip frame (i.e. [0, 0 0]) will obviously be at negative Z in a frame that is located above the hip frame, meaning you need negative Z displacement in the transformation matrix.
-    left_leg = new Leg(-0.15, 0, -0.065);
-    right_leg = new Leg(0.15, 0, -0.065);
+    left_leg = new Leg(-0.15, 0, -0.065, left_leg_contact_state_port);
+    right_leg = new Leg(0.15, 0, -0.065, right_leg_contact_state_port);
 
     simState = new SimState(sim_state_port);
 

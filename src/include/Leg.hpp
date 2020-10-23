@@ -40,12 +40,13 @@
 #include "CartesianTrajectory.hpp"
 #include "Helpers.hpp"
 #include "log_type.hpp"
+#include "ContactState.hpp"
 
 using Eigen::MatrixXd;
 using namespace std;
 
 class Leg {
-    public: Leg(double hip_offset_x, double hip_offset_y, double hip_offset_z);
+    public: Leg(double hip_offset_x, double hip_offset_y, double hip_offset_z, int contact_state_port);
     
     public: long long iteration_counter;
 

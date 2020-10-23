@@ -1,6 +1,6 @@
 #include "include/Leg.hpp"
 
-Leg::Leg(double hip_offset_x_param, double hip_offset_y_param, double hip_offset_z_param) {
+Leg::Leg(double hip_offset_x_param, double hip_offset_y_param, double hip_offset_z_param, int contact_state_port) {
     // Initiate damping ratio matrix, desired natural frequency, orientation gains as well as desired trajectory to avoid null pointer
     h << 0.6, 0, 0,
         0, 0.6, 0,
@@ -28,6 +28,8 @@ Leg::Leg(double hip_offset_x_param, double hip_offset_y_param, double hip_offset
                                                     0, 0, 0, 1).finished();
 
     foot_trajectory = CartesianTrajectory();
+    
+    // contactState = ContactState(contact_state_port);
 }
 
 long long iteration_counter = 0;
