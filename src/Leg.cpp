@@ -1,10 +1,10 @@
 #include "include/Leg.hpp"
 
-Leg::Leg(double hip_offset_x_param, double hip_offset_y_param, double hip_offset_z_param, int contact_state_port) {
+Leg::Leg(const double hip_offset_x, const double hip_offset_y, const double hip_offset_z, const int contact_state_port) : contactState(contact_state_port) {
     // Initiate damping ratio matrix, desired natural frequency, orientation gains as well as desired trajectory to avoid null pointer
     h << 0.6, 0, 0,
         0, 0.6, 0,
-        0, 0, 0.6;  
+        0, 0, 0.6;
     
     omega_desired << 10.0 * M_PI, 16.0 * M_PI, 10.0 * M_PI;
 
@@ -17,19 +17,17 @@ Leg::Leg(double hip_offset_x_param, double hip_offset_y_param, double hip_offset
     Kp_orientation = 9;
     Kd_orientation = 0.15;
 
-    hip_offset_x = hip_offset_x_param;
-    hip_offset_y = hip_offset_y_param;
-    hip_offset_z = hip_offset_z_param;
+    this->hip_offset_x = hip_offset_x;
+    this->hip_offset_y = hip_offset_y;
+    this->hip_offset_z = hip_offset_z;
 
     // Convert from hip to body frame, look at Leg Class Instantiation for explanation
-    H_hip_body = (Eigen::Matrix<double, 4, 4>() << 1, 0, 0, Leg::hip_offset_x,
-                                                    0, 1, 0, 0,
-                                                    0, 0, 1, Leg::hip_offset_z, // Torso Z - Hip Z in Gazebo SDF
+    H_hip_body = (Eigen::Matrix<double, 4, 4>() << 1, 0, 0, hip_offset_x,
+                                                    0, 1, 0, hip_offset_y,
+                                                    0, 0, 1, hip_offset_z, // Torso Z - Hip Z in Gazebo SDF
                                                     0, 0, 0, 1).finished();
 
     foot_trajectory = CartesianTrajectory();
-    
-    // contactState = ContactState(contact_state_port);
 }
 
 long long iteration_counter = 0;

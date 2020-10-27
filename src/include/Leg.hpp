@@ -112,6 +112,7 @@ class Leg {
     public: Eigen::Matrix<double, 3, 1> omega_desired; // Desired natural frequency of the leg
 
     public: CartesianTrajectory foot_trajectory;
+    public: ContactState contactState;
     
     public: Eigen::Matrix<double, 4, 4> H_hip_body; // Matrix for transforming a point from hip frame to body frame. Dependent on hip_offset values passed as arguments to Leg constructor
 
