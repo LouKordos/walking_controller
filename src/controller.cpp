@@ -358,31 +358,6 @@ void calculate_left_leg_torques() {
 
             left_leg->update_torque_setpoint();
 
-            if(iteration_counter % 1 == 0) {
-                /*
-                    << "t,"
-                    << "theta1,theta2,theta3,theta4,theta5,theta1_dot,theta2_dot,theta3_dot,theta4_dot,theta5_dot,"
-                    << "tau_1,tau_2,tau_3,tau_4,tau_5,"
-                    << "foot_pos_x,foot_pos_y,foot_pos_z,"
-                    << "foot_pos_x_desired,foot_pos_y_desired,foot_pos_z_desired"
-                    << "foot_vel_x,foot_vel_y,foot_vel_z,"
-                    << "foot_vel_x_desired,foot_vel_y_desired,foot_vel_z_desired" << std::endl;
-                */
-                
-                ofstream data_file;
-                data_file.open("../.././plot_data/" + filename + "_left.csv", ios::app); // Open csv file in append mode
-                data_file << get_time() // Write plot values to csv file
-                            << "," << theta1 << "," << theta2 << "," << theta3 << "," << theta4 << "," << theta5
-                            << "," << theta1_dot << "," << theta2_dot << "," << theta3_dot << "," << theta4_dot << "," << theta5_dot
-                            << "," << left_leg->tau_setpoint(0) << "," << left_leg->tau_setpoint(1) << "," << left_leg->tau_setpoint(2) << "," << left_leg->tau_setpoint(3) << "," << left_leg->tau_setpoint(4)
-                            << "," << left_leg->foot_pos(0) << "," << left_leg->foot_pos(1) << "," << left_leg->foot_pos(2)
-                            << "," << left_leg->pos_desired(0, 0) << "," << left_leg->pos_desired(1, 0) << "," << left_leg->pos_desired(2, 0)
-                            << "," << left_leg->foot_vel(0) << "," << left_leg->foot_vel(1) << "," << left_leg->foot_vel(2)
-                            << "," << left_leg->vel_desired(0, 0) << "," << left_leg->vel_desired(1, 0) << "," << left_leg->vel_desired(2, 0) << std::endl;
-                    
-                data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
-            }
-
             // for(int i = 0; i < 5; ++i) {
             //     left_leg->tau_setpoint(i, 0) = 0;
             // }
@@ -405,6 +380,31 @@ void calculate_left_leg_torques() {
         s << left_leg->tau_setpoint(0, 0) << "|" << left_leg->tau_setpoint(1, 0) << "|" << left_leg->tau_setpoint(2, 0) << "|" << left_leg->tau_setpoint(3, 0) << "|" << left_leg->tau_setpoint(4, 0); // Write torque setpoints to stringstream
         sendto(sockfd, (const char *)s.str().c_str(), strlen(s.str().c_str()), 
                 MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len); // Send the torque setpoint string to the simulation
+
+        if(iteration_counter % 1 == 0) {
+            /*
+                << "t,"
+                << "theta1,theta2,theta3,theta4,theta5,theta1_dot,theta2_dot,theta3_dot,theta4_dot,theta5_dot,"
+                << "tau_1,tau_2,tau_3,tau_4,tau_5,"
+                << "foot_pos_x,foot_pos_y,foot_pos_z,"
+                << "foot_pos_x_desired,foot_pos_y_desired,foot_pos_z_desired"
+                << "foot_vel_x,foot_vel_y,foot_vel_z,"
+                << "foot_vel_x_desired,foot_vel_y_desired,foot_vel_z_desired" << std::endl;
+            */
+            
+            ofstream data_file;
+            data_file.open("../.././plot_data/" + filename + "_left.csv", ios::app); // Open csv file in append mode
+            data_file << get_time() // Write plot values to csv file
+                        << "," << theta1 << "," << theta2 << "," << theta3 << "," << theta4 << "," << theta5
+                        << "," << theta1_dot << "," << theta2_dot << "," << theta3_dot << "," << theta4_dot << "," << theta5_dot
+                        << "," << left_leg->tau_setpoint(0) << "," << left_leg->tau_setpoint(1) << "," << left_leg->tau_setpoint(2) << "," << left_leg->tau_setpoint(3) << "," << left_leg->tau_setpoint(4)
+                        << "," << left_leg->foot_pos(0) << "," << left_leg->foot_pos(1) << "," << left_leg->foot_pos(2)
+                        << "," << left_leg->pos_desired(0, 0) << "," << left_leg->pos_desired(1, 0) << "," << left_leg->pos_desired(2, 0)
+                        << "," << left_leg->foot_vel(0) << "," << left_leg->foot_vel(1) << "," << left_leg->foot_vel(2)
+                        << "," << left_leg->vel_desired(0, 0) << "," << left_leg->vel_desired(1, 0) << "," << left_leg->vel_desired(2, 0) << std::endl;
+                
+            data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
+        }
 
         iteration_counter++; // Increment iteration counter
 
@@ -604,31 +604,6 @@ void calculate_right_leg_torques() {
 
             right_leg->update_torque_setpoint();
 
-            if(iteration_counter % 1 == 0) {
-                /*
-                    << "t,"
-                    << "theta1,theta2,theta3,theta4,theta5,theta1_dot,theta2_dot,theta3_dot,theta4_dot,theta5_dot,"
-                    << "tau_1,tau_2,tau_3,tau_4,tau_5,"
-                    << "foot_pos_x,foot_pos_y,foot_pos_z,"
-                    << "foot_pos_x_desired,foot_pos_y_desired,foot_pos_z_desired"
-                    << "foot_vel_x,foot_vel_y,foot_vel_z,"
-                    << "foot_vel_x_desired,foot_vel_y_desired,foot_vel_z_desired" << std::endl;
-                */
-                
-                ofstream data_file;
-                data_file.open("../.././plot_data/" + filename + "_right.csv", ios::app); // Open csv file in append mode
-                data_file << get_time() // Write plot values to csv file
-                            << "," << theta1 << "," << theta2 << "," << theta3 << "," << theta4 << "," << theta5
-                            << "," << theta1_dot << "," << theta2_dot << "," << theta3_dot << "," << theta4_dot << "," << theta5_dot
-                            << "," << right_leg->tau_setpoint(0) << "," << right_leg->tau_setpoint(1) << "," << right_leg->tau_setpoint(2) << "," << right_leg->tau_setpoint(3) << "," << right_leg->tau_setpoint(4)
-                            << "," << right_leg->foot_pos(0) << "," << right_leg->foot_pos(1) << "," << right_leg->foot_pos(2)
-                            << "," << right_leg->pos_desired(0, 0) << "," << right_leg->pos_desired(1, 0) << "," << right_leg->pos_desired(2, 0)
-                            << "," << right_leg->foot_vel(0) << "," << right_leg->foot_vel(1) << "," << right_leg->foot_vel(2)
-                            << "," << right_leg->vel_desired(0, 0) << "," << right_leg->vel_desired(1, 0) << "," << right_leg->vel_desired(2, 0) << std::endl;
-                    
-                data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
-            }
-
             // for(int i = 0; i < 5; ++i) {
             //     right_leg->tau_setpoint(i, 0) = 0;
             // }
@@ -651,6 +626,31 @@ void calculate_right_leg_torques() {
         s << right_leg->tau_setpoint(0, 0) << "|" << right_leg->tau_setpoint(1, 0) << "|" << right_leg->tau_setpoint(2, 0) << "|" << right_leg->tau_setpoint(3, 0) << "|" << right_leg->tau_setpoint(4, 0); // Write torque setpoints to stringstream
         sendto(sockfd, (const char *)s.str().c_str(), strlen(s.str().c_str()), 
                 MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len); // Send the torque setpoint string to the simulation
+
+        if(iteration_counter % 1 == 0) {
+            /*
+                << "t,"
+                << "theta1,theta2,theta3,theta4,theta5,theta1_dot,theta2_dot,theta3_dot,theta4_dot,theta5_dot,"
+                << "tau_1,tau_2,tau_3,tau_4,tau_5,"
+                << "foot_pos_x,foot_pos_y,foot_pos_z,"
+                << "foot_pos_x_desired,foot_pos_y_desired,foot_pos_z_desired"
+                << "foot_vel_x,foot_vel_y,foot_vel_z,"
+                << "foot_vel_x_desired,foot_vel_y_desired,foot_vel_z_desired" << std::endl;
+            */
+            
+            ofstream data_file;
+            data_file.open("../.././plot_data/" + filename + "_right.csv", ios::app); // Open csv file in append mode
+            data_file << get_time() // Write plot values to csv file
+                        << "," << theta1 << "," << theta2 << "," << theta3 << "," << theta4 << "," << theta5
+                        << "," << theta1_dot << "," << theta2_dot << "," << theta3_dot << "," << theta4_dot << "," << theta5_dot
+                        << "," << right_leg->tau_setpoint(0) << "," << right_leg->tau_setpoint(1) << "," << right_leg->tau_setpoint(2) << "," << right_leg->tau_setpoint(3) << "," << right_leg->tau_setpoint(4)
+                        << "," << right_leg->foot_pos(0) << "," << right_leg->foot_pos(1) << "," << right_leg->foot_pos(2)
+                        << "," << right_leg->pos_desired(0, 0) << "," << right_leg->pos_desired(1, 0) << "," << right_leg->pos_desired(2, 0)
+                        << "," << right_leg->foot_vel(0) << "," << right_leg->foot_vel(1) << "," << right_leg->foot_vel(2)
+                        << "," << right_leg->vel_desired(0, 0) << "," << right_leg->vel_desired(1, 0) << "," << right_leg->vel_desired(2, 0) << std::endl;
+                
+            data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
+        }
 
         iteration_counter++; // Increment iteration counter
 
