@@ -57,7 +57,7 @@ Eigen::Matrix<double, 334, 6> get_swing_trajectory(const Eigen::Matrix<double, 3
             ++index;
         }
     }
-
+    
     return trajectory;
 }
 
