@@ -369,7 +369,7 @@ void calculate_left_leg_torques() {
         else {
             // IMPORTANT AND DANGEROUS MISTAKE: WHEN COPYING LEFT_LEG CODE AND REPLACING ALL LEFT WITH RIGHT, INDEX IS NOT CHANGED AND LEFT LEG TORQUES WILL BE USED FOR BOTH LEGS
             // left_leg->tau_setpoint = get_joint_torques(-u.block<3,1>(0, 0), left_leg->theta1, left_leg->theta2, left_leg->theta3, left_leg->theta4, left_leg->theta5, x(0, 0), x(1, 0), x(2, 0));
-            left_leg->tau_setpoint = get_joint_torques((Eigen::Matrix<double, 3, 1>() << 0, 0, u_t(2, 0)).finished(), left_leg->theta1, left_leg->theta2, left_leg->theta3, left_leg->theta4, left_leg->theta5, x(0, 0), x(1, 0), x(2, 0), left_leg->config);
+            left_leg->tau_setpoint = get_joint_torques((Eigen::Matrix<double, 3, 1>() << 0, 0, -u_t(2, 0)).finished(), left_leg->theta1, left_leg->theta2, left_leg->theta3, left_leg->theta4, left_leg->theta5, x(0, 0), x(1, 0), x(2, 0), left_leg->config);
         }
 
         if(simState->isPaused()) {
@@ -615,7 +615,7 @@ void calculate_right_leg_torques() {
         else {
             // IMPORTANT AND DANGEROUS MISTAKE: WHEN COPYING LEFT_LEG CODE AND REPLACING ALL LEFT WITH RIGHT, INDEX IS NOT CHANGED AND LEFT LEG TORQUES WILL BE USED FOR BOTH LEGS
             // right_leg->tau_setpoint = get_joint_torques(-u.block<3,1>(3, 0), right_leg->theta1, right_leg->theta2, right_leg->theta3, right_leg->theta4, right_leg->theta5, x(0, 0), x(1, 0), x(2, 0));
-            right_leg->tau_setpoint = get_joint_torques((Eigen::Matrix<double, 3, 1>() << 0, 0, u_t(5, 0)).finished(), right_leg->theta1, right_leg->theta2, right_leg->theta3, right_leg->theta4, right_leg->theta5, x(0, 0), x(1, 0), x(2, 0), right_leg->config);
+            right_leg->tau_setpoint = get_joint_torques((Eigen::Matrix<double, 3, 1>() << 0, 0, -u_t(5, 0)).finished(), right_leg->theta1, right_leg->theta2, right_leg->theta3, right_leg->theta4, right_leg->theta5, x(0, 0), x(1, 0), x(2, 0), right_leg->config);
         }
         
         if(simState->isPaused()) {
