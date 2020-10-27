@@ -46,7 +46,7 @@ void ContactState::updateContactState() {
 
         contact_mutex.lock();
         contact_state = msg == "1" ? true : false;
-        std::cout << "contact_state: " << contact_state << std::endl;
+        // std::cout << "port: " << port << ", contact_state: " << contact_state << std::endl;
         contact_mutex.unlock();
 
         iteration_counter++; // Increment iteration counter
