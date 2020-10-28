@@ -369,7 +369,7 @@ void calculate_left_leg_torques() {
         else {
             // IMPORTANT AND DANGEROUS MISTAKE: WHEN COPYING LEFT_LEG CODE AND REPLACING ALL LEFT WITH RIGHT, INDEX IS NOT CHANGED AND LEFT LEG TORQUES WILL BE USED FOR BOTH LEGS
             // left_leg->tau_setpoint = get_joint_torques(-u.block<3,1>(0, 0), left_leg->theta1, left_leg->theta2, left_leg->theta3, left_leg->theta4, left_leg->theta5, x(0, 0), x(1, 0), x(2, 0));
-            left_leg->tau_setpoint = get_joint_torques((Eigen::Matrix<double, 3, 1>() << 0, 0, -u_t(2, 0)).finished(), left_leg->theta1, left_leg->theta2, left_leg->theta3, left_leg->theta4, left_leg->theta5, x(0, 0), x(1, 0), x(2, 0), left_leg->config);
+            left_leg->tau_setpoint = Eigen::ArrayXd::Zero(5, 1); //get_joint_torques((Eigen::Matrix<double, 3, 1>() << 0, 0, -u_t(2, 0)).finished(), left_leg->theta1, left_leg->theta2, left_leg->theta3, left_leg->theta4, left_leg->theta5, x(0, 0), x(1, 0), x(2, 0), left_leg->config);
         }
 
         if(simState->isPaused()) {
@@ -615,7 +615,7 @@ void calculate_right_leg_torques() {
         else {
             // IMPORTANT AND DANGEROUS MISTAKE: WHEN COPYING LEFT_LEG CODE AND REPLACING ALL LEFT WITH RIGHT, INDEX IS NOT CHANGED AND LEFT LEG TORQUES WILL BE USED FOR BOTH LEGS
             // right_leg->tau_setpoint = get_joint_torques(-u.block<3,1>(3, 0), right_leg->theta1, right_leg->theta2, right_leg->theta3, right_leg->theta4, right_leg->theta5, x(0, 0), x(1, 0), x(2, 0));
-            right_leg->tau_setpoint = get_joint_torques((Eigen::Matrix<double, 3, 1>() << 0, 0, -u_t(5, 0)).finished(), right_leg->theta1, right_leg->theta2, right_leg->theta3, right_leg->theta4, right_leg->theta5, x(0, 0), x(1, 0), x(2, 0), right_leg->config);
+            right_leg->tau_setpoint = Eigen::ArrayXd::Zero(5, 1); //get_joint_torques((Eigen::Matrix<double, 3, 1>() << 0, 0, -u_t(5, 0)).finished(), right_leg->theta1, right_leg->theta2, right_leg->theta3, right_leg->theta4, right_leg->theta5, x(0, 0), x(1, 0), x(2, 0), right_leg->config);
         }
         
         if(simState->isPaused()) {
@@ -1134,38 +1134,13 @@ int main(int _argc, char **_argv)
         bool swing_left_temp = left_leg->swing_phase;
         bool swing_right_temp = right_leg->swing_phase;
         // Loop through prediction horizon
-        // bool contactLeft = left_leg->contactState.hasContact();
-        // bool contactRight = right_leg->contactState.hasContact();
-        bool contactLeft = !left_leg->swing_phase;
-        bool contactRight = !right_leg->swing_phase;
-        // If contactState = true and swing_phase = true, set all swing_phase_temp until next swap to false to account for unexpected contact
-        // If contactState = false and swing_phase = false, set all swing_phase_temp until next swap to true account for unexpected swing phase / contact loss
-        int contactSwapsTemp = 0;
         for(int k = 0; k < N; ++k) {
             // If contact_swap_interval iterations in future have passed, alternate again. the k != 0 check is there to prevent swapping twice if it swapped before simulating the future contacts already.
             if((total_iterations + k) % contact_swap_interval == 0 && k != 0 && alternate_contacts) {
-                swing_right_temp = !swing_right_temp;
                 swing_left_temp = !swing_left_temp;
-                
-                ++contactSwapsTemp;
+                swing_right_temp = !swing_right_temp;
             }
 
-            if(contactSwapsTemp < 1) { // Only override contact values up until next contact swap
-                if(contactLeft && left_leg->swing_phase) {
-                    swing_left_temp = false;
-                }
-                else if(!contactLeft && !left_leg->swing_phase) {
-                    swing_left_temp = true;
-                }
-
-                if(contactRight && right_leg->swing_phase) {
-                    swing_right_temp = false;
-                }
-                else if(!contactRight && !right_leg->swing_phase) {
-                    swing_right_temp = true;
-                }
-            }
-            
             D_k << swing_left_temp, 0, 0, 0, 0, 0,
                     0, swing_left_temp, 0, 0, 0, 0,
                     0, 0, swing_left_temp, 0, 0, 0,
