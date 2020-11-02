@@ -1029,6 +1029,8 @@ int main(int _argc, char **_argv)
 
     struct timespec deadline; // timespec struct for storing time that execution thread should sleep for
 
+    long long iterationsAtLastContact = 0;
+
     while(true) {
         // Loop starts here
         auto start = high_resolution_clock::now();
@@ -1128,19 +1130,47 @@ int main(int _argc, char **_argv)
             
             left_leg->swing_phase = !left_leg->swing_phase;
             right_leg->swing_phase = !right_leg->swing_phase;
+
+            iterationsAtLastContact = total_iterations;
         }
 
         // Temporary variable for "simulating" future contacts
         bool swing_left_temp = left_leg->swing_phase;
         bool swing_right_temp = right_leg->swing_phase;
         // Loop through prediction horizon
+        bool contactLeft = left_leg->contactState.hasContact();
+        bool contactRight = right_leg->contactState.hasContact();
+        // bool contactLeft = !left_leg->swing_phase;
+        // bool contactRight = !right_leg->swing_phase;
+        // If contactState = true and swing_phase = true, set all swing_phase_temp until next swap to false to account for unexpected contact
+        // If contactState = false and swing_phase = false, set all swing_phase_temp until next swap to true account for unexpected swing phase / contact loss
+        int contactSwapsTemp = 0;
         for(int k = 0; k < N; ++k) {
             // If contact_swap_interval iterations in future have passed, alternate again. the k != 0 check is there to prevent swapping twice if it swapped before simulating the future contacts already.
             if((total_iterations + k) % contact_swap_interval == 0 && k != 0 && alternate_contacts) {
-                swing_left_temp = !swing_left_temp;
                 swing_right_temp = !swing_right_temp;
+                swing_left_temp = !swing_left_temp;
+                
+                ++contactSwapsTemp;
             }
 
+            // Only override planned contact values if there recently was a contact switch or there will be.
+            if(contactSwapsTemp < 1 && ((total_iterations - iterationsAtLastContact) > 5 && ((int)(contact_swap_interval / dt) - (total_iterations - iterationsAtLastContact)) < 5)) { // Only override contact values up until next contact swap
+                if(contactLeft && left_leg->swing_phase) {
+                    swing_left_temp = false;
+                }
+                else if(!contactLeft && !left_leg->swing_phase) {
+                    swing_left_temp = true;
+                }
+                
+                if(contactRight && right_leg->swing_phase) {
+                    swing_right_temp = false;
+                }
+                else if(!contactRight && !right_leg->swing_phase) {
+                    swing_right_temp = true;
+                }
+            }
+            
             D_k << swing_left_temp, 0, 0, 0, 0, 0,
                     0, swing_left_temp, 0, 0, 0, 0,
                     0, 0, swing_left_temp, 0, 0, 0,
@@ -1150,7 +1180,7 @@ int main(int _argc, char **_argv)
             
             D_vector.block<m, m>(0, k*m) = D_k;
         }
-        
+
         // Update P_param
         P_param.block<m, m*N> (0, 1 + N + n*N + m*N) = D_vector;
 
