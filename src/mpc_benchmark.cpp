@@ -179,7 +179,7 @@ std::tuple<double, double> run_benchmark(int port_offset) {
     double solver_preparation_time_sum = 0;
 
     left_leg = new Leg(-0.15, 0, -0.065, 4201+port_offset);
-    right_leg = new Leg(0.15, 0, -0.065, 4202+port_offset);
+    right_leg = new Leg(0.15, 0, -0.065, 4301+port_offset);
     left_leg->swing_phase = true;
 
     Dict opts;
