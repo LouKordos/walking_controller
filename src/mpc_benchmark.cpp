@@ -22,6 +22,7 @@
 #include <boost/date_time/posix_time/posix_time.hpp> // Also for timestamps
 
 #include <unistd.h> // POSIX base
+#include <tuple>
 
 #include <errno.h> //It defines macros for reporting and retrieving error conditions through error codes
 #include <time.h> //contains various functions for manipulating date and time
@@ -67,9 +68,6 @@ const double t_stance = contact_swap_interval * dt; // Duration that the foot wi
 static Eigen::Matrix<double, 3, 1> next_body_vel = Eigen::ArrayXd::Zero(3, 1);
 
 bool first_iteration_flag = false;
-
-Leg *left_leg;
-Leg *right_leg;
 
 static const Eigen::MatrixXd I_body = (Eigen::Matrix<double, 3, 3>() << 0.5, 0.0, 0.0,
                                                                         0.0, 0.62288, 0.0,
@@ -170,15 +168,18 @@ Eigen::Matrix<double, n, 1> step_discrete_model(Eigen::Matrix<double, n, 1> x, E
     return A_d * x + B_d * u;
 }
 
-void run_benchmark() {
+std::tuple<double, double> run_benchmark(int port_offset) {
+    Leg *left_leg;
+    Leg *right_leg;
+
     Eigen::Matrix<double, n, 1> x_t = (Eigen::Matrix<double, n, 1>() << 0., 0., 0., 0, 0, 0.8, 0, 0, 0, 0, 0, 0, -9.81).finished();
     Eigen::Matrix<double, m, 1> u_t = (Eigen::Matrix<double, m, 1>() << 0, 0, m_value*9.81 / 2, 0, 0, m_value*9.81/2).finished();
 
     double full_iteration_time_sum = 0;
     double solver_preparation_time_sum = 0;
 
-    left_leg = new Leg(-0.15, 0, -0.065, rand() % 30 + 1985);
-    right_leg = new Leg(0.15, 0, -0.065, rand() % 30 + 1985);
+    left_leg = new Leg(-0.15, 0, -0.065, 4201+port_offset);
+    right_leg = new Leg(0.15, 0, -0.065, 4202+port_offset);
     left_leg->swing_phase = true;
 
     Dict opts;
@@ -892,21 +893,36 @@ void run_benchmark() {
         deadline.tv_sec = 0;
         clock_nanosleep(CLOCK_REALTIME, 0, &deadline, NULL);
     }
-    
+
+    double average_full_iteration_time = full_iteration_time_sum / (double)num_iterations;
+    double average_solver_preparation_time = solver_preparation_time_sum / (double)num_iterations;
+
     std::cout << "\n--------------------------------------------------------------\n";
     std::cout << "Benchmark results:\n";
-    std::cout << "Average full iteration time in µS: " << full_iteration_time_sum / (double)num_iterations << std::endl;
-    std::cout << "Average solver preparation time in µS: " << solver_preparation_time_sum / (double)num_iterations << std::endl;
+    std::cout << "Average full iteration time in µS: " << average_full_iteration_time << std::endl;
+    std::cout << "Average solver preparation time in µS: " << average_solver_preparation_time << std::endl;
     // std::cout << "Final state:\n" << x_t << std::endl;
     std::cout << "--------------------------------------------------------------\n";
+
+    return std::tuple<double, double> (average_full_iteration_time, average_solver_preparation_time);
 }
 
 int main() {
+    int num_benchmark_runs = 10;
+    double total_benchmark_full_iteration_time, total_benchmark_solver_preparation_time;
 
-    for(int i = 0; i < 10; ++i) {
-        std::cout << "Starting run " << i << "..." << std::endl;
-        run_benchmark();
+    for(int i = 0; i < num_benchmark_runs; ++i) {
+        std::cout << "Starting run " << i << "." << std::endl;
+        std::tuple<double, double> result = run_benchmark(i);
+
+        total_benchmark_full_iteration_time += std::get<0>(result);
+        total_benchmark_solver_preparation_time += std::get<1>(result);
     }
-    
+
+    std::cout << "\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
+    std::cout << "Average average full iteration time over " << num_benchmark_runs << " passes in µS: " << total_benchmark_full_iteration_time / (double)num_benchmark_runs  << std::endl;
+    std::cout << "Average average solver time preparation over " << num_benchmark_runs << " passes in µS: " << total_benchmark_solver_preparation_time / (double)num_benchmark_runs << std::endl;
+    std::cout << "\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
+
     return 0;
 }
