@@ -31,5 +31,9 @@ expr = expr.replace("l4", "config.l4")
 expr = expr.replace("l5", "config.l5")
 expr = expr.replace("l6", "config.l6")
 
+expr = expr.replace("f_x", "f(0, 0)")
+expr = expr.replace("f_y", "f(1, 0)")
+expr = expr.replace("f_z", "f(2, 0)")
+
 with open(parsed_filename, "w") as parsed_file:
 	    parsed_file.write(expr)
