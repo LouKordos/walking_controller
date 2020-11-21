@@ -4,7 +4,7 @@
       {
         "type": "shell",
         "label": "Build Release using CMake",
-        "command": "cmake .. -DCMAKE_BUILD_TYPE=Release; make -j",
+        "command": "cmake .. -DCMAKE_BUILD_TYPE=Release && make -j$(nproc)",
         "args": [],
         "options": {
           "cwd": "${workspaceFolder}/src/build"
@@ -20,7 +20,7 @@
       {
         "type": "shell",
         "label": "Build Debug using CMake",
-        "command": "cmake .. -DCMAKE_BUILD_TYPE=Debug; make -j",
+        "command": "cmake .. -DCMAKE_BUILD_TYPE=Debug && make -j$(nproc)",
         "args": [],
         "options": {
           "cwd": "${workspaceFolder}/src/build"
