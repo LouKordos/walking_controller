@@ -8,11 +8,12 @@ find_package(casadi)
 #set(COMMUNICATIONS_LIBS zcm)
 
 add_compile_options(-std=c++17 -Wpedantic -L /usr/local/lib)
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
 
 include_directories("${PROJECT_SOURCE_DIR}/include")
 include_directories("/usr/local/include/")
 
-set_source_files_properties(model_functions.cpp PROPERTIES COMPILE_FLAGS -O3)
+set_source_files_properties(model_functions.cpp PROPERTIES COMPILE_FLAGS "-O3")
 
 add_executable(controller controller.cpp model_functions.cpp Leg.cpp Helpers.cpp CartesianTrajectory.cpp PolyCoefficients4D.cpp SimState.cpp ContactState.cpp)
 
@@ -24,14 +25,14 @@ add_executable(mpc_benchmark mpc_benchmark.cpp model_functions.cpp Leg.cpp Helpe
 
 #target_link_libraries (controller ${CMAKE_THREAD_LIBS_INIT} casadi model_functions helpers leg)
 target_link_libraries(controller ${CMAKE_THREAD_LIBS_INIT} casadi)
-target_link_libraries (nlp_test ${CMAKE_THREAD_LIBS_INIT} casadi)
+target_link_libraries (nlp_test ${CMAKE_THREAD_LIBS_INIT} casadi)   
 target_link_libraries(mpc_benchmark ${CMAKE_THREAD_LIBS_INIT} casadi)
 
 message("CMAKE_CXX_FLAGS_DEBUG is ${CMAKE_CXX_FLAGS_DEBUG}")
 message("CMAKE_CXX_FLAGS is ${CMAKE_CXX_FLAGS}")
 message("CMAKE_CXX_FLAGS_RELEASE is ${CMAKE_CXX_FLAGS_RELEASE}")
 message("PROJECT_SOURCE_DIR: " ${PROJECT_SOURCE_DIR})
-
+message("CMAKE_BUILD_TYPE is ${CMAKE_BUILD_TYPE}")
 
 # Current compilation commands:
 
