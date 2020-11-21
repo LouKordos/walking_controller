@@ -919,7 +919,7 @@ int main() {
         total_benchmark_solver_preparation_time += std::get<1>(result);
     }
 
-    std::cout << "\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
+    std::cout << "\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
     std::cout << "Average average full iteration time over " << num_benchmark_runs << " passes in µS: " << total_benchmark_full_iteration_time / (double)num_benchmark_runs  << std::endl;
     std::cout << "Average average solver time preparation over " << num_benchmark_runs << " passes in µS: " << total_benchmark_solver_preparation_time / (double)num_benchmark_runs << std::endl;
     std::cout << "\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
