@@ -898,7 +898,7 @@ std::tuple<double, double> run_benchmark(int port_offset) {
     double average_solver_preparation_time = solver_preparation_time_sum / (double)num_iterations;
 
     std::cout << "\n--------------------------------------------------------------\n";
-    std::cout << "Benchmark results:\n";
+    std::cout << "Benchmark run result:\n";
     std::cout << "Average full iteration time in µS: " << average_full_iteration_time << std::endl;
     std::cout << "Average solver preparation time in µS: " << average_solver_preparation_time << std::endl;
     // std::cout << "Final state:\n" << x_t << std::endl;
