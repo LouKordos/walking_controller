@@ -818,25 +818,6 @@ int main(int _argc, char **_argv)
     bool alternate_contacts = true;
     left_leg->swing_phase = true;
     // left_leg->swing_phase = right_leg->swing_phase = true;
-
-    // auto start_test = high_resolution_clock::now();
-
-    // auto traj = get_swing_trajectory((Eigen::Matrix<double,3,1>() << 0.1, 0.1, -1).finished(), (Eigen::Matrix<double,3,1>() << 0.05, 0.05, -0.9).finished(), 
-    //                                     (Eigen::Matrix<double,3,1>() << 0, 0, -1).finished(), 
-    //                                     (Eigen::Matrix<double,3,1>() << 0.0, 0.0, 0).finished(), (Eigen::Matrix<double,3,1>() << 0.0, 0.0, -0).finished(), 0.3);
-
-    // auto end_test = high_resolution_clock::now();
-    // std::cout << duration_cast<microseconds>(end_test - start_test).count() << std::endl;
-
-    // ofstream traj_log_file;
-    // traj_log_file.open("../.././plot_data/traj_log_test.csv");
-    // for(int row = 0; row < 1000; ++row) {
-    //     for(int col = 0; col < 3; ++col) {
-    //         traj_log_file << traj(row, col*2+0) << "," << traj(row, col*2+1) << ",";
-    //     }
-    //     traj_log_file << "\n";
-    // }
-    // traj_log_file.close();
     
     // Bind functions to threads
     // left_leg_state_thread = std::thread(std::bind(update_left_leg_state));
