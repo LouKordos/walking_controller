@@ -45,4 +45,5 @@
 - RT Kernel, isolcpu, taskset
 - Refactor code to use Eigen Matrix for r instead of seperate values
 - Use class for tcp / udp communication so that there is one standard communication module that can easily be altered / swapped out
-- Replace AF_INET with AF_UNIX: https://stackoverflow.com/questions/20510016/client-server-socket-communication-af-unix
+- Replace AF_INET with AF_UNIX: https://stackoverflow.com/questions/20510016/client-server-socket-communication-af-unixa
+ - Alpine Docker containr to build everything from source
