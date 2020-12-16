@@ -1,0 +1,41 @@
+FROM ubuntu
+
+ENV DEBIAN_FRONTEND=noninteractive TZ=Europe/Berlin
+RUN apt-get update -y && apt-get dist-upgrade -y
+
+RUN apt-get install gcc g++ gfortran git cmake liblapack-dev pkg-config libboost-all-dev --install-recommends -y
+RUN apt-get install coinor-libipopt-dev -y
+
+# Install casadi
+RUN git clone https://github.com/casadi/casadi.git -b master casadi --depth 1
+WORKDIR /casadi
+RUN mkdir build
+WORKDIR /casadi/build
+ENV PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/local/lib/pkgconfig/
+RUN cmake DCMAKE_BUILD_TYPE="Release" \
+    -DWITH_IPOPT=ON \
+    -DWITH_CLANG=OFF \
+    ..
+
+RUN make -j$(nproc) && make install
+RUN ldconfig
+
+WORKDIR /
+RUN git clone https://gitlab.com/libeigen/eigen.git
+WORKDIR /eigen
+RUN mkdir build
+WORKDIR /eigen/build
+RUN cmake .. -DCMAKE_BUILD_TYPE=Release && make install
+
+COPY ./src /src
+COPY ./nlp.so /
+
+WORKDIR /src
+
+RUN rm -rf ./build && mkdir ./build
+WORKDIR /src/build
+
+RUN cmake .. -DCMAKE_BUILD_TYPE=Release
+RUN make -j$(nproc)
+
+CMD "./mpc_benchmark"
