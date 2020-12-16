@@ -856,7 +856,6 @@ std::tuple<double, double> run_benchmark(int port_offset) {
 
         ++total_iterations;
 
-
         end = high_resolution_clock::now();
         double duration_after = duration_cast<microseconds> (end - start).count();
 
