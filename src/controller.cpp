@@ -60,12 +60,13 @@ static const double dt = 1/30.0; // Sampling interval, Timestep length in second
 static const int N = 20; // MPC Prediction Horizon Length in Number of Samples
 
 double f_min_z = 0; // Min contact Force in Z direction for MPC constraint, limits X and Y forces through friction constraint
-double f_max_z = 1200; // Max contact Force in Z direction for MPC constraint, limits X and Y forces through friction constraint
+double f_max_z = 800; // Max contact Force in Z direction for MPC constraint, limits X and Y forces through friction constraint
 
 static const double m_value = 30.0; // Combined robot mass in kg
 
 const int contact_swap_interval = 10; // Interval at which the contact swaps from one foot to the other in Samples
 const double t_stance = contact_swap_interval * dt; // Duration that the foot will be in stance phase
+bool alternate_contacts;
 
 static Eigen::Matrix<double, n, 1> x_t = (Eigen::Matrix<double, n, 1>() << 0., 0., 0., 0, 0, 0.8, 0, 0, 0, 0, 0, 0, -9.81).finished();
 static Eigen::Matrix<double, m, 1> u_t = (Eigen::Matrix<double, m, 1>() << 0, 0, m_value*9.81 / 2, 0, 0, m_value*9.81/2).finished();
@@ -368,8 +369,16 @@ void calculate_left_leg_torques() {
         }
         else {
             // IMPORTANT AND DANGEROUS MISTAKE: WHEN COPYING LEFT_LEG CODE AND REPLACING ALL LEFT WITH RIGHT, INDEX IS NOT CHANGED AND LEFT LEG TORQUES WILL BE USED FOR BOTH LEGS
-            // left_leg->tau_setpoint = get_joint_torques(-u.block<3,1>(0, 0), left_leg->theta1, left_leg->theta2, left_leg->theta3, left_leg->theta4, left_leg->theta5, x(0, 0), x(1, 0), x(2, 0));
-            left_leg->tau_setpoint = Eigen::ArrayXd::Zero(5, 1); //get_joint_torques((Eigen::Matrix<double, 3, 1>() << 0, 0, -u_t(2, 0)).finished(), left_leg->theta1, left_leg->theta2, left_leg->theta3, left_leg->theta4, left_leg->theta5, x(0, 0), x(1, 0), x(2, 0), left_leg->config);
+            // left_leg->tau_setpoint = Eigen::ArrayXd::Zero(5, 1);
+            left_leg->tau_setpoint = get_joint_torques(-u_t.block<3, 1>(0, 0), left_leg->theta1, left_leg->theta2, left_leg->theta3, left_leg->theta4, left_leg->theta5, x(0, 0), x(1, 0), x(2, 0), left_leg->config);
+            for(int i = 0; i < 5; ++i) {
+                constrain(left_leg->tau_setpoint(i), -200, 200);
+            }
+            constrain(left_leg->tau_setpoint(4), -10, 10);
+
+            // if(!left_leg->contactState.hasContact()) {
+            //     left_leg->tau_setpoint = Eigen::ArrayXd::Zero(5, 1);
+            // }
         }
 
         if(simState->isPaused()) {
@@ -614,8 +623,16 @@ void calculate_right_leg_torques() {
         }
         else {
             // IMPORTANT AND DANGEROUS MISTAKE: WHEN COPYING LEFT_LEG CODE AND REPLACING ALL LEFT WITH RIGHT, INDEX IS NOT CHANGED AND LEFT LEG TORQUES WILL BE USED FOR BOTH LEGS
-            // right_leg->tau_setpoint = get_joint_torques(-u.block<3,1>(3, 0), right_leg->theta1, right_leg->theta2, right_leg->theta3, right_leg->theta4, right_leg->theta5, x(0, 0), x(1, 0), x(2, 0));
-            right_leg->tau_setpoint = Eigen::ArrayXd::Zero(5, 1); //get_joint_torques((Eigen::Matrix<double, 3, 1>() << 0, 0, -u_t(5, 0)).finished(), right_leg->theta1, right_leg->theta2, right_leg->theta3, right_leg->theta4, right_leg->theta5, x(0, 0), x(1, 0), x(2, 0), right_leg->config);
+            // right_leg->tau_setpoint = Eigen::ArrayXd::Zero(5, 1);
+            right_leg->tau_setpoint = get_joint_torques(-u_t.block<3, 1>(3, 0), right_leg->theta1, right_leg->theta2, right_leg->theta3, right_leg->theta4, right_leg->theta5, x(0, 0), x(1, 0), x(2, 0), right_leg->config);
+            for(int i = 0; i < 5; ++i) {
+                constrain(right_leg->tau_setpoint(i), -200, 200);
+            }
+            constrain(right_leg->tau_setpoint(4), -10, 10);
+            
+            // if(!right_leg->contactState.hasContact()) {
+            //     right_leg->tau_setpoint = Eigen::ArrayXd::Zero(5, 1);
+            // }
         }
         
         if(simState->isPaused()) {
@@ -815,8 +832,11 @@ int main(int _argc, char **_argv)
 
     left_leg->foot_pos_world_desired << -0.15, 0, 0.6;
     right_leg->foot_pos_world_desired << 0.15, 0, 0.6;
-    bool alternate_contacts = true;
+
+    alternate_contacts = true;
     left_leg->swing_phase = true;
+
+    // left_leg->swing_phase = right_leg->swing_phase = false;
     // left_leg->swing_phase = right_leg->swing_phase = true;
     
     // Bind functions to threads
@@ -1011,11 +1031,18 @@ int main(int _argc, char **_argv)
     struct timespec deadline; // timespec struct for storing time that execution thread should sleep for
 
     long long iterationsAtLastContact = 0;
+    int alternate_flag = 0; // Temporary flag for waiting a bit before activating the gait
 
     while(true) {
         // Loop starts here
         auto start = high_resolution_clock::now();
         auto start_total = high_resolution_clock::now();
+
+        // if(total_iterations == 14 && !alternate_flag) {
+        //     alternate_contacts = true;
+        //     left_leg->swing_phase = true;
+        //     alternate_flag = true;
+        // }
 
         // while(simState->isPaused() && total_iterations > 3) {
         //     sendto(sockfd, (const char *)"0|0|0|0|0|0|0|0|0|0|0|0", strlen("0|0|0|0|0|0|0|0|0|0|0|0"), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
@@ -1058,8 +1085,9 @@ int main(int _argc, char **_argv)
             }
         }
 
-        // stringstream temp;
-        // temp << "x_t:" << x_t(0, 0) << "," << x_t(1, 0) << "," << x_t(2, 0) << "," << x_t(3, 0) << "," << x_t(4, 0) << "," << x_t(5, 0) << "," << x_t(6, 0) << "," << x_t(7, 0) << "," << x_t(8, 0) << "," << x_t(9, 0) << "," << x_t(10, 0) << "," << x_t(11, 0) << "," << x_t(12, 0);
+        stringstream temp;
+        temp << "x_t:" << x_t(0, 0) << "," << x_t(1, 0) << "," << x_t(2, 0) << "," << x_t(3, 0) << "," << x_t(4, 0) << "," << x_t(5, 0) << "," << x_t(6, 0) << "," << x_t(7, 0) << "," << x_t(8, 0) << "," << x_t(9, 0) << "," << x_t(10, 0) << "," << x_t(11, 0) << "," << x_t(12, 0);
+        log(temp.str(), INFO);
         // print_threadsafe(temp.str(), "mpc_thread", INFO, true);
 
         // Alternate contacts if contact_swap_interval iterations have passed
@@ -1640,7 +1668,7 @@ int main(int _argc, char **_argv)
         auto end_total = high_resolution_clock::now();
         double full_iteration_duration = duration_cast<microseconds> (end_total - start_total).count();
 
-        // std::cout << "Full iteration took " << full_iteration_duration << " microseconds" << std::endl;
+        std::cout << "Full iteration took " << full_iteration_duration << " microseconds" << std::endl;
         temp.str(std::string());
         temp << "Full MPC iteration loop duration: " << full_iteration_duration << "µS";
         log(temp.str(), INFO);
