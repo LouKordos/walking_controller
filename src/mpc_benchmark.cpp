@@ -189,6 +189,7 @@ std::tuple<double, double> run_benchmark(int port_offset) {
     ipopt_opts["print_level"] = 0;
     ipopt_opts["acceptable_tol"] = 1e-7;
     ipopt_opts["acceptable_obj_change_tol"] = 1e-5;
+    ipopt_opts["linear_solver"] = "ma27";
 
     opts["print_time"] = 0;
     opts["ipopt"] = ipopt_opts;
@@ -345,7 +346,7 @@ std::tuple<double, double> run_benchmark(int port_offset) {
         }
 
         // stringstream temp;
-        // std::cout << "x_t:" << x_t(0, 0) << "," << x_t(1, 0) << "," << x_t(2, 0) << "," << x_t(3, 0) << "," << x_t(4, 0) << "," << x_t(5, 0) << "," << x_t(6, 0) << "," << x_t(7, 0) << "," << x_t(8, 0) << "," << x_t(9, 0) << "," << x_t(10, 0) << "," << x_t(11, 0) << "," << x_t(12, 0) << std::endl;
+        std::cout << "x_t:" << x_t(0, 0) << "," << x_t(1, 0) << "," << x_t(2, 0) << "," << x_t(3, 0) << "," << x_t(4, 0) << "," << x_t(5, 0) << "," << x_t(6, 0) << "," << x_t(7, 0) << "," << x_t(8, 0) << "," << x_t(9, 0) << "," << x_t(10, 0) << "," << x_t(11, 0) << "," << x_t(12, 0) << std::endl;
         // print_threadsafe(temp.str(), "mpc_thread", INFO, true);
 
         // Alternate contacts if contact_swap_interval iterations have passed

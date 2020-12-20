@@ -3,9 +3,27 @@ FROM ubuntu:18.04
 ENV DEBIAN_FRONTEND=noninteractive TZ=Europe/Berlin
 RUN apt-get update -y && apt-get dist-upgrade -y
 
-RUN apt-get install gcc g++ gfortran git cmake liblapack-dev pkg-config libboost-all-dev --install-recommends -y
+RUN apt-get install gcc g++ wget gfortran libblas3 libblas-dev git cmake liblapack-dev pkg-config libboost-all-dev --install-recommends -y
 RUN apt-get install coinor-libipopt-dev -y
 
+ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
+ENV OMP_NUM_THREADS=8
+
+COPY coinhsl-archive-2014.01.17.tar.gz /coinhsl-archive-2014.01.17.tar.gz
+RUN wget http://glaros.dtc.umn.edu/gkhome/fetch/sw/metis/OLD/metis-4.0.3.tar.gz
+RUN tar -xvf metis-4.0.3.tar.gz
+RUN tar -xvf coinhsl-archive-2014.01.17.tar.gz
+WORKDIR /coinhsl-archive-2014.01.17
+RUN mv ../metis-4.0.3 .
+RUN ./configure --prefix=/usr LIBS="-llapack" --with-blas="-L/usr/lib -lblas" CXXFLAGS="-g -O2 -fopenmp" FCFLAGS="-g -O2 -fopenmp" CFLAGS="-g -O2 -fopenmp"
+
+RUN make
+RUN make install
+RUN ls -a /usr/lib 
+RUN ln -s /usr/lib/libcoinhsl.so /usr/lib/libhsl.so
+
+
+WORKDIR /
 # Install casadi
 RUN git clone https://github.com/casadi/casadi.git -b master casadi --depth 1
 WORKDIR /casadi
@@ -15,6 +33,7 @@ ENV PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/local/lib/pkgconfig/
 RUN cmake DCMAKE_BUILD_TYPE="Release" \
     -DWITH_IPOPT=ON \
     -DWITH_CLANG=OFF \
+    -DWITH_HSL=ON \
     ..
 
 RUN make -j$(nproc) && make install
@@ -38,4 +57,4 @@ WORKDIR /src/build
 RUN cmake .. -DCMAKE_BUILD_TYPE=Release
 RUN make -j$(nproc)
 
-CMD "./mpc_benchmark"
+CMD "./controller"
