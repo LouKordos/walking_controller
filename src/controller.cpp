@@ -100,7 +100,8 @@ static double current_time = 0;
 // Setting up debugging and plotting csv file
 int largest_index = 0;
 std::string filename;
-
+std::string plotDataDirPath; 
+ 
 double get_time() {
 
     return simState->getSimTime();
@@ -224,7 +225,7 @@ void calculate_left_leg_torques() {
     socklen_t len;
 
     ofstream data_file;
-    data_file.open("../.././plot_data/" + filename + "_left.csv");
+    data_file.open(plotDataDirPath + filename + "_left.csv");
     data_file << "t,"
                 << "theta1,theta2,theta3,theta4,theta5,theta1_dot,theta2_dot,theta3_dot,theta4_dot,theta5_dot,"
                 << "tau_1,tau_2,tau_3,tau_4,tau_5,"
@@ -402,7 +403,7 @@ void calculate_left_leg_torques() {
             */
             
             ofstream data_file;
-            data_file.open("../.././plot_data/" + filename + "_left.csv", ios::app); // Open csv file in append mode
+            data_file.open(plotDataDirPath + filename + "_left.csv", ios::app); // Open csv file in append mode
             data_file << get_time() // Write plot values to csv file
                         << "," << theta1 << "," << theta2 << "," << theta3 << "," << theta4 << "," << theta5
                         << "," << theta1_dot << "," << theta2_dot << "," << theta3_dot << "," << theta4_dot << "," << theta5_dot
@@ -478,7 +479,7 @@ void calculate_right_leg_torques() {
     socklen_t len;
 
     ofstream data_file;
-    data_file.open("../.././plot_data/" + filename + "_right.csv");
+    data_file.open(plotDataDirPath + filename + "_right.csv");
     data_file << "t,"
                 << "theta1,theta2,theta3,theta4,theta5,theta1_dot,theta2_dot,theta3_dot,theta4_dot,theta5_dot,"
                 << "tau_1,tau_2,tau_3,tau_4,tau_5,"
@@ -656,7 +657,7 @@ void calculate_right_leg_torques() {
             */
             
             ofstream data_file;
-            data_file.open("../.././plot_data/" + filename + "_right.csv", ios::app); // Open csv file in append mode
+            data_file.open(plotDataDirPath + filename + "_right.csv", ios::app); // Open csv file in append mode
             data_file << get_time() // Write plot values to csv file
                         << "," << theta1 << "," << theta2 << "," << theta3 << "," << theta4 << "," << theta5
                         << "," << theta1_dot << "," << theta2_dot << "," << theta3_dot << "," << theta4_dot << "," << theta5_dot
@@ -803,11 +804,19 @@ int main(int _argc, char **_argv)
 
     simState = new SimState(sim_state_port);
 
+    char* pPath;
+    pPath = getenv ("IS_DOCKER");
+    if (pPath == "Y" || pPath == "YES") {
+        plotDataDirPath = "/plot_data/";
+    }
+    else {
+        plotDataDirPath = "../.././plot_data/";
+    }
+    
     // Find largest index in plot_data and use the next one as file name for log files
-    std::string path = "../.././plot_data/";
     DIR *dir;
     struct dirent *ent;
-    if ((dir = opendir (path.c_str())) != NULL) {
+    if ((dir = opendir (plotDataDirPath.c_str())) != NULL) {
         /* print all the files and directories within directory */
         while ((ent = readdir (dir)) != NULL) {
             //printf ("%s\n", ent->d_name);
@@ -1024,8 +1033,15 @@ int main(int _argc, char **_argv)
 
     // Log file
     ofstream data_file;
-    data_file.open("../.././plot_data/mpc_log.csv");
-    data_file << "t,phi,theta,psi,pos_x,pos_y,pos_z,omega_x,omega_y,omega_z,vel_x,vel_y,vel_z,g,f_x_left,f_y_left,f_z_left,f_x_right,f_y_right,f_z_right,r_x_left,r_y_left,r_z_left,r_x_right,r_y_right,r_z_right,theta_delay_compensation,full_iteration_time,phi_delay_compensation" << std::endl; // Add header to csv file
+    data_file.open(plotDataDirPath + "mpc_log.csv");
+    data_file << "t,phi,theta,psi,pos_x,pos_y,pos_z,omega_x,omega_y,omega_z,vel_x,vel_y,vel_z,"
+    << "g,f_x_left,f_y_left,f_z_left,f_x_right,f_y_right,f_z_right,"
+    << "r_x_left,r_y_left,r_z_left,r_x_right,r_y_right,r_z_right,"
+    << "foot_pos_world_desired_x_left,foot_pos_world_desired_y_left,foot_pos_world_desired_z_left,"
+    << "foot_pos_world_desired_x_right,foot_pos_world_desired_y_right,foot_pos_world_desired_z_right,"
+    << "foot_pos_body_frame_desired_x_left,foot_pos_body_frame_desired_y_left,foot_pos_body_frame_desired_z_left,"
+    << "foot_pos_body_frame_desired_x_right,foot_pos_body_frame_desired_y_right,foot_pos_body_frame_desired_z_right,"
+    << "theta_delay_compensation,full_iteration_time,phi_delay_compensation" << std::endl; // Add header to csv file
     data_file.close();
 
     struct timespec deadline; // timespec struct for storing time that execution thread should sleep for
@@ -1678,10 +1694,15 @@ int main(int _argc, char **_argv)
 
         // Log data to csv file
         ofstream data_file;
-        data_file.open("../.././plot_data/mpc_log.csv", ios::app); // Open csv file in append mode
+        data_file.open(plotDataDirPath + "mpc_log.csv", ios::app); // Open csv file in append mode
         data_file << total_iterations * dt << "," << x_t(0, 0) << "," << x_t(1, 0) << "," << x_t(2, 0) << "," << x_t(3, 0) << "," << x_t(4, 0) << "," << x_t(5, 0) << "," << x_t(6, 0) << "," << x_t(7, 0) << "," << x_t(8, 0) << "," << x_t(9, 0) << "," << x_t(10, 0) << "," << x_t(11, 0) << "," << x_t(12, 0)
                 << "," << u_t(0) << "," << u_t(1) << "," << u_t(2) << "," << u_t(3) << "," << u_t(4) << "," << u_t(5) 
-                << "," << r_x_left << "," << r_y_left << "," << r_z_left << "," << r_x_right << "," << r_y_right << "," << r_z_right << "," << P_param(1, 0) << "," << full_iteration_duration / 1000.0 << "," << solution_variables(n, 0) << std::endl; // Zero at the end has to be replace with predicted delay compensation state!
+                << "," << r_x_left << "," << r_y_left << "," << r_z_left << "," << r_x_right << "," << r_y_right << "," << r_z_right
+                << "," << left_leg->foot_pos_world_desired(0, 0) << "," << left_leg->foot_pos_world_desired(1, 0) << "," << left_leg->foot_pos_world_desired(2, 0)
+                << "," << right_leg->foot_pos_world_desired(0, 0) << "," << right_leg->foot_pos_world_desired(1, 0) << "," << right_leg->foot_pos_world_desired(2, 0)
+                << "," << left_leg->foot_pos_desired_body_frame(0, 0) << "," << left_leg->foot_pos_desired_body_frame(1, 0) << "," << left_leg->foot_pos_desired_body_frame(2, 0)
+                << "," << right_leg->foot_pos_desired_body_frame(0, 0) << "," << right_leg->foot_pos_desired_body_frame(1, 0) << "," << right_leg->foot_pos_desired_body_frame(2, 0) 
+                << "," << P_param(1, 0) << "," << full_iteration_duration / 1000.0 << "," << solution_variables(n, 0) << std::endl;
         data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
 
         u_mutex.unlock();
