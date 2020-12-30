@@ -1,0 +1,90 @@
+FROM alpine:latest
+
+RUN echo "http://dl-cdn.alpinelinux.org/alpine/v3.5/community" >> /etc/apk/repositories \
+  && apk update
+
+
+RUN apk add --update-cache --no-cache build-base gfortran git patch wget pkgconfig \
+                                        libgcc libquadmath musl libgfortran \
+                                        cmake
+
+RUN apk add openblas openblas-dev libc-dev
+
+RUN wget -q -O /etc/apk/keys/sgerrand.rsa.pub https://alpine-pkgs.sgerrand.com/sgerrand.rsa.pub --quiet
+RUN wget https://github.com/sgerrand/alpine-pkg-glibc/releases/download/2.32-r0/glibc-2.32-r0.apk --quiet
+RUN apk add glibc-2.32-r0.apk
+
+RUN rm /usr/glibc-compat/lib/ld-linux-x86-64.so.2 && \
+    ln -s /usr/glibc-compat/lib/ld-2.30.so /usr/glibc-compat/lib/ld-linux-x86-64.so.2 && \
+    \
+# Isolate the glibc lib's from musl-libc lib's
+    rm \
+        /lib/ld-linux-x86-64.so.2 \
+        /etc/ld.so.cache && \
+    echo "/usr/glibc-compat/lib" > /usr/glibc-compat/etc/ld.so.conf && \
+    /usr/glibc-compat/sbin/ldconfig -i && \
+    rm -r \
+        /var/cache/ldconfig/aux-cache \
+        /var/cache/ldconfig
+
+RUN ldconfig -p
+
+# # Install MKL
+
+# RUN wget http://registrationcenter-download.intel.com/akdlm/irc_nas/tec/16917/l_mkl_2020.4.304.tgz --quiet
+# RUN tar -xvzf l_mkl_2020.4.304.tgz
+# WORKDIR /l_mkl_2020.4.304
+# RUN sed -i "s/ACCEPT_EULA=decline/ACCEPT_EULA=accept/" ./silent.cfg
+# RUN ldconfig -p 
+# RUN sh ./install.sh
+
+# Install LAPACK
+
+WORKDIR /
+RUN git clone https://github.com/Reference-LAPACK/lapack.git
+RUN mkdir build
+WORKDIR /lapack/build
+RUN cmake ..
+RUN cmake --build . -j$(nproc) --target install
+
+WORKDIR /
+
+# Install METIS
+RUN wget http://glaros.dtc.umn.edu/gkhome/fetch/sw/metis/metis-5.1.0.tar.gz
+RUN gunzip metis-5.1.0.tar.gz
+RUN tar -xvf metis-5.1.0.tar
+WORKDIR /metis-5.1.0
+RUN sed -i "s/#define IDXTYPEWIDTH 32/#define IDXTYPEWIDTH 64/" ./include/metis.h
+RUN make -j$(nproc) config shared=1
+RUN make install
+
+WORKDIR /
+
+# # Install HSL solver
+# RUN git clone https://github.com/coin-or-tools/ThirdParty-HSL.git
+# WORKDIR /ThirdParty-HSL
+
+# RUN ./configure
+# RUN make -j$(nproc)
+# RUN make install
+
+WORKDIR /
+
+RUN git clone https://github.com/coin-or-tools/ThirdParty-Mumps.git
+WORKDIR /ThirdParty-Mumps
+RUN ./get.Mumps
+RUN ./configure
+RUN make -j$(nproc)
+RUN make install
+
+WORKDIR /
+
+# Install IPOPT
+RUN git clone https://github.com/coin-or/Ipopt.git
+WORKDIR /Ipopt
+RUN mkdir build
+WORKDIR /Ipopt/build
+RUN ../configure
+RUN make -j$(nproc)
+RUN make test
+RUN make install
