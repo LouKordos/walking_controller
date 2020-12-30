@@ -1244,60 +1244,57 @@ int main(int _argc, char **_argv)
                 P_param(m+5, 1 + N + n*N + m*N + k*m) = (m_value * 9.81) / 2;
             }
         }
+
+        Eigen::Matrix<double, 4, 4> H_body_world; // Transformation matrix from body frame to world frame
+
+        //ZYX order
+        H_body_world << cos(P_param(2, 0))*cos(P_param(1, 0)), sin(P_param(0, 0))*sin(P_param(1, 0))*cos(P_param(2, 0)) - sin(P_param(2, 0))*cos(P_param(0, 0)), sin(P_param(0, 0))*sin(P_param(2, 0)) + sin(P_param(1, 0))*cos(P_param(0, 0))*cos(P_param(2, 0)), P_param(3, 0),
+                            sin(P_param(2, 0))*cos(P_param(1, 0)), sin(P_param(0, 0))*sin(P_param(2, 0))*sin(P_param(1, 0)) + cos(P_param(0, 0))*cos(P_param(2, 0)), -sin(P_param(0, 0))*cos(P_param(2, 0)) + sin(P_param(2, 0))*sin(P_param(1, 0))*cos(P_param(0, 0)), P_param(4, 0),
+                            -sin(P_param(1, 0)), sin(P_param(0, 0))*cos(P_param(1, 0)), cos(P_param(0, 0))*cos(P_param(1, 0)), P_param(5, 0),
+                            0, 0, 0, 1;
+
+        // Transform point in body frame to world frame to get current world position. hip_offset is the hip joint position
+        Eigen::Matrix<double, 3, 1> adjusted_pos_vector_left = (H_body_world * (Eigen::Matrix<double, 4, 1>() << -hip_offset , 0, 0, 1).finished()).block<3,1>(0, 0);
+        Eigen::Matrix<double, 3, 1> adjusted_pos_vector_right = (H_body_world * (Eigen::Matrix<double, 4, 1>() << hip_offset, 0, 0, 1).finished()).block<3, 1>(0, 0);
         
-        if (total_iterations % contact_swap_interval == 0) {
-            
-            Eigen::Matrix<double, 4, 4> H_body_world; // Transformation matrix from body frame to world frame
+        Eigen::Matrix<double, 3, 1> vel_vector = (Eigen::Matrix<double, 3, 1>() << P_param(9, 0), P_param(10, 0), P_param(11, 0)).finished();
+        Eigen::Matrix<double, 3, 1> vel_desired_vector = (Eigen::Matrix<double, 3, 1>() << vel_x_desired, vel_y_desired, vel_z_desired).finished();
+        Eigen::Matrix<double, 3, 1> omega_desired_vector = (Eigen::Matrix<double, 3, 1>() << omega_x_desired, omega_y_desired, omega_z_desired).finished();
+        
+        left_leg->foot_pos_world_desired_mutex.lock();
+        right_leg->foot_pos_world_desired_mutex.lock();
+        left_leg->foot_pos_world_desired = adjusted_pos_vector_left + (t_stance/2) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(P_param(5, 0)) / 9.81) * vel_vector.cross(omega_desired_vector);
+        right_leg->foot_pos_world_desired = adjusted_pos_vector_right + (t_stance/2) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(P_param(5, 0)) / 9.81) * vel_vector.cross(omega_desired_vector);
 
-            //ZYX order
-            H_body_world << cos(P_param(2, 0))*cos(P_param(1, 0)), sin(P_param(0, 0))*sin(P_param(1, 0))*cos(P_param(2, 0)) - sin(P_param(2, 0))*cos(P_param(0, 0)), sin(P_param(0, 0))*sin(P_param(2, 0)) + sin(P_param(1, 0))*cos(P_param(0, 0))*cos(P_param(2, 0)), P_param(3, 0),
-                                sin(P_param(2, 0))*cos(P_param(1, 0)), sin(P_param(0, 0))*sin(P_param(2, 0))*sin(P_param(1, 0)) + cos(P_param(0, 0))*cos(P_param(2, 0)), -sin(P_param(0, 0))*cos(P_param(2, 0)) + sin(P_param(2, 0))*sin(P_param(1, 0))*cos(P_param(0, 0)), P_param(4, 0),
-                                -sin(P_param(1, 0)), sin(P_param(0, 0))*cos(P_param(1, 0)), cos(P_param(0, 0))*cos(P_param(1, 0)), P_param(5, 0),
-                                0, 0, 0, 1;
-
-            // Transform point in body frame to world frame to get current world position. hip_offset is the hip joint position
-            Eigen::Matrix<double, 3, 1> adjusted_pos_vector_left = (H_body_world * (Eigen::Matrix<double, 4, 1>() << -hip_offset , 0, 0, 1).finished()).block<3,1>(0, 0);
-            Eigen::Matrix<double, 3, 1> adjusted_pos_vector_right = (H_body_world * (Eigen::Matrix<double, 4, 1>() << hip_offset, 0, 0, 1).finished()).block<3, 1>(0, 0);
-            
-            Eigen::Matrix<double, 3, 1> vel_vector = (Eigen::Matrix<double, 3, 1>() << P_param(9, 0), P_param(10, 0), P_param(11, 0)).finished();
-            Eigen::Matrix<double, 3, 1> vel_desired_vector = (Eigen::Matrix<double, 3, 1>() << vel_x_desired, vel_y_desired, vel_z_desired).finished();
-            Eigen::Matrix<double, 3, 1> omega_desired_vector = (Eigen::Matrix<double, 3, 1>() << omega_x_desired, omega_y_desired, omega_z_desired).finished();
-            
-            left_leg->foot_pos_world_desired_mutex.lock();
-            right_leg->foot_pos_world_desired_mutex.lock();
-            left_leg->foot_pos_world_desired = adjusted_pos_vector_left + (t_stance/2) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(P_param(5, 0)) / 9.81) * vel_vector.cross(omega_desired_vector);
-            right_leg->foot_pos_world_desired = adjusted_pos_vector_right + (t_stance/2) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(P_param(5, 0)) / 9.81) * vel_vector.cross(omega_desired_vector);
-
-            //TODO: Instead of using inverse, either solve the inverse symbolically in python or just ues Transpose as shown in Modern Robotics Video
-            // Find foot position in body frame to limit it in order to account for leg reachability, collision with other leg and reasonable values
-            //H_body_world.inverse() is H_world_body
-            Eigen::Matrix<double, 3, 1> left_foot_pos_body = (H_body_world.inverse() * (Eigen::Matrix<double, 4, 1>() << left_leg->foot_pos_world_desired, 1).finished()).block<3,1>(0, 0);
-            Eigen::Matrix<double, 3, 1> right_foot_pos_body = (H_body_world.inverse() * (Eigen::Matrix<double, 4, 1>() << right_leg->foot_pos_world_desired, 1).finished()).block<3,1>(0,0);
-            
-            // Constrain X value of foot position in body coordinates
-            if (left_foot_pos_body(0, 0) > r_x_limit - hip_offset) {
-                left_foot_pos_body(0, 0) = r_x_limit - hip_offset;
-                left_leg->foot_pos_world_desired = (H_body_world * (Eigen::Matrix<double, 4, 1>() << left_foot_pos_body, 1).finished()).block<3,1>(0, 0);
-            }
-            else if (left_foot_pos_body(0, 0) < -r_x_limit - hip_offset) {
-                left_foot_pos_body(0, 0) = -r_x_limit - hip_offset;
-                left_leg->foot_pos_world_desired = (H_body_world * (Eigen::Matrix<double, 4, 1>() << left_foot_pos_body, 1).finished()).block<3,1>(0, 0);
-            }
-
-            if (right_foot_pos_body(0, 0) > r_x_limit + hip_offset) {
-                right_foot_pos_body(0, 0) = r_x_limit + hip_offset;
-                right_leg->foot_pos_world_desired = (H_body_world * (Eigen::Matrix<double, 4, 1>() << right_foot_pos_body, 1).finished()).block<3,1>(0, 0);
-            }
-            else if (right_foot_pos_body(0, 0) < -r_x_limit + hip_offset) {
-                right_foot_pos_body(0, 0) = -r_x_limit + hip_offset;
-                right_leg->foot_pos_world_desired = (H_body_world * (Eigen::Matrix<double, 4, 1>() << right_foot_pos_body, 1).finished()).block<3,1>(0, 0);
-            }
-            left_leg->foot_pos_world_desired(2, 0) = right_leg->foot_pos_world_desired(2, 0) = 0; // This is needed because the formula above doesn't make sense for Z, and the foot naturally touches the ground at Z = 0 in the world frame
-            
-            // stringstream temp;
-            // temp << "left_foot_pos_world_desired: " << left_foot_pos_world(0, 0) << "," << left_foot_pos_world(1, 0) << "," << left_foot_pos_world(2, 0);
-            // print_threadsafe(temp.str(), "mpc_thread", INFO);
+        //TODO: Instead of using inverse, either solve the inverse symbolically in python or just ues Transpose as shown in Modern Robotics Video
+        // Find foot position in body frame to limit it in order to account for leg reachability, collision with other leg and reasonable values
+        //H_body_world.inverse() is H_world_body
+        Eigen::Matrix<double, 3, 1> left_foot_pos_body = (H_body_world.inverse() * (Eigen::Matrix<double, 4, 1>() << left_leg->foot_pos_world_desired, 1).finished()).block<3,1>(0, 0);
+        Eigen::Matrix<double, 3, 1> right_foot_pos_body = (H_body_world.inverse() * (Eigen::Matrix<double, 4, 1>() << right_leg->foot_pos_world_desired, 1).finished()).block<3,1>(0,0);
+        
+        // Constrain X value of foot position in body coordinates
+        if (left_foot_pos_body(0, 0) > r_x_limit - hip_offset) {
+            left_foot_pos_body(0, 0) = r_x_limit - hip_offset;
+            left_leg->foot_pos_world_desired = (H_body_world * (Eigen::Matrix<double, 4, 1>() << left_foot_pos_body, 1).finished()).block<3,1>(0, 0);
         }
+        else if (left_foot_pos_body(0, 0) < -r_x_limit - hip_offset) {
+            left_foot_pos_body(0, 0) = -r_x_limit - hip_offset;
+            left_leg->foot_pos_world_desired = (H_body_world * (Eigen::Matrix<double, 4, 1>() << left_foot_pos_body, 1).finished()).block<3,1>(0, 0);
+        }
+
+        if (right_foot_pos_body(0, 0) > r_x_limit + hip_offset) {
+            right_foot_pos_body(0, 0) = r_x_limit + hip_offset;
+            right_leg->foot_pos_world_desired = (H_body_world * (Eigen::Matrix<double, 4, 1>() << right_foot_pos_body, 1).finished()).block<3,1>(0, 0);
+        }
+        else if (right_foot_pos_body(0, 0) < -r_x_limit + hip_offset) {
+            right_foot_pos_body(0, 0) = -r_x_limit + hip_offset;
+            right_leg->foot_pos_world_desired = (H_body_world * (Eigen::Matrix<double, 4, 1>() << right_foot_pos_body, 1).finished()).block<3,1>(0, 0);
+        }
+        left_leg->foot_pos_world_desired(2, 0) = right_leg->foot_pos_world_desired(2, 0) = 0; // This is needed because the formula above doesn't make sense for Z, and the foot naturally touches the ground at Z = 0 in the world frame
+        
+        // stringstream temp;
+        // temp << "left_foot_pos_world_desired: " << left_foot_pos_world(0, 0) << "," << left_foot_pos_world(1, 0) << "," << left_foot_pos_world(2, 0);
+        // print_threadsafe(temp.str(), "mpc_thread", INFO);
 
         // Calculate r from foot world position
         r_x_left = left_leg->foot_pos_world_desired(0, 0) - (double)P_param(3, 0);
