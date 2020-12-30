@@ -16,7 +16,7 @@ Eigen::Matrix<double, 3, 1> CartesianTrajectory::get_trajectory_pos(double t) {
 
         temp_pos(i, 0) = a * pow(t, 4) + b * pow(t, 3) + c * pow(t, 2) + d * t + e;
     }
-
+    
     return temp_pos;
 }
 
