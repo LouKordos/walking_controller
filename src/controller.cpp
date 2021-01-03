@@ -321,6 +321,8 @@ void calculate_left_leg_torques() {
             left_leg->theta4dot = theta4_dot;
             left_leg->theta5dot = theta5_dot;
         }
+        // Update no matter the gait phase to keep foot state updated
+        left_leg->update();
 
         // If swing, leg trajectory should be followed, if not, foot is in contact with the ground and MPC forces should be converted into torques and applied
         if(left_leg->swing_phase) {
@@ -334,7 +336,6 @@ void calculate_left_leg_torques() {
             // left_leg->accel_desired << 0, 0, 0;
             
             //TODO: Maybe rework to only use q and q_dot
-            left_leg->update();
 
             // std::cout << "q: " << left_leg->q << std::endl;
             // std::cout << "q_dot: " << left_leg->q_dot << std::endl;
@@ -576,6 +577,9 @@ void calculate_right_leg_torques() {
             right_leg->theta5dot = theta5_dot;
         }
 
+        //TODO: Maybe rework to only use q and q_dot
+        right_leg->update();
+
         // If swing, leg trajectory should be followed, if not, foot is in contact with the ground and MPC forces should be converted into torques and applied
         if(right_leg->swing_phase) {
             
@@ -586,9 +590,6 @@ void calculate_right_leg_torques() {
             // right_leg->pos_desired << 0, 0, -1, 0, 0;
             // right_leg->vel_desired << 0, 0, 0, 0, 0;
             // right_leg->accel_desired << 0, 0, 0;
-            
-            //TODO: Maybe rework to only use q and q_dot
-            right_leg->update();
 
             // std::cout << "q: " << right_leg->q << std::endl;
             // std::cout << "q_dot: " << right_leg->q_dot << std::endl;
