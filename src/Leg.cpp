@@ -193,6 +193,19 @@ void Leg::update() {
     Leg::iteration_counter++;
 }
 
+// Simply returns the current foot position in world frame
+Eigen::Matrix<double, 3, 1> Leg::get_foot_pos_world(Eigen::Matrix<double, 13, 1> &com_state) {
+    //ZYX order
+    Eigen::Matrix<double, 4, 4> H_body_world = (Eigen::Matrix<double, 4, 4>() << cos(com_state(2, 0))*cos(com_state(1, 0)), sin(com_state(0, 0))*sin(com_state(1, 0))*cos(com_state(2, 0)) - sin(com_state(2, 0))*cos(com_state(0, 0)), sin(com_state(0, 0))*sin(com_state(2, 0)) + sin(com_state(1, 0))*cos(com_state(0, 0))*cos(com_state(2, 0)), com_state(3, 0),
+                        sin(com_state(2, 0))*cos(com_state(1, 0)), sin(com_state(0, 0))*sin(com_state(2, 0))*sin(com_state(1, 0)) + cos(com_state(0, 0))*cos(com_state(2, 0)), -sin(com_state(0, 0))*cos(com_state(2, 0)) + sin(com_state(2, 0))*sin(com_state(1, 0))*cos(com_state(0, 0)), com_state(4, 0),
+                        -sin(com_state(1, 0)), sin(com_state(0, 0))*cos(com_state(1, 0)), cos(com_state(0, 0))*cos(com_state(1, 0)), com_state(5, 0),
+                        0, 0, 0, 1).finished();
+
+    Leg::update_foot_pos_body_frame(com_state);
+
+    return (H_body_world * (Eigen::Matrix<double, 4, 1>() << Leg::foot_pos_body_frame, 1).finished()).block<3,1>(0, 0); 
+}
+
 void Leg::update_torque_setpoint() {
     update_tau_setpoint(J_foot_combined, Kp, pos_desired, foot_pos, Kd, vel_desired, foot_vel, tau_ff, tau_setpoint);
 
