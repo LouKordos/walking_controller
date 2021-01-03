@@ -840,8 +840,8 @@ int main(int _argc, char **_argv)
     filename = std::to_string(largest_index + 1);
     std::cout << "filename: " << filename << std::endl;
 
-    left_leg->foot_pos_world_desired << -0.15, 0, 0.6;
-    right_leg->foot_pos_world_desired << 0.15, 0, 0.6;
+    left_leg->foot_pos_world_desired << -0.15, 0, 0;
+    right_leg->foot_pos_world_desired << 0.15, 0, 0;
 
     alternate_contacts = true;
     left_leg->swing_phase = true;
