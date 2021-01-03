@@ -798,8 +798,8 @@ int main(int _argc, char **_argv)
     log("--------------------------------", INFO);
     log("--------------------------------", INFO);
 
-    // is 0.065 because it's the difference between torso COM height and Hip Actuator Center Height, negative because just think about it or just calculate an example value with negative and positive z displacement. 
-    // A point expressed in hip frame (i.e. [0, 0 0]) will obviously be at negative Z in a frame that is located above the hip frame, meaning you need negative Z displacement in the transformation matrix.
+    // is 0.065 because it's the difference between torso COM height and Hip Actuator Center Height, negative because just think about it or calculate an example value with negative and positive z displacement. 
+    // A point expressed in hip frame (i.e. [0, 0, 0]) will obviously be at negative Z in a frame that is located above the hip frame, meaning you need negative Z displacement in the transformation matrix.
     left_leg = new Leg(-0.15, 0, -0.065, left_leg_contact_state_port);
     right_leg = new Leg(0.15, 0, -0.065, right_leg_contact_state_port);
 
