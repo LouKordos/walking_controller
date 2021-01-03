@@ -1263,51 +1263,86 @@ int main(int _argc, char **_argv)
         
         left_leg->foot_pos_world_desired_mutex.lock();
         right_leg->foot_pos_world_desired_mutex.lock();
-        left_leg->foot_pos_world_desired = adjusted_pos_vector_left + (t_stance/2) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(P_param(5, 0)) / 9.81) * vel_vector.cross(omega_desired_vector);
-        right_leg->foot_pos_world_desired = adjusted_pos_vector_right + (t_stance/2) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(P_param(5, 0)) / 9.81) * vel_vector.cross(omega_desired_vector);
 
-        //TODO: Instead of using inverse, either solve the inverse symbolically in python or just ues Transpose as shown in Modern Robotics Video
-        // Find foot position in body frame to limit it in order to account for leg reachability, collision with other leg and reasonable values
-        //H_body_world.inverse() is H_world_body
-        Eigen::Matrix<double, 3, 1> left_foot_pos_body = (H_body_world.inverse() * (Eigen::Matrix<double, 4, 1>() << left_leg->foot_pos_world_desired, 1).finished()).block<3,1>(0, 0);
-        Eigen::Matrix<double, 3, 1> right_foot_pos_body = (H_body_world.inverse() * (Eigen::Matrix<double, 4, 1>() << right_leg->foot_pos_world_desired, 1).finished()).block<3,1>(0,0);
-        
-        // Constrain X value of foot position in body coordinates
-        if (left_foot_pos_body(0, 0) > r_x_limit - hip_offset) {
-            left_foot_pos_body(0, 0) = r_x_limit - hip_offset;
-            left_leg->foot_pos_world_desired = (H_body_world * (Eigen::Matrix<double, 4, 1>() << left_foot_pos_body, 1).finished()).block<3,1>(0, 0);
-        }
-        else if (left_foot_pos_body(0, 0) < -r_x_limit - hip_offset) {
-            left_foot_pos_body(0, 0) = -r_x_limit - hip_offset;
-            left_leg->foot_pos_world_desired = (H_body_world * (Eigen::Matrix<double, 4, 1>() << left_foot_pos_body, 1).finished()).block<3,1>(0, 0);
+        // Only change where forces are applied when in swing phase, foot cannot move while in contact
+        if(left_leg->swing_phase) {
+            left_leg->foot_pos_world_desired = adjusted_pos_vector_left + (t_stance/2.0) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(P_param(5, 0)) / 9.81) * vel_vector.cross(omega_desired_vector);
+            
+            //TODO: Instead of using inverse, either solve the inverse symbolically in python or just ues Transpose as shown in Modern Robotics Video
+            // Find foot position in body frame to limit it in order to account for leg reachability, collision with other leg and reasonable values
+            //H_body_world.inverse() is H_world_body
+            Eigen::Matrix<double, 3, 1> left_foot_pos_body = (H_body_world.inverse() * (Eigen::Matrix<double, 4, 1>() << left_leg->foot_pos_world_desired, 1).finished()).block<3,1>(0, 0);
+            
+            // Constrain X value of foot position in body coordinates
+            if (left_foot_pos_body(0, 0) > r_x_limit - hip_offset) {
+                left_foot_pos_body(0, 0) = r_x_limit - hip_offset;
+                left_leg->foot_pos_world_desired = (H_body_world * (Eigen::Matrix<double, 4, 1>() << left_foot_pos_body, 1).finished()).block<3,1>(0, 0);
+            }
+            else if (left_foot_pos_body(0, 0) < -r_x_limit - hip_offset) {
+                left_foot_pos_body(0, 0) = -r_x_limit - hip_offset;
+                left_leg->foot_pos_world_desired = (H_body_world * (Eigen::Matrix<double, 4, 1>() << left_foot_pos_body, 1).finished()).block<3,1>(0, 0);
+            }
+            left_leg->foot_pos_world_desired(2, 0) = 0; // This is needed because the formula above doesn't make sense for Z, and the foot naturally touches the ground at Z = 0 in the world frame
         }
 
-        if (right_foot_pos_body(0, 0) > r_x_limit + hip_offset) {
-            right_foot_pos_body(0, 0) = r_x_limit + hip_offset;
-            right_leg->foot_pos_world_desired = (H_body_world * (Eigen::Matrix<double, 4, 1>() << right_foot_pos_body, 1).finished()).block<3,1>(0, 0);
+        // Only change where forces are applied when in swing phase, foot cannot move while in contact
+        if(right_leg->swing_phase) {
+            right_leg->foot_pos_world_desired = adjusted_pos_vector_right + (t_stance/2.0) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(P_param(5, 0)) / 9.81) * vel_vector.cross(omega_desired_vector);
+
+            //TODO: Instead of using inverse, either solve the inverse symbolically in python or just ues Transpose as shown in Modern Robotics Video
+            // Find foot position in body frame to limit it in order to account for leg reachability, collision with other leg and reasonable values
+            //H_body_world.inverse() is H_world_body
+            Eigen::Matrix<double, 3, 1> right_foot_pos_body = (H_body_world.inverse() * (Eigen::Matrix<double, 4, 1>() << right_leg->foot_pos_world_desired, 1).finished()).block<3,1>(0,0);
+
+            // Constrain X value of foot position in body coordinates
+            if (right_foot_pos_body(0, 0) > r_x_limit + hip_offset) {
+                right_foot_pos_body(0, 0) = r_x_limit + hip_offset;
+                right_leg->foot_pos_world_desired = (H_body_world * (Eigen::Matrix<double, 4, 1>() << right_foot_pos_body, 1).finished()).block<3,1>(0, 0);
+            }
+            else if (right_foot_pos_body(0, 0) < -r_x_limit + hip_offset) {
+                right_foot_pos_body(0, 0) = -r_x_limit + hip_offset;
+                right_leg->foot_pos_world_desired = (H_body_world * (Eigen::Matrix<double, 4, 1>() << right_foot_pos_body, 1).finished()).block<3,1>(0, 0);
+            }
+            right_leg->foot_pos_world_desired(2, 0) = 0; // This is needed because the formula above doesn't make sense for Z, and the foot naturally touches the ground at Z = 0 in the world frame
         }
-        else if (right_foot_pos_body(0, 0) < -r_x_limit + hip_offset) {
-            right_foot_pos_body(0, 0) = -r_x_limit + hip_offset;
-            right_leg->foot_pos_world_desired = (H_body_world * (Eigen::Matrix<double, 4, 1>() << right_foot_pos_body, 1).finished()).block<3,1>(0, 0);
-        }
-        left_leg->foot_pos_world_desired(2, 0) = right_leg->foot_pos_world_desired(2, 0) = 0; // This is needed because the formula above doesn't make sense for Z, and the foot naturally touches the ground at Z = 0 in the world frame
         
         // stringstream temp;
         // temp << "left_foot_pos_world_desired: " << left_foot_pos_world(0, 0) << "," << left_foot_pos_world(1, 0) << "," << left_foot_pos_world(2, 0);
         // print_threadsafe(temp.str(), "mpc_thread", INFO);
 
         // Calculate r from foot world position
-        r_x_left = left_leg->foot_pos_world_desired(0, 0) - (double)P_param(3, 0);
-        r_x_right = right_leg->foot_pos_world_desired(0, 0) - (double)P_param(3, 0);
+        if(left_leg->swing_phase) {
+            r_x_left = left_leg->foot_pos_world_desired(0, 0) - (double)P_param(3, 0);
+            r_y_left = left_leg->foot_pos_world_desired(1, 0) - (double)P_param(4, 0);
+            r_z_left = -P_param(5, 0);
+        }
+        else  { // If in stance phase, tell the MPC where the foot actually is, not where the MPC expects it to be
+            Eigen::Matrix<double, n, 1> x_temp = P_param.block<n,1>(0, 0);
+            Eigen::Matrix<double, 3, 1> foot_pos_world_left = left_leg->get_foot_pos_world(x_temp);
+            left_leg->foot_pos_world_desired = foot_pos_world_left;
 
-        r_y_left = left_leg->foot_pos_world_desired(1, 0) - (double)P_param(4, 0);
-        r_y_right = right_leg->foot_pos_world_desired(1, 0) - (double)P_param(4, 0);
+            r_x_left = foot_pos_world_left(0, 0) - P_param(3, 0);
+            r_y_left = foot_pos_world_left(1, 0) - P_param(4, 0);
+            r_z_left = -P_param(5, 0);
+        }
+
+        if(right_leg->swing_phase) {
+            r_x_right = right_leg->foot_pos_world_desired(0, 0) - (double)P_param(3, 0);
+            r_y_right = right_leg->foot_pos_world_desired(1, 0) - (double)P_param(4, 0);
+            r_z_right = -P_param(5, 0);
+        }
+        else { // If in stance phase, tell the MPC where the foot actually is, not where the MPC expects it to be
+            Eigen::Matrix<double, n, 1> x_temp = P_param.block<n,1>(0, 0);
+            Eigen::Matrix<double, 3, 1> foot_pos_world_right = right_leg->get_foot_pos_world(x_temp);
+            right_leg->foot_pos_world_desired = foot_pos_world_right;
+
+            r_x_right = foot_pos_world_right(0, 0) - P_param(3, 0);
+            r_y_right = foot_pos_world_right(1, 0) - P_param(4, 0);
+            r_z_right = -P_param(5, 0);
+        }
 
         left_leg->foot_pos_world_desired_mutex.unlock();
         right_leg->foot_pos_world_desired_mutex.unlock();
-
-        r_z_left = -P_param(5, 0);
-        r_z_right = -P_param(5, 0);
 
         double pos_x_desired_temp = pos_x_desired;
         double pos_y_desired_temp = pos_y_desired;
@@ -1389,6 +1424,11 @@ int main(int _argc, char **_argv)
         double pos_y_t_next = 0.0;
         double pos_z_t = 0.0;
 
+        int swap_counter = 0; // Keeping track of contact swaps that have happened during prediction horizon so that only the first contact swap sets next_foot_pos_world_desired
+
+        bool swing_left_horizon = left_leg->swing_phase;
+        bool swing_right_horizon = right_leg->swing_phase;
+
         // Discretization loop for Prediction Horizon
         for(int i = 0; i < N; ++i) {
             if (i < N-1) {
@@ -1433,33 +1473,33 @@ int main(int _argc, char **_argv)
                 pos_y_t = (double)P_param(4, 0);
                 pos_z_t = (double)P_param(5, 0);
             }
+            
+            if((total_iterations+i) % contact_swap_interval == 0 && i != 0) { // Go to next contact swap in prediction horizon and get desired foot position for trajectory planner. The if + if statement is badly written and should be refactored
+                swing_left_horizon = !swing_left_horizon;
+                swing_right_horizon = !swing_right_horizon;
+            }
 
-            int swap_counter = 0;
+            // See comments before, same procedure here, also ZYX order
+            Eigen::Matrix<double, 4, 4> H_body_world = (Eigen::Matrix<double, 4, 4>() << cos(psi_t)*cos(theta_t), sin(phi_t)*sin(theta_t)*cos(psi_t) - sin(psi_t)*cos(phi_t), sin(phi_t)*sin(psi_t) + sin(theta_t)*cos(phi_t)*cos(psi_t), pos_x_t,
+                                                        sin(psi_t)*cos(theta_t), sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t), -sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t), pos_y_t,
+                                                        -sin(theta_t), sin(phi_t)*cos(theta_t), cos(phi_t)*cos(theta_t), pos_z_t,
+                                                        0, 0, 0, 1).finished();
 
-            if((total_iterations+i) % contact_swap_interval == 0 && i != 0) {
-                
-                // See comments before, same procedure here, also ZYX order
-                Eigen::Matrix<double, 4, 4> H_body_world = (Eigen::Matrix<double, 4, 4>() << cos(psi_t)*cos(theta_t), sin(phi_t)*sin(theta_t)*cos(psi_t) - sin(psi_t)*cos(phi_t), sin(phi_t)*sin(psi_t) + sin(theta_t)*cos(phi_t)*cos(psi_t), pos_x_t,
-                                                            sin(psi_t)*cos(theta_t), sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t), -sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t), pos_y_t,
-                                                            -sin(theta_t), sin(phi_t)*cos(theta_t), cos(phi_t)*cos(theta_t), pos_z_t,
-                                                            0, 0, 0, 1).finished();
+            Eigen::Matrix<double, 3, 1> adjusted_pos_vector_left = (H_body_world * (Eigen::Matrix<double, 4, 1>() << -hip_offset, 0, 0, 1).finished()).block<3, 1>(0, 0);
+            Eigen::Matrix<double, 3, 1> adjusted_pos_vector_right = (H_body_world * (Eigen::Matrix<double, 4, 1>() << hip_offset, 0, 0, 1).finished()).block<3, 1>(0, 0);
+            
+            Eigen::Matrix<double, 3, 1> vel_vector = (Eigen::Matrix<double, 3, 1>() << vel_x_t, vel_y_t, vel_z_t).finished();
+            Eigen::Matrix<double, 3, 1> vel_desired_vector = (Eigen::Matrix<double, 3, 1>() << vel_x_desired, vel_y_desired, vel_z_desired).finished();
+            Eigen::Matrix<double, 3, 1> omega_desired_vector = (Eigen::Matrix<double, 3, 1>() << omega_x_desired, omega_y_desired, omega_z_desired).finished();
 
-                Eigen::Matrix<double, 3, 1> adjusted_pos_vector_left = (H_body_world * (Eigen::Matrix<double, 4, 1>() << -hip_offset, 0, 0, 1).finished()).block<3,1>(0, 0);
-                Eigen::Matrix<double, 3, 1> adjusted_pos_vector_right = (H_body_world * (Eigen::Matrix<double, 4, 1>() << hip_offset, 0, 0, 1).finished()).block<3, 1>(0, 0);
-                
-                Eigen::Matrix<double, 3, 1> vel_vector = (Eigen::Matrix<double, 3, 1>() << vel_x_t, vel_y_t, vel_z_t).finished();
-                Eigen::Matrix<double, 3, 1> vel_desired_vector = (Eigen::Matrix<double, 3, 1>() << vel_x_desired, vel_y_desired, vel_z_desired).finished();
-                Eigen::Matrix<double, 3, 1> omega_desired_vector = (Eigen::Matrix<double, 3, 1>() << omega_x_desired, omega_y_desired, omega_z_desired).finished();
-
-                left_leg->foot_pos_world_discretization = adjusted_pos_vector_left + (t_stance/2) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(pos_z_t) / 9.81) * vel_vector.cross(omega_desired_vector);
-                right_leg->foot_pos_world_discretization = adjusted_pos_vector_right + (t_stance/2) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(pos_z_t) / 9.81) * vel_vector.cross(omega_desired_vector);
-
+            // Only change where forces are applied when in swing phase, foot cannot move while in contact
+            if(swing_left_horizon) {
+                left_leg->foot_pos_world_discretization = adjusted_pos_vector_left + (t_stance/2.0) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(pos_z_t) / 9.81) * vel_vector.cross(omega_desired_vector);
                 
                 //TODO: Instead of using inverse, either solve the inverse symbolically in python or just ues Transpose as shown in Modern Robotics Video
                 Eigen::Matrix<double, 3, 1> left_foot_pos_body = (H_body_world.inverse() * (Eigen::Matrix<double, 4, 1>() << left_leg->foot_pos_world_discretization, 1).finished()).block<3,1>(0, 0);
-                Eigen::Matrix<double, 3, 1> right_foot_pos_body = (H_body_world.inverse() * (Eigen::Matrix<double, 4, 1>() << right_leg->foot_pos_world_discretization, 1).finished()).block<3,1>(0, 0);
-
-               // Constrain X value of foot position in body coordinates, TODO: Do this in all directions with a smarter implementation using precise reachability of leg kinematics (account for singularities as well)
+                
+                // Constrain X value of foot position in body coordinates, TODO: Do this in all directions with a smarter implementation using precise reachability of leg kinematics (account for singularities as well)
                 if (left_foot_pos_body(0, 0) > r_x_limit - hip_offset) {
                     left_foot_pos_body(0, 0) = r_x_limit - hip_offset;
                     left_leg->foot_pos_world_discretization = (H_body_world * (Eigen::Matrix<double, 4, 1>() << left_foot_pos_body, 1).finished()).block<3,1>(0, 0);
@@ -1468,6 +1508,15 @@ int main(int _argc, char **_argv)
                     left_foot_pos_body(0, 0) = -r_x_limit - hip_offset;
                     left_leg->foot_pos_world_discretization = (H_body_world * (Eigen::Matrix<double, 4, 1>() << left_foot_pos_body, 1).finished()).block<3,1>(0, 0);
                 }
+                left_leg->foot_pos_world_discretization(2, 0) = 0; // This is needed because the formula above doesn't make sense for Z, and the foot naturally touches the ground at Z = 0 in the world frame
+            }
+
+            // Only change where forces are applied when in swing phase, foot cannot move while in contact
+            if(swing_right_horizon) {
+                right_leg->foot_pos_world_discretization = adjusted_pos_vector_right + (t_stance/2.0) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(pos_z_t) / 9.81) * vel_vector.cross(omega_desired_vector);
+
+                //TODO: Instead of using inverse, either solve the inverse symbolically in python or just ues Transpose as shown in Modern Robotics Video
+                Eigen::Matrix<double, 3, 1> right_foot_pos_body = (H_body_world.inverse() * (Eigen::Matrix<double, 4, 1>() << right_leg->foot_pos_world_discretization, 1).finished()).block<3,1>(0, 0);
 
                 if (right_foot_pos_body(0, 0) > r_x_limit + hip_offset) {
                     right_foot_pos_body(0, 0) = r_x_limit + hip_offset;
@@ -1477,9 +1526,10 @@ int main(int _argc, char **_argv)
                     right_foot_pos_body(0, 0) = -r_x_limit + hip_offset;
                     right_leg->foot_pos_world_discretization = (H_body_world * (Eigen::Matrix<double, 4, 1>() << right_foot_pos_body, 1).finished()).block<3,1>(0, 0);
                 }
+                right_leg->foot_pos_world_discretization(2, 0) = 0; // This is needed because the formula above doesn't make sense for Z, and the foot naturally touches the ground at Z = 0 in the world frame
+            }
 
-                left_leg->foot_pos_world_discretization(2, 0) = right_leg->foot_pos_world_discretization(2, 0) = 0; // This is needed because the formula above doesn't make sense for Z, and the foot naturally touches the ground at Z = 0 in the world frame
-                
+            if((total_iterations+i) % contact_swap_interval == 0 && i != 0) { // Go to next contact swap in prediction horizon and get desired foot position for trajectory planner. The if + if statement is badly written and should be refactored
                 if(swap_counter < 1) {
                     left_leg->next_foot_pos_world_desired_mutex.lock();
                     right_leg->next_foot_pos_world_desired_mutex.lock();
@@ -1499,17 +1549,15 @@ int main(int _argc, char **_argv)
                     right_leg->next_foot_pos_world_desired_mutex.unlock();
                     next_body_vel_mutex.unlock();
                 }
-
                 swap_counter++;
             }
 
             r_x_left = left_leg->foot_pos_world_discretization(0, 0) - pos_x_t;
-            r_x_right = right_leg->foot_pos_world_discretization(0, 0) - pos_x_t;
-
             r_y_left = left_leg->foot_pos_world_discretization(1, 0) - pos_y_t;
-            r_y_right = right_leg->foot_pos_world_discretization(1, 0) - pos_y_t;
-
             r_z_left = -pos_z_t;
+
+            r_x_right = right_leg->foot_pos_world_discretization(0, 0) - pos_x_t;
+            r_y_right = right_leg->foot_pos_world_discretization(1, 0) - pos_y_t;
             r_z_right = -pos_z_t;
 
             // Calculate I_world based on formula from notebook, which equates to R_zyx * I_world * R_zyx.T
