@@ -45,34 +45,9 @@ static leg_config config;
 
 void Leg::update_foot_pos_body_frame(Eigen::Matrix<double, 13, 1> &com_state) {
 
-    double phi_com = com_state(0, 0);
-    double theta_com = com_state(1, 0);
-    double psi_com = com_state(2, 0);
-    
-    double pos_x_com = com_state(3, 0);
-    double pos_y_com = com_state(4, 0);
-    double pos_z_com = com_state(5, 0);
-    
-    double vel_x_com = com_state(9, 0);
-    double vel_y_com = com_state(10, 0);
-    double vel_z_com = com_state(11, 0);
-
-    Eigen::Matrix<double, 4, 4> H_world_body = (Eigen::Matrix<double, 4, 4>() << cos(psi_com)*cos(theta_com), sin(psi_com)*cos(theta_com), -sin(theta_com), -pos_x_com*cos(psi_com)*cos(theta_com) - pos_y_com*sin(psi_com)*cos(theta_com) + pos_z_com*sin(theta_com), 
-                                            sin(phi_com)*sin(theta_com)*cos(psi_com) - sin(psi_com)*cos(phi_com), sin(phi_com)*sin(psi_com)*sin(theta_com) + cos(phi_com)*cos(psi_com), sin(phi_com)*cos(theta_com), -pos_x_com*sin(phi_com)*sin(theta_com)*cos(psi_com) + pos_x_com*sin(psi_com)*cos(phi_com) - pos_y_com*sin(phi_com)*sin(psi_com)*sin(theta_com) - pos_y_com*cos(phi_com)*cos(psi_com) - pos_z_com*sin(phi_com)*cos(theta_com), 
-                                            sin(phi_com)*sin(psi_com) + sin(theta_com)*cos(phi_com)*cos(psi_com), -sin(phi_com)*cos(psi_com) + sin(psi_com)*sin(theta_com)*cos(phi_com), cos(phi_com)*cos(theta_com), -pos_x_com*sin(phi_com)*sin(psi_com) - pos_x_com*sin(theta_com)*cos(phi_com)*cos(psi_com) + pos_y_com*sin(phi_com)*cos(psi_com) - pos_y_com*sin(psi_com)*sin(theta_com)*cos(phi_com) - pos_z_com*cos(phi_com)*cos(theta_com), 
-                                            0, 0, 0, 1).finished();
-
     Leg::foot_pos_body_frame_mutex.lock();
     Leg::foot_pos_body_frame = (H_hip_body * (Eigen::Matrix<double, 4, 1>() << foot_pos.block<3,1>(0, 0), 1).finished()).block<3,1>(0, 0);
     Leg::foot_pos_body_frame_mutex.unlock();
-
-    // stringstream temp;
-    // temp << "foot_pos_body_frame: " << foot_pos_body_frame;
-    // print_threadsafe(temp.str(), "Leg::update_foot_pos_body_frame", INFO);
-
-    // temp.str(std::string());
-    // temp << (H_world_body.inverse() * (Eigen::Matrix<double, 4, 1>() << foot_pos_body_frame.block<3,1>(0, 0), 1).finished()).block<3,1>(0, 0);
-    // print_threadsafe(temp.str(), "foot_pos_world_frame in update function", INFO);
 }
 
 void Leg::update_foot_trajectory(Eigen::Matrix<double, 13, 1> &com_state, Eigen::Matrix<double, 3, 1> next_body_vel, double t_stance, double time) {
