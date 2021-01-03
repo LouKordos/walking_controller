@@ -1645,9 +1645,25 @@ int main(int _argc, char **_argv)
             u_t = Eigen::ArrayXd::Zero(6, 1);
         }
 
+        x_temp = P_param.block<n,1>(0, 0);
+        Eigen::Matrix<double, 3, 1> foot_pos_world_left = left_leg->get_foot_pos_world(x_temp);
+        Eigen::Matrix<double, 3, 1> foot_pos_world_right = right_leg->get_foot_pos_world(x_temp);
+
+        double r_x_actual_left = foot_pos_world_left(0, 0) - P_param(3, 0);
+        double r_y_actual_left = foot_pos_world_left(1, 0) - P_param(4, 0);
+        double r_z_actual_left = -P_param(5, 0);
+
+        double r_x_actual_right = foot_pos_world_right(0, 0) - P_param(3, 0);
+        double r_y_actual_right = foot_pos_world_right(1, 0) - P_param(4, 0);
+        double r_z_actual_right = -P_param(5, 0);
+
         // Send optimal control over UDP, along with logging info for the gazebo plugin
         stringstream s;
-        s << u_t(0, 0) << "|" << u_t(1, 0) << "|" << u_t(2, 0) << "|" << u_t(3, 0) << "|" << u_t(4, 0) << "|" << u_t(5, 0) << "|" << r_x_left << "|" << r_y_left << "|" << r_z_left << "|" << r_x_right << "|" << r_y_right << "|" << r_z_right << "|" << P_param(1, 0) << "|420|" << solution_variables(0, 0); // Write torque setpoints to stringstream
+        s << u_t(0, 0) << "|" << u_t(1, 0) << "|" << u_t(2, 0) << "|" << u_t(3, 0) << "|" << u_t(4, 0) << "|" << u_t(5, 0) 
+            // << "|" << r_x_left << "|" << r_y_left << "|" << r_z_left << "|" << r_x_right << "|" << r_y_right << "|" << r_z_right
+            // << "|" << left_leg->foot_pos_body_frame(0, 0) << "|" << left_leg->foot_pos_body_frame(1, 0) << "|" << left_leg->foot_pos_body_frame(2, 0) << "|" << right_leg->foot_pos_body_frame(0, 0) << "|" << right_leg->foot_pos_body_frame(1, 0) << "|" << right_leg->foot_pos_body_frame(2, 0) 
+            << "|" << r_x_actual_left << "|" << r_y_actual_left << "|" << r_z_actual_left << "|" << r_x_actual_right << "|" << r_y_actual_right << "|" << r_z_actual_right
+            << "|" << P_param(1, 0) << "|420|" << solution_variables(0, 0); // Write torque setpoints to stringstream
         // s << u_t(0, 0) << "|" << u_t(1, 0) << "|" << u_t(2, 0) << "|" << u_t(3, 0) << "|" << u_t(4, 0) << "|" << u_t(5, 0) << "|" << r_x_left << "|" << r_y_left << "|" << r_z_left << "|" << r_x_right << "|" << r_y_right << "|" << r_z_right << "|" << P_param(1, 0) << "|420|0" ; // Write torque setpoints to stringstream
         
         // std::cout << "u_t: " << u_t(0) << "," << u_t(1) << "," << u_t(2) << "," << u_t(3) << "," << u_t(4) << "," << u_t(5) << std::endl;
