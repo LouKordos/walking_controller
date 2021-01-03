@@ -1127,9 +1127,7 @@ int main(int _argc, char **_argv)
 
             if(!left_leg->swing_phase) { // Left foot will now be in swing phase so we need to save lift off position for swing trajectory planning
 
-                x_mutex.lock();
-                Eigen::Matrix<double, n, 1> x_temp = x_t;
-                x_mutex.unlock();
+                Eigen::Matrix<double, n, 1> x_temp = P_param.block<n,1>(0, 0);
 
                 left_leg->update_foot_pos_body_frame(x_temp);
                 left_leg->foot_pos_body_frame_mutex.lock();
@@ -1140,9 +1138,7 @@ int main(int _argc, char **_argv)
             }
             if(!right_leg->swing_phase) { // Right foot will now be in swing phase so we need to save lift off position for swing trajectory planning
 
-                x_mutex.lock();
-                Eigen::Matrix<double, n, 1> x_temp = x_t;
-                x_mutex.unlock();
+                Eigen::Matrix<double, n, 1> x_temp = P_param.block<n,1>(0, 0);
 
                 right_leg->update_foot_pos_body_frame(x_temp);
                 right_leg->foot_pos_body_frame_mutex.lock();
