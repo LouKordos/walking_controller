@@ -1178,7 +1178,7 @@ int main(int _argc, char **_argv)
                 
                 ++contactSwapsTemp;
             }
-
+            
             // Only override planned contact values if there recently was a contact switch or there will be.
             if(contactSwapsTemp < 1 && ((total_iterations - iterationsAtLastContact) > 5 && ((int)(contact_swap_interval / dt) - (total_iterations - iterationsAtLastContact)) < 5)) { // Only override contact values up until next contact swap
                 if(contactLeft && left_leg->swing_phase) {
@@ -1246,7 +1246,6 @@ int main(int _argc, char **_argv)
         }
 
         Eigen::Matrix<double, 4, 4> H_body_world; // Transformation matrix from body frame to world frame
-
         //ZYX order
         H_body_world << cos(P_param(2, 0))*cos(P_param(1, 0)), sin(P_param(0, 0))*sin(P_param(1, 0))*cos(P_param(2, 0)) - sin(P_param(2, 0))*cos(P_param(0, 0)), sin(P_param(0, 0))*sin(P_param(2, 0)) + sin(P_param(1, 0))*cos(P_param(0, 0))*cos(P_param(2, 0)), P_param(3, 0),
                             sin(P_param(2, 0))*cos(P_param(1, 0)), sin(P_param(0, 0))*sin(P_param(2, 0))*sin(P_param(1, 0)) + cos(P_param(0, 0))*cos(P_param(2, 0)), -sin(P_param(0, 0))*cos(P_param(2, 0)) + sin(P_param(2, 0))*sin(P_param(1, 0))*cos(P_param(0, 0)), P_param(4, 0),
@@ -1355,7 +1354,6 @@ int main(int _argc, char **_argv)
         double omega_z_desired_temp = omega_z_desired;// - 0.02;
 
         //Update reference trajectory
-
         for(int i = 0; i < N; ++i) {
             // if (vel_y_desired_temp < 0.2) {
             //     vel_y_desired_temp += 0.02;
