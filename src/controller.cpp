@@ -1000,11 +1000,11 @@ int main(int _argc, char **_argv)
     double omega_y_desired = 0;
     double omega_z_desired = 0;
 
-    double gait_gain = 0.1; // Rename to more accurate name
+    const double gait_gain = 0.1; // Rename to more accurate name
 
-    double r_x_limit = 0.5; // The relative foot position in x (so r_x_left and r_x_right) is limited to +/- r_x_limit
+    const double r_x_limit = 0.5; // The relative foot position in x (so r_x_left and r_x_right) is limited to +/- r_x_limit
 
-    double hip_offset = 0.15; // Offset in x direction from Center of body frame / CoM to center of hip joint
+    const double hip_offset = 0.15; // Offset in x direction from Center of body frame / CoM to center of hip joint
     
     // Foot positions used in state space matrices. These are in the world frame, but represent a vector from the CoM! This means the formula to get the actual foot world position is r + p
     double r_x_left = -hip_offset;
