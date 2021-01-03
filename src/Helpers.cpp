@@ -81,7 +81,14 @@ std::string getLogTypeString(LogType type) {
 
 void log(std::string message, LogType type) {
     ofstream log_file;
-    log_file.open("../../controller_log.txt", ios::app);
+    char* pPath;
+    pPath = getenv ("IS_DOCKER");
+    if (pPath == "Y" || pPath == "YES") {
+        log_file.open("/plot_data/controller_log.txt", ios::app);
+    }
+    else {
+        log_file.open("../.././plot_data/controller_log.txt", ios::app);
+    }
 
     log_file << "[" << boost::posix_time::second_clock::local_time().time_of_day() << "] [" << getLogTypeString(type) << "]" << ": " << message << std::endl;
     
