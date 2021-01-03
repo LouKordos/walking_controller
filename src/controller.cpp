@@ -1038,10 +1038,16 @@ int main(int _argc, char **_argv)
     data_file << "t,phi,theta,psi,pos_x,pos_y,pos_z,omega_x,omega_y,omega_z,vel_x,vel_y,vel_z,"
     << "g,f_x_left,f_y_left,f_z_left,f_x_right,f_y_right,f_z_right,"
     << "r_x_left,r_y_left,r_z_left,r_x_right,r_y_right,r_z_right,"
+    << "r_x_actual_left,r_y_actual_left,r_z_actual_left,"
+    << "r_x_actual_right,r_y_actual_right,r_z_actual_right,"
+    << "foot_pos_body_frame_x_left,foot_pos_body_frame_y_left,foot_pos_body_frame_z_left,"
+    << "foot_pos_body_frame_x_right,foot_pos_body_frame_y_right,foot_pos_body_frame_z_right,"
     << "foot_pos_world_desired_x_left,foot_pos_world_desired_y_left,foot_pos_world_desired_z_left,"
     << "foot_pos_world_desired_x_right,foot_pos_world_desired_y_right,foot_pos_world_desired_z_right,"
     << "foot_pos_body_frame_desired_x_left,foot_pos_body_frame_desired_y_left,foot_pos_body_frame_desired_z_left,"
     << "foot_pos_body_frame_desired_x_right,foot_pos_body_frame_desired_y_right,foot_pos_body_frame_desired_z_right,"
+    << "next_foot_pos_world_desired_x_left,next_foot_pos_world_desired_y_left,next_foot_pos_world_desired_z_left,"
+    << "next_foot_pos_world_desired_x_right,next_foot_pos_world_desired_y_right, next_foot_pos_world_desired_z_right,"
     << "theta_delay_compensation,full_iteration_time,phi_delay_compensation" << std::endl; // Add header to csv file
     data_file.close();
 
@@ -1101,7 +1107,7 @@ int main(int _argc, char **_argv)
                 }
             }
         }
-
+        
         stringstream temp;
         temp << "x_t:" << x_t(0, 0) << "," << x_t(1, 0) << "," << x_t(2, 0) << "," << x_t(3, 0) << "," << x_t(4, 0) << "," << x_t(5, 0) << "," << x_t(6, 0) << "," << x_t(7, 0) << "," << x_t(8, 0) << "," << x_t(9, 0) << "," << x_t(10, 0) << "," << x_t(11, 0) << "," << x_t(12, 0);
         log(temp.str(), INFO);
@@ -1690,18 +1696,47 @@ int main(int _argc, char **_argv)
         u_mutex.lock();
         x_mutex.lock();
 
+        left_leg->trajectory_start_time_mutex.lock();
+        right_leg->trajectory_start_time_mutex.lock();
+        left_leg->foot_trajectory_mutex.lock();
+        right_leg->foot_trajectory_mutex.lock();
+        left_leg->foot_pos_world_desired_mutex.lock();
+        right_leg->foot_pos_world_desired_mutex.lock();
+        left_leg->foot_pos_body_frame_mutex.lock();
+        right_leg->foot_pos_body_frame_mutex.lock();
+        left_leg->next_foot_pos_world_desired_mutex.lock();
+        right_leg->next_foot_pos_world_desired_mutex.lock();
+
         // Log data to csv file
         ofstream data_file;
         data_file.open(plotDataDirPath + "mpc_log.csv", ios::app); // Open csv file in append mode
         data_file << total_iterations * dt << "," << x_t(0, 0) << "," << x_t(1, 0) << "," << x_t(2, 0) << "," << x_t(3, 0) << "," << x_t(4, 0) << "," << x_t(5, 0) << "," << x_t(6, 0) << "," << x_t(7, 0) << "," << x_t(8, 0) << "," << x_t(9, 0) << "," << x_t(10, 0) << "," << x_t(11, 0) << "," << x_t(12, 0)
                 << "," << u_t(0) << "," << u_t(1) << "," << u_t(2) << "," << u_t(3) << "," << u_t(4) << "," << u_t(5) 
-                << "," << r_x_left << "," << r_y_left << "," << r_z_left << "," << r_x_right << "," << r_y_right << "," << r_z_right
+                << "," << r_x_left << "," << r_y_left << "," << r_z_left
+                << "," << r_x_right << "," << r_y_right << "," << r_z_right
+                << "," << r_x_actual_left << "," << r_y_actual_left << "," << r_z_actual_left
+                << "," << r_x_actual_right << "," << r_y_actual_right << "," << r_z_actual_right
+                << "," << left_leg->foot_pos_body_frame(0, 0) << "," << left_leg->foot_pos_body_frame(1, 0) << "," << left_leg->foot_pos_body_frame(2, 0)
+                << "," << right_leg->foot_pos_body_frame(0, 0) << "," << right_leg->foot_pos_body_frame(1, 0) << "," << right_leg->foot_pos_body_frame(2, 0)
                 << "," << left_leg->foot_pos_world_desired(0, 0) << "," << left_leg->foot_pos_world_desired(1, 0) << "," << left_leg->foot_pos_world_desired(2, 0)
                 << "," << right_leg->foot_pos_world_desired(0, 0) << "," << right_leg->foot_pos_world_desired(1, 0) << "," << right_leg->foot_pos_world_desired(2, 0)
-                << "," << left_leg->foot_pos_desired_body_frame(0, 0) << "," << left_leg->foot_pos_desired_body_frame(1, 0) << "," << left_leg->foot_pos_desired_body_frame(2, 0)
-                << "," << right_leg->foot_pos_desired_body_frame(0, 0) << "," << right_leg->foot_pos_desired_body_frame(1, 0) << "," << right_leg->foot_pos_desired_body_frame(2, 0) 
+                << "," << left_leg->foot_trajectory.get_trajectory_pos(1.0 / 3.0)(0, 0) << "," << left_leg->foot_trajectory.get_trajectory_pos(1.0 / 3.0)(1, 0) << "," << left_leg->foot_trajectory.get_trajectory_pos(1.0 / 3.0)(2, 0)
+                << "," << right_leg->foot_trajectory.get_trajectory_pos(1.0 / 3.0)(0, 0) << "," << right_leg->foot_trajectory.get_trajectory_pos(1.0 / 3.0)(1, 0) << "," << right_leg->foot_trajectory.get_trajectory_pos(1.0 / 3.0)(2, 0)
+                << "," << left_leg->next_foot_pos_world_desired(0, 0) << "," << left_leg->next_foot_pos_world_desired(1, 0) << "," << left_leg->next_foot_pos_world_desired(2, 0)
+                << "," << right_leg->next_foot_pos_world_desired(0, 0) << "," << right_leg->next_foot_pos_world_desired(1, 0) << "," << right_leg->next_foot_pos_world_desired(2, 0)
                 << "," << P_param(1, 0) << "," << full_iteration_duration / 1000.0 << "," << solution_variables(n, 0) << std::endl;
         data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
+
+        left_leg->foot_pos_world_desired_mutex.unlock();
+        right_leg->foot_pos_world_desired_mutex.unlock();
+        left_leg->foot_pos_body_frame_mutex.unlock();
+        right_leg->foot_pos_body_frame_mutex.unlock();
+        left_leg->next_foot_pos_world_desired_mutex.unlock();
+        right_leg->next_foot_pos_world_desired_mutex.unlock();
+        left_leg->foot_trajectory_mutex.unlock();
+        right_leg->foot_trajectory_mutex.unlock();
+        left_leg->trajectory_start_time_mutex.unlock();
+        right_leg->trajectory_start_time_mutex.unlock();
 
         u_mutex.unlock();
         x_mutex.unlock();
