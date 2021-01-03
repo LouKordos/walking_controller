@@ -793,7 +793,7 @@ int main(int _argc, char **_argv)
     log("--------------------------------", INFO);
     log("--------------------------------", INFO);
     log("--------------------------------", INFO);
-    log("Starting walking controller...", INFO);
+    log("Starting walking controller...",   INFO);
     log("--------------------------------", INFO);
     log("--------------------------------", INFO);
     log("--------------------------------", INFO);
