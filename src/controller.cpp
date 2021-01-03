@@ -845,9 +845,6 @@ int main(int _argc, char **_argv)
 
     alternate_contacts = true;
     left_leg->swing_phase = true;
-
-    // left_leg->swing_phase = right_leg->swing_phase = false;
-    // left_leg->swing_phase = right_leg->swing_phase = true;
     
     // Bind functions to threads
     // left_leg_state_thread = std::thread(std::bind(update_left_leg_state));
