@@ -42,52 +42,52 @@ struct leg_config {
 
     // "ul" is upper leg
 
-    double Ixx_ul = 8.5e-04;
+    double Ixx_ul = 8.5e-04 * 5;
     double Ixy_ul = 0;
     double Ixz_ul = 0;
 
     double Iyx_ul = 0;
-    double Iyy_ul = 8.5e-04;
+    double Iyy_ul = 8.5e-04 * 5;
     double Iyz_ul = 0;
 
     double Izx_ul = 0;
     double Izy_ul = 0;
-    double Izz_ul = 1e-04;
+    double Izz_ul = 1e-04 * 5;
 
     //"ll" is lower leg
 
-    double Ixx_ll = 7.982e-04;
+    double Ixx_ll = 7.982e-04 * 5;
     double Ixy_ll = 0;
     double Ixz_ll = 0;
 
     double Iyx_ll = 0;
-    double Iyy_ll = 7.982e-04;
+    double Iyy_ll = 7.982e-04 * 5;
     double Iyz_ll = 0;
 
     double Izx_ll = 0;
     double Izy_ll = 0;
-    double Izz_ll = 9.378e-05;
+    double Izz_ll = 9.378e-05 * 5;
 
-    double Ixx_foot = 1.42e-04;
+    double Ixx_foot = 1.42e-04 * 5;
     double Ixy_foot = 0;
     double Ixz_foot = 0;
 
     double Iyx_foot = 0;
-    double Iyy_foot = 2.8e-05;
+    double Iyy_foot = 2.8e-05 * 5;
     double Iyz_foot = 0;
 
     double Izx_foot = 0;
     double Izy_foot = 0;
-    double Izz_foot = 1.6e-04;
+    double Izz_foot = 1.6e-04 * 5;
 
     // Masses of each link in kg
 
     double m_hip3 = 1;
     double m_hip2 = 1;
     double m_hip1 = 1;
-    double m_ul = 0.11;
-    double m_ll = 0.1;
-    double m_foot = 0.05;
+    double m_ul = 0.55;
+    double m_ll = 0.5;
+    double m_foot = 0.1;
 
     // Distances from joint to joint (l1 is 0 because bas frame is at the same place as hip3 so there is only rotation) in m
 
