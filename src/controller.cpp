@@ -56,7 +56,7 @@ static const int udp_buffer_size = 4096; // Buffer size for receiving leg state 
 static const int n = 13; // Number of states in model
 static const int m = 6; // Number of control input variables in model
 
-static const double dt = 1/30.0; // Sampling interval, Timestep length in seconds
+static const double dt = 1/50.0; // Sampling interval, Timestep length in seconds
 static const int N = 20; // MPC Prediction Horizon Length in Number of Samples
 
 double f_min_z = 0; // Min contact Force in Z direction for MPC constraint, limits X and Y forces through friction constraint
@@ -64,7 +64,7 @@ double f_max_z = 800; // Max contact Force in Z direction for MPC constraint, li
 
 static const double m_value = 30.0; // Combined robot mass in kg
 
-const int contact_swap_interval = 10; // Interval at which the contact swaps from one foot to the other in Samples
+const int contact_swap_interval = 16; // Interval at which the contact swaps from one foot to the other in Samples
 const double t_stance = contact_swap_interval * dt; // Duration that the foot will be in stance phase
 bool alternate_contacts;
 
@@ -86,7 +86,7 @@ SimState *simState;
 
 bool first_iteration_flag = false;
 
-//should be running at 1kHz but communication overhead is adding ~80µS, that's why it's reduced a bit
+// Should be running at 1kHz but communication overhead is adding ~80µS, that's why it's reduced a bit
 static const double state_update_interval = 960.0; // Interval for fetching and parsing the leg state from gazebosim in microseconds
 static const double torque_calculation_interval = 960.0; // Interval for calculating and sending the torque setpoint to gazebosim in microseconds
 static const double time_update_interval = 1000.0;
@@ -906,6 +906,7 @@ int main(int _argc, char **_argv)
     ipopt_opts["print_level"] = 0;
     ipopt_opts["acceptable_tol"] = 1e-7;
     ipopt_opts["acceptable_obj_change_tol"] = 1e-5;
+    ipopt_opts["linear_solver"] = "ma27";
 
     opts["print_time"] = 0;
     opts["ipopt"] = ipopt_opts;
