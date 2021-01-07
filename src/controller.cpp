@@ -106,11 +106,11 @@ double get_time() {
 
     return simState->getSimTime();
 
-    time_mutex.lock();
-    double t = current_time; // Store in temporary variable because return would exit the function, but the mutex still has to be unlocked
-    time_mutex.unlock();
+    // time_mutex.lock();
+    // double t = current_time; // Store in temporary variable because return would exit the function, but the mutex still has to be unlocked
+    // time_mutex.unlock();
 
-    return t;
+    // return t;
 }
 
 void update_time() {
