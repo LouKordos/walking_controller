@@ -1067,25 +1067,30 @@ int main(int _argc, char **_argv)
     struct timespec deadline; // timespec struct for storing time that execution thread should sleep for
 
     long long iterationsAtLastContact = 0;
-    int alternate_flag = 0; // Temporary flag for waiting a bit before activating the gait
+    bool alternate_flag = false; // Temporary flag for waiting a bit before activating the gait
 
     while(true) {
         // Loop starts here
         auto start = high_resolution_clock::now();
         auto start_total = high_resolution_clock::now();
 
-        // if(total_iterations == 14 && !alternate_flag) {
-        //     alternate_contacts = true;
-        //     left_leg->swing_phase = true;
-        //     alternate_flag = true;
-        // }
+        if(total_iterations == contact_swap_interval-1) {
+            // alternate_contacts = true;
+            // left_leg->swing_phase = true;
+            // alternate_flag = true;
+            vel_y_desired = 0.1;
+        }
 
         // while(simState->isPaused() && total_iterations > 3) {
         //     sendto(sockfd, (const char *)"0|0|0|0|0|0|0|0|0|0|0|0", strlen("0|0|0|0|0|0|0|0|0|0|0|0"), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
         //     sleep(dt);
         // }
 
-        // if (vel_y_desired < 0.2) {
+        // if (vel_x_desired < 0.3) {
+        //     vel_x_desired += 0.01;
+        // }
+
+        // if (vel_y_desired < 0.3) {
         //     vel_y_desired += 0.01;
         // }
 
@@ -1108,7 +1113,7 @@ int main(int _argc, char **_argv)
             //P_param(i,0) = x_t(i, 0);
         }
         x_mutex.unlock();
-
+        
         // Step the model one timestep and use the resulting state as the initial state for the solver. This compensates for the roughly 1 sample delay due to the solver time
         P_param.block<n,1>(0, 0) = step_discrete_model(x_t, u_t, r_x_left, r_x_right, r_y_left, r_y_right, r_z_left, r_z_right);
 
