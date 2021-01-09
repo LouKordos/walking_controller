@@ -57,3 +57,4 @@
 - Alpine Docker containr to build everything from source
 - InfluxDB live logging 
 - vcpkg or conan
+- Do actual performance validation and test suite with gazebo server docker container
