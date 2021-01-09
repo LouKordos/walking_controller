@@ -54,13 +54,11 @@ class Leg {
     public: double hip_offset_y;
     public: double hip_offset_z;
 
-    public: double theta1;
     public: double theta2;
     public: double theta3;
     public: double theta4;
     public: double theta5;
 
-    public: double theta1dot;
     public: double theta2dot;
     public: double theta3dot;
     public: double theta4dot;
@@ -74,26 +72,26 @@ class Leg {
     public: std::mutex q_mutex, q_dot_mutex, foot_pos_world_desired_mutex, lift_off_pos_mutex, lift_off_vel_mutex, foot_pos_body_frame_mutex,
                         trajectory_start_time_mutex, foot_trajectory_mutex, next_foot_pos_world_desired_mutex, foot_pos_desired_body_frame_mutex;
     
-    public: Eigen::Matrix<double, 5, 1> q; // Leg angle vector / Model state
-    public: Eigen::Matrix<double, 5, 1> q_dot; // Leg angular velocity vector / Differentiated model state
+    public: Eigen::Matrix<double, 4, 1> q; // Leg angle vector / Model state
+    public: Eigen::Matrix<double, 4, 1> q_dot; // Leg angular velocity vector / Differentiated model state
 
-    public: Eigen::Matrix<double, 5, 1> C; // matrix containing the result of C * q_dot and the other terms based on the jupyter notebook
-    public: Eigen::Matrix<double, 5, 5> B; // mass and inertia matrix of the leg model
-    public: Eigen::Matrix<double, 5, 1> G; // gravity vector of the leg model. If directly applied as torques to each joint, it should compensate for gravity.
+    public: Eigen::Matrix<double, 4, 1> C; // matrix containing the result of C * q_dot and the other terms based on the jupyter notebook
+    public: Eigen::Matrix<double, 4, 4> B; // mass and inertia matrix of the leg model
+    public: Eigen::Matrix<double, 4, 1> G; // gravity vector of the leg model. If directly applied as torques to each joint, it should compensate for gravity.
 
-    public: Eigen::Matrix<double, 3, 5> J_foot; // Jacobian of the foot / end effector, also called the contact Jacobian.
-    public: Eigen::Matrix<double, 5, 5> J_foot_combined; // Combined Jacobian with geometric positional part and analytical orientation part.
-    public: Eigen::Matrix<double, 3, 5> J_foot_dot; // Time derivative of the contact / end effector Jacobian,
+    public: Eigen::Matrix<double, 3, 4> J_foot; // Jacobian of the foot / end effector, also called the contact Jacobian.
+    public: Eigen::Matrix<double, 4, 4> J_foot_combined; // Combined Jacobian with geometric positional part and analytical orientation part.
+    public: Eigen::Matrix<double, 3, 4> J_foot_dot; // Time derivative of the contact / end effector Jacobian,
 
     public: Eigen::Matrix<double, 3, 3> Lambda; // "Desired Inertia matrix" of the leg, based on Jacobian and inertia matrix B / M
 
-    public: Eigen::Matrix<double, 5, 5> Kp; // Cartesian Position gain matrix for calculation of torque setpoint
-    public: Eigen::Matrix<double, 5, 5> Kd; // Derivative / Cartesian Velocity for calculation of torque setpoint
+    public: Eigen::Matrix<double, 4, 4> Kp; // Cartesian Position gain matrix for calculation of torque setpoint
+    public: Eigen::Matrix<double, 4, 4> Kd; // Derivative / Cartesian Velocity for calculation of torque setpoint
 
-    public: Eigen::Matrix<double, 5, 1> tau_ff; // Vector containing feedforward torque based on Coriolis, Centrifugal, gravity and feed-forward acceleration terms.
-    public: Eigen::Matrix<double, 5, 1> tau_setpoint; // Final torque setpoint calculated from above matrices and feedforward torque added.
+    public: Eigen::Matrix<double, 4, 1> tau_ff; // Vector containing feedforward torque based on Coriolis, Centrifugal, gravity and feed-forward acceleration terms.
+    public: Eigen::Matrix<double, 4, 1> tau_setpoint; // Final torque setpoint calculated from above matrices and feedforward torque added.
 
-    public: Eigen::Matrix<double, 5, 1> foot_pos; // Cartesian foot / end-effector position, hip frame
+    public: Eigen::Matrix<double, 4, 1> foot_pos; // Cartesian foot / end-effector position, hip frame
     public: Eigen::Matrix<double, 3, 1> foot_pos_body_frame; // Foot / end-effector position in body frame
     public: Eigen::Matrix<double, 3, 1> foot_pos_desired_body_frame; // Body frame
     public: Eigen::Matrix<double, 3, 1> next_foot_pos_world_desired; // Next desired foot position in world frame, obtained from the MPC prediction horizon (at the next contact swap. It is also the target position for the trajectory calculator.
@@ -101,11 +99,11 @@ class Leg {
     public: Eigen::Matrix<double, 3, 1> lift_off_pos; // Body frame
     public: Eigen::Matrix<double, 3, 1> foot_pos_world_discretization; // World frame
 
-    public: Eigen::Matrix<double, 5, 1> foot_vel; // Cartesian foot/ end-effector velocity
+    public: Eigen::Matrix<double, 4, 1> foot_vel; // Cartesian foot/ end-effector velocity
     public: Eigen::Matrix<double, 3, 1> lift_off_vel; // Body frame
 
-    public: Eigen::Matrix<double, 5, 1> pos_desired; // Desired cartesian foot / end-effector position + orientation (roll and yaw)
-    public: Eigen::Matrix<double, 5, 1> vel_desired; // Desired cartesian foot / end-effector velocity + angular velocity
+    public: Eigen::Matrix<double, 4, 1> pos_desired; // Desired cartesian foot / end-effector position + orientation (roll and yaw)
+    public: Eigen::Matrix<double, 4, 1> vel_desired; // Desired cartesian foot / end-effector velocity + angular velocity
     public: Eigen::Matrix<double, 3, 1> accel_desired; // Desired cartesian foot / end-effector acceleration
 
     public: Eigen::Matrix<double, 3, 3> h; // Damping ratio matrix
@@ -126,7 +124,6 @@ class Leg {
 
     public: double phi = 0; // Roll, rotation around X, alpha
     public: double theta = 0; // Pitch, rotation around Y, beta
-    public: double psi = 0; // Yaw, rotation arond Z, gamma
 
     public: leg_config config;
 

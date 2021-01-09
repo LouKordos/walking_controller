@@ -27,7 +27,7 @@ Eigen::Matrix<double, 334, 6> get_swing_trajectory(const Eigen::Matrix<double, 3
 
 std::vector<std::string> split_string(std::string str, char delimiter);
 
-Eigen::Matrix<double, 5, 1> get_joint_torques(Eigen::Matrix<double, 3, 1> f, double theta1, double theta2, double theta3, double theta4, double theta5, double phi, double theta, double psi, leg_config &config);
+Eigen::Matrix<double, 4, 1> get_joint_torques(Eigen::Matrix<double, 3, 1> f, double theta2, double theta3, double theta4, double theta5, double phi, double theta, double psi, leg_config &config);
 
 std::string getLogTypeString(LogType type);
 

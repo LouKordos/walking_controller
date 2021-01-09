@@ -6,16 +6,16 @@ Leg::Leg(const double hip_offset_x, const double hip_offset_y, const double hip_
         0, 0.6, 0,
         0, 0, 0.6;
     
-    omega_desired << 10.0 * M_PI, 16.0 * M_PI, 10.0 * M_PI;
+    omega_desired << 100.0 * M_PI, 160.0 * M_PI, 100.0 * M_PI;
 
     pos_desired << 0, 0, -1.115, 0, 0; // Cartesian xyz + euler roll and pitch
     vel_desired << 0, 0, 0, 0, 0; // Cartesian xyz + euler roll and pitch
     accel_desired << 0, 0, 0; // Cartesian xyz
 
-    update_foot_pos(theta1, theta2, theta3, theta4, theta5, phi, psi, foot_pos, config);
+    update_foot_pos(theta2, theta3, theta4, theta5, phi, foot_pos, config);
 
-    Kp_orientation = 9;
-    Kd_orientation = 0.15;
+    Kp_orientation = 90;
+    Kd_orientation = 1.5;
 
     this->hip_offset_x = hip_offset_x;
     this->hip_offset_y = hip_offset_y;
@@ -39,7 +39,6 @@ long long iteration_counter = 0;
 
 double phi = 0; // Roll, rotation around X, alpha
 double theta = 0; // Pitch, rotation around Y, beta
-double psi = 0; // Yaw, rotation arond Z, gamma
 
 static leg_config config;
 
@@ -120,22 +119,22 @@ void Leg::update_foot_trajectory(Eigen::Matrix<double, 13, 1> &com_state, Eigen:
 
 void Leg::update() {
     q_mutex.lock();
-    update_q(theta1, theta2, theta3, theta4, theta5, q);
+    update_q(theta2, theta3, theta4, theta5, q);
     q_mutex.unlock();
 
     q_dot_mutex.lock();
-    update_q_dot(theta1dot, theta2dot, theta3dot, theta4dot, theta5dot, q_dot);
+    update_q_dot(theta2dot, theta3dot, theta4dot, theta5dot, q_dot);
     q_dot_mutex.unlock();
 
-    update_orientation(theta1, theta2, theta3, theta4, theta5, phi, theta, psi);
+    update_orientation(theta2, theta3, theta4, theta5, phi, theta);
 
-    update_B(theta1, theta2, theta3, theta4, theta5, theta1dot, theta2dot, theta3dot, theta4dot, theta5dot, B, config);
+    update_B(theta2, theta3, theta4, theta5, theta2dot, theta3dot, theta4dot, theta5dot, B, config);
 
-    update_J_foot(theta1, theta2, theta3, theta4, theta5, J_foot, config);
+    update_J_foot(theta2, theta3, theta4, theta5, J_foot, config);
 
-    update_J_foot_combined(theta1, theta2, theta3, theta4, theta5, theta1dot, theta2dot, theta3dot, theta4dot, theta5dot, J_foot_combined, config);
+    update_J_foot_combined(theta2, theta3, theta4, theta5, theta2dot, theta3dot, theta4dot, theta5dot, J_foot_combined, config);
 
-    update_J_foot_dot(theta1, theta2, theta3, theta4, theta5, theta1dot, theta2dot, theta3dot, theta4dot, theta5dot, J_foot_dot, config);
+    update_J_foot_dot(theta2, theta3, theta4, theta5, theta2dot, theta3dot, theta4dot, theta5dot, J_foot_dot, config);
 
     //Set singular Jacobians to zero, filter and constrain elements
 
@@ -163,9 +162,9 @@ void Leg::update() {
         }
     }
 
-    update_G(theta1, theta2, theta3, theta4, theta5, G, config);
+    update_G(theta2, theta3, theta4, theta5, G, config);
 
-    update_C(theta1, theta2, theta3, theta4, theta5, theta1dot, theta2dot, theta3dot, theta4dot, theta5dot, C, config);
+    update_C(theta2, theta3, theta4, theta5, theta2dot, theta3dot, theta4dot, theta5dot, C, config);
 
     update_Lambda(J_foot, B, Lambda);
     
@@ -184,7 +183,7 @@ void Leg::update() {
     update_Kp(Lambda, omega_desired, Kp_orientation, Kp);
     update_Kd(Lambda, omega_desired, h, Kd_orientation, Kd);
     
-    update_foot_pos(theta1, theta2, theta3, theta4, theta5, phi, psi, foot_pos, config);
+    update_foot_pos(theta2, theta3, theta4, theta5, phi, foot_pos, config);
     
     Leg::q_dot_mutex.lock();
     update_foot_vel(J_foot_combined, Leg::q_dot, foot_vel);
@@ -209,8 +208,8 @@ Eigen::Matrix<double, 3, 1> Leg::get_foot_pos_world(Eigen::Matrix<double, 13, 1>
 void Leg::update_torque_setpoint() {
     update_tau_setpoint(J_foot_combined, Kp, pos_desired, foot_pos, Kd, vel_desired, foot_vel, tau_ff, tau_setpoint);
 
-    for(int i = 0; i < 5; ++i) { // Loop through each torque setpoint vector element
+    for(int i = 0; i < 4; ++i) { // Loop through each torque setpoint vector element
             constrain(tau_setpoint(i, 0), config.lower_torque_limit, config.upper_torque_limit); // constrain element based on global torque limits
     }
-    constrain(tau_setpoint(4, 0), -5, 5);
+    constrain(tau_setpoint(4, 0), -15, 15);
 }

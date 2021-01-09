@@ -227,8 +227,8 @@ void calculate_left_leg_torques() {
     ofstream data_file;
     data_file.open(plotDataDirPath + filename + "_left.csv");
     data_file << "t,"
-                << "theta1,theta2,theta3,theta4,theta5,theta1_dot,theta2_dot,theta3_dot,theta4_dot,theta5_dot,"
-                << "tau_1,tau_2,tau_3,tau_4,tau_5,"
+                << "theta2,theta3,theta4,theta5,theta2_dot,theta3_dot,theta4_dot,theta5_dot,"
+                << "tau_1,tau_2,tau_3,tau_4,"
                 << "foot_pos_x,foot_pos_y,foot_pos_z,"
                 << "foot_pos_x_desired,foot_pos_y_desired,foot_pos_z_desired,"
                 << "foot_vel_x,foot_vel_y,foot_vel_z,"
@@ -246,13 +246,11 @@ void calculate_left_leg_torques() {
 
         //Declaring angle and angular velocity variables for updating matrices
         
-        double theta1 = 0;
         double theta2 = 0;
         double theta3 = 0;
         double theta4 = 0;
         double theta5 = 0;
 
-        double theta1_dot = 0;
         double theta2_dot = 0;
         double theta3_dot = 0;
         double theta4_dot = 0;
@@ -285,37 +283,33 @@ void calculate_left_leg_torques() {
 
         std::vector<std::string> state = split_string(raw_state, '|'); // Split raw state message by message delimiter to parse individual elements
 
-        if(static_cast<int>(state.size()) >= 9) { // Check if message is complete. TODO: Add unique character to end of message for extra check
+        if(static_cast<int>(state.size()) >= 5) { // Check if message is complete. TODO: Add unique character to end of message for extra check
 
-            // Convert individual string elements to float
-            theta1 = atof(state[0].c_str());
-            theta2 = atof(state[1].c_str());
-            theta3 = atof(state[2].c_str());
-            theta4 = atof(state[3].c_str());
-            theta5 = atof(state[4].c_str());
+            // Convert individual string elements to double
+            theta2 = atof(state[0].c_str());
+            theta3 = atof(state[1].c_str());
+            theta4 = atof(state[2].c_str());
+            theta5 = atof(state[3].c_str());
 
-            theta1_dot = atof(state[5].c_str());
-            theta2_dot = atof(state[6].c_str());
-            theta3_dot = atof(state[7].c_str());
-            theta4_dot = atof(state[8].c_str());
-            theta5_dot = atof(state[9].c_str());
+            theta2_dot = atof(state[4].c_str());
+            theta3_dot = atof(state[5].c_str());
+            theta4_dot = atof(state[6].c_str());
+            theta5_dot = atof(state[7].c_str());
 
             // Update states based on parsed angles
             left_leg->q_mutex.lock();
-            left_leg->q << theta1, theta2, theta3, theta4, theta5;
+            left_leg->q << theta2, theta3, theta4, theta5;
             left_leg->q_mutex.unlock();
 
             left_leg->q_dot_mutex.lock();
-            left_leg->q_dot << theta1_dot, theta2_dot, theta3_dot, theta4_dot, theta5_dot;
+            left_leg->q_dot << theta2_dot, theta3_dot, theta4_dot, theta5_dot;
             left_leg->q_dot_mutex.unlock();
 
-            left_leg->theta1 = theta1;
             left_leg->theta2 = theta2;
             left_leg->theta3 = theta3;
             left_leg->theta4 = theta4;
             left_leg->theta5 = theta5;
 
-            left_leg->theta1dot = theta1_dot;
             left_leg->theta2dot = theta2_dot;
             left_leg->theta3dot = theta3_dot;
             left_leg->theta4dot = theta4_dot;
@@ -349,73 +343,41 @@ void calculate_left_leg_torques() {
             left_leg->pos_desired << (left_leg->H_hip_body.inverse() * (Eigen::Matrix<double, 4, 1>() << left_leg->foot_trajectory.get_trajectory_pos(current_trajectory_time), 1).finished()).block<3, 1>(0, 0), 0, 0;
             left_leg->vel_desired << left_leg->foot_trajectory.get_trajectory_vel(current_trajectory_time), 0, 0;
             left_leg->accel_desired << left_leg->foot_trajectory.get_trajectory_accel(current_trajectory_time);
-            
-            // stringstream temp;
-            // temp << "current_traj_time: " << current_trajectory_time
-            //      << "\nfoot_pos_desired: " << left_leg->pos_desired(0, 0) << "," << left_leg->pos_desired(1, 0) << "," << left_leg->pos_desired(2, 0)
-            //      << "\nfoot_pos_actual: " << left_leg->foot_pos(0, 0) << "," << left_leg->foot_pos(1, 0) << "," << left_leg->foot_pos(2, 0);
-
-            // print_threadsafe(temp.str(), "left_leg_torque_thread", INFO);
 
             left_leg->foot_trajectory_mutex.unlock();
 
             left_leg->update_torque_setpoint();
-
-            // for(int i = 0; i < 5; ++i) {
-            //     left_leg->tau_setpoint(i, 0) = 0;
-            // }
-
-            // temp.str(std::string());
-            // temp << left_leg->tau_setpoint;
-            // print_threadsafe(temp.str(), "tau_setpoint_left_leg in stance phase", INFO);
         }
         else {
             // IMPORTANT AND DANGEROUS MISTAKE: WHEN COPYING LEFT_LEG CODE AND REPLACING ALL LEFT WITH RIGHT, INDEX IS NOT CHANGED AND LEFT LEG TORQUES WILL BE USED FOR BOTH LEGS
             // left_leg->tau_setpoint = Eigen::ArrayXd::Zero(5, 1);
-            left_leg->tau_setpoint = get_joint_torques(-u_t.block<3, 1>(0, 0), left_leg->theta1, left_leg->theta2, left_leg->theta3, left_leg->theta4, left_leg->theta5, x(0, 0), x(1, 0), x(2, 0), left_leg->config);
-            for(int i = 0; i < 5; ++i) {
+            left_leg->tau_setpoint = get_joint_torques(-u_t.block<3, 1>(0, 0), left_leg->theta2, left_leg->theta3, left_leg->theta4, left_leg->theta5, x(0, 0), x(1, 0), x(2, 0), left_leg->config);
+            for(int i = 0; i < 4; ++i) {
                 constrain(left_leg->tau_setpoint(i), -200, 200);
             }
-            constrain(left_leg->tau_setpoint(4), -15, 15);
-
-            // if(!left_leg->contactState.hasContact()) {
-            //     left_leg->tau_setpoint = Eigen::ArrayXd::Zero(5, 1);
-            // }
         }
 
         if(simState->isPaused()) {
-            left_leg->tau_setpoint = Eigen::ArrayXd::Zero(5, 1);
+            left_leg->tau_setpoint = Eigen::ArrayXd::Zero(4, 1);
         }
 
-        // left_leg->tau_setpoint(0, 0) = 0;
-
         stringstream s;
-        s << left_leg->tau_setpoint(0, 0) << "|" << left_leg->tau_setpoint(1, 0) << "|" << left_leg->tau_setpoint(2, 0) << "|" << left_leg->tau_setpoint(3, 0) << "|" << left_leg->tau_setpoint(4, 0); // Write torque setpoints to stringstream
+        s << left_leg->tau_setpoint(0, 0) << "|" << left_leg->tau_setpoint(1, 0) << "|" << left_leg->tau_setpoint(2, 0) << "|" << left_leg->tau_setpoint(3, 0); // Write torque setpoints to stringstream
         sendto(sockfd, (const char *)s.str().c_str(), strlen(s.str().c_str()), 
                 MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len); // Send the torque setpoint string to the simulation
 
         if(iteration_counter % 1 == 0) {
-            /*
-                << "t,"
-                << "theta1,theta2,theta3,theta4,theta5,theta1_dot,theta2_dot,theta3_dot,theta4_dot,theta5_dot,"
-                << "tau_1,tau_2,tau_3,tau_4,tau_5,"
-                << "foot_pos_x,foot_pos_y,foot_pos_z,"
-                << "foot_pos_x_desired,foot_pos_y_desired,foot_pos_z_desired"
-                << "foot_vel_x,foot_vel_y,foot_vel_z,"
-                << "foot_vel_x_desired,foot_vel_y_desired,foot_vel_z_desired" << std::endl;
-            */
             
             ofstream data_file;
             data_file.open(plotDataDirPath + filename + "_left.csv", ios::app); // Open csv file in append mode
             data_file << get_time() // Write plot values to csv file
-                        << "," << theta1 << "," << theta2 << "," << theta3 << "," << theta4 << "," << theta5
-                        << "," << theta1_dot << "," << theta2_dot << "," << theta3_dot << "," << theta4_dot << "," << theta5_dot
-                        << "," << left_leg->tau_setpoint(0) << "," << left_leg->tau_setpoint(1) << "," << left_leg->tau_setpoint(2) << "," << left_leg->tau_setpoint(3) << "," << left_leg->tau_setpoint(4)
+                        << "," << theta2 << "," << theta3 << "," << theta4 << "," << theta5
+                        << "," << theta2_dot << "," << theta3_dot << "," << theta4_dot << "," << theta5_dot
+                        << "," << left_leg->tau_setpoint(0) << "," << left_leg->tau_setpoint(1) << "," << left_leg->tau_setpoint(2) << "," << left_leg->tau_setpoint(3)
                         << "," << left_leg->foot_pos(0) << "," << left_leg->foot_pos(1) << "," << left_leg->foot_pos(2)
                         << "," << left_leg->pos_desired(0, 0) << "," << left_leg->pos_desired(1, 0) << "," << left_leg->pos_desired(2, 0)
                         << "," << left_leg->foot_vel(0) << "," << left_leg->foot_vel(1) << "," << left_leg->foot_vel(2)
                         << "," << left_leg->vel_desired(0, 0) << "," << left_leg->vel_desired(1, 0) << "," << left_leg->vel_desired(2, 0) << std::endl;
-                
             data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
         }
 
@@ -484,8 +446,8 @@ void calculate_right_leg_torques() {
     ofstream data_file;
     data_file.open(plotDataDirPath + filename + "_right.csv");
     data_file << "t,"
-                << "theta1,theta2,theta3,theta4,theta5,theta1_dot,theta2_dot,theta3_dot,theta4_dot,theta5_dot,"
-                << "tau_1,tau_2,tau_3,tau_4,tau_5,"
+                << "theta2,theta3,theta4,theta5,theta2_dot,theta3_dot,theta4_dot,theta5_dot,"
+                << "tau_1,tau_2,tau_3,tau_4,"
                 << "foot_pos_x,foot_pos_y,foot_pos_z,"
                 << "foot_pos_x_desired,foot_pos_y_desired,foot_pos_z_desired,"
                 << "foot_vel_x,foot_vel_y,foot_vel_z,"
@@ -503,13 +465,11 @@ void calculate_right_leg_torques() {
 
         //Declaring angle and angular velocity variables for updating matrices
         
-        double theta1 = 0;
         double theta2 = 0;
         double theta3 = 0;
         double theta4 = 0;
         double theta5 = 0;
 
-        double theta1_dot = 0;
         double theta2_dot = 0;
         double theta3_dot = 0;
         double theta4_dot = 0;
@@ -542,37 +502,33 @@ void calculate_right_leg_torques() {
 
         std::vector<std::string> state = split_string(raw_state, '|'); // Split raw state message by message delimiter to parse individual elements
 
-        if(static_cast<int>(state.size()) >= 9) { // Check if message is complete. TODO: Add unique character to end of message for extra check
+        if(static_cast<int>(state.size()) >= 4) { // Check if message is complete. TODO: Add unique character to end of message for extra check
 
-            // Convert individual string elements to float
-            theta1 = atof(state[0].c_str());
-            theta2 = atof(state[1].c_str());
-            theta3 = atof(state[2].c_str());
-            theta4 = atof(state[3].c_str());
-            theta5 = atof(state[4].c_str());
+            // Convert individual string elements to double
+            theta2 = atof(state[0].c_str());
+            theta3 = atof(state[1].c_str());
+            theta4 = atof(state[2].c_str());
+            theta5 = atof(state[3].c_str());
 
-            theta1_dot = atof(state[5].c_str());
-            theta2_dot = atof(state[6].c_str());
-            theta3_dot = atof(state[7].c_str());
-            theta4_dot = atof(state[8].c_str());
-            theta5_dot = atof(state[9].c_str());
+            theta2_dot = atof(state[4].c_str());
+            theta3_dot = atof(state[5].c_str());
+            theta4_dot = atof(state[6].c_str());
+            theta5_dot = atof(state[7].c_str());
 
             // Update states based on parsed angles
             right_leg->q_mutex.lock();
-            right_leg->q << theta1, theta2, theta3, theta4, theta5;
+            right_leg->q << theta2, theta3, theta4, theta5;
             right_leg->q_mutex.unlock();
 
             right_leg->q_dot_mutex.lock();
-            right_leg->q_dot << theta1_dot, theta2_dot, theta3_dot, theta4_dot, theta5_dot;
+            right_leg->q_dot << theta2_dot, theta3_dot, theta4_dot, theta5_dot;
             right_leg->q_dot_mutex.unlock();
 
-            right_leg->theta1 = theta1;
             right_leg->theta2 = theta2;
             right_leg->theta3 = theta3;
             right_leg->theta4 = theta4;
             right_leg->theta5 = theta5;
 
-            right_leg->theta1dot = theta1_dot;
             right_leg->theta2dot = theta2_dot;
             right_leg->theta3dot = theta3_dot;
             right_leg->theta4dot = theta4_dot;
@@ -582,19 +538,8 @@ void calculate_right_leg_torques() {
         //TODO: Maybe rework to only use q and q_dot
         right_leg->update();
 
-        // If swing, leg trajectory should be followed, if not, foot is in contact with the ground and MPC forces should be converted into torques and applied
+        // If swing phase, leg trajectory should be followed, if not, foot is in contact with the ground and MPC forces should be converted into torques and applied
         if(right_leg->swing_phase) {
-            
-            // right_leg->pos_desired << 0, 0, 0.1*sin(16*get_time()) - 0.95, 0, 0;
-            // right_leg->vel_desired << 0, 0, 1.6*cos(16*get_time()), 0, 0;
-            // right_leg->accel_desired << 0, 0, -25.6*sin(16*get_time());
-
-            // right_leg->pos_desired << 0, 0, -1, 0, 0;
-            // right_leg->vel_desired << 0, 0, 0, 0, 0;
-            // right_leg->accel_desired << 0, 0, 0;
-
-            // std::cout << "q: " << right_leg->q << std::endl;
-            // std::cout << "q_dot: " << right_leg->q_dot << std::endl;
             
             right_leg->trajectory_start_time_mutex.lock();
             double current_trajectory_time = get_time() - right_leg->trajectory_start_time;
@@ -605,48 +550,27 @@ void calculate_right_leg_torques() {
             right_leg->pos_desired << (right_leg->H_hip_body.inverse() * (Eigen::Matrix<double, 4, 1>() << right_leg->foot_trajectory.get_trajectory_pos(current_trajectory_time), 1).finished()).block<3, 1>(0, 0), 0, 0;
             right_leg->vel_desired << right_leg->foot_trajectory.get_trajectory_vel(current_trajectory_time), 0, 0;
             right_leg->accel_desired << right_leg->foot_trajectory.get_trajectory_accel(current_trajectory_time);
-            
-            // stringstream temp;
-            // temp << "current_traj_time: " << current_trajectory_time
-            //      << "\nfoot_pos_desired: " << right_leg->pos_desired(0, 0) << "," << right_leg->pos_desired(1, 0) << "," << right_leg->pos_desired(2, 0)
-            //      << "\nfoot_pos_actual: " << right_leg->foot_pos(0, 0) << "," << right_leg->foot_pos(1, 0) << "," << right_leg->foot_pos(2, 0);
-
-            // print_threadsafe(temp.str(), "right_leg_torque_thread", INFO);
 
             right_leg->foot_trajectory_mutex.unlock();
 
             right_leg->update_torque_setpoint();
-
-            // for(int i = 0; i < 5; ++i) {
-            //     right_leg->tau_setpoint(i, 0) = 0;
-            // }
-
-            // temp.str(std::string());
-            // temp << right_leg->tau_setpoint;
-            // print_threadsafe(temp.str(), "tau_setpoint_right_leg in stance phase", INFO);
         }
         else {
             // IMPORTANT AND DANGEROUS MISTAKE: WHEN COPYING LEFT_LEG CODE AND REPLACING ALL LEFT WITH RIGHT, INDEX IS NOT CHANGED AND LEFT LEG TORQUES WILL BE USED FOR BOTH LEGS
             // right_leg->tau_setpoint = Eigen::ArrayXd::Zero(5, 1);
-            right_leg->tau_setpoint = get_joint_torques(-u_t.block<3, 1>(3, 0), right_leg->theta1, right_leg->theta2, right_leg->theta3, right_leg->theta4, right_leg->theta5, x(0, 0), x(1, 0), x(2, 0), right_leg->config);
-            for(int i = 0; i < 5; ++i) {
+            right_leg->tau_setpoint = get_joint_torques(-u_t.block<3, 1>(3, 0), right_leg->theta2, right_leg->theta3, right_leg->theta4, right_leg->theta5, x(0, 0), x(1, 0), x(2, 0), right_leg->config);
+            for(int i = 0; i < 4; ++i) {
                 constrain(right_leg->tau_setpoint(i), -200, 200);
             }
-            constrain(right_leg->tau_setpoint(4), -15, 15);
-            
-            // if(!right_leg->contactState.hasContact()) {
-            //     right_leg->tau_setpoint = Eigen::ArrayXd::Zero(5, 1);
-            // }
         }
         
         if(simState->isPaused()) {
-            right_leg->tau_setpoint = Eigen::ArrayXd::Zero(5, 1);
+            right_leg->tau_setpoint = Eigen::ArrayXd::Zero(4, 1);
         }
 
-        // right_leg->tau_setpoint(0, 0) = 0;
 
         stringstream s;
-        s << right_leg->tau_setpoint(0, 0) << "|" << right_leg->tau_setpoint(1, 0) << "|" << right_leg->tau_setpoint(2, 0) << "|" << right_leg->tau_setpoint(3, 0) << "|" << right_leg->tau_setpoint(4, 0); // Write torque setpoints to stringstream
+        s << right_leg->tau_setpoint(0, 0) << "|" << right_leg->tau_setpoint(1, 0) << "|" << right_leg->tau_setpoint(2, 0) << "|" << right_leg->tau_setpoint(3, 0); // Write torque setpoints to stringstream
         sendto(sockfd, (const char *)s.str().c_str(), strlen(s.str().c_str()), 
                 MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len); // Send the torque setpoint string to the simulation
 
@@ -664,9 +588,9 @@ void calculate_right_leg_torques() {
             ofstream data_file;
             data_file.open(plotDataDirPath + filename + "_right.csv", ios::app); // Open csv file in append mode
             data_file << get_time() // Write plot values to csv file
-                        << "," << theta1 << "," << theta2 << "," << theta3 << "," << theta4 << "," << theta5
-                        << "," << theta1_dot << "," << theta2_dot << "," << theta3_dot << "," << theta4_dot << "," << theta5_dot
-                        << "," << right_leg->tau_setpoint(0) << "," << right_leg->tau_setpoint(1) << "," << right_leg->tau_setpoint(2) << "," << right_leg->tau_setpoint(3) << "," << right_leg->tau_setpoint(4)
+                        << "," << theta2 << "," << theta3 << "," << theta4 << "," << theta5
+                        << "," << theta2_dot << "," << theta3_dot << "," << theta4_dot << "," << theta5_dot
+                        << "," << right_leg->tau_setpoint(0) << "," << right_leg->tau_setpoint(1) << "," << right_leg->tau_setpoint(2) << "," << right_leg->tau_setpoint(3)
                         << "," << right_leg->foot_pos(0) << "," << right_leg->foot_pos(1) << "," << right_leg->foot_pos(2)
                         << "," << right_leg->pos_desired(0, 0) << "," << right_leg->pos_desired(1, 0) << "," << right_leg->pos_desired(2, 0)
                         << "," << right_leg->foot_vel(0) << "," << right_leg->foot_vel(1) << "," << right_leg->foot_vel(2)
@@ -861,7 +785,7 @@ int main(int _argc, char **_argv)
     // while(true) { }
     stringstream temp;
     temp << "\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
-            << "If you're running this in a docker container, make sure to use the --net=host option when running it.\n"
+            << "If you're running this in a docker container, make sure to use the --net=host option and the IS_DOCKER=Y environment variable when running it.\n"
             << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
     print_threadsafe(temp.str(), "main()", WARN, false);
 
