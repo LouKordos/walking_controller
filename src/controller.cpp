@@ -1332,8 +1332,8 @@ int main(int _argc, char **_argv)
 
         // Calculate r from foot world position
         if(left_leg->swing_phase) {
-            r_x_left = left_leg->foot_pos_world_desired(0, 0) - (double)P_param(3, 0);
-            r_y_left = left_leg->foot_pos_world_desired(1, 0) - (double)P_param(4, 0);
+            r_x_left = left_leg->foot_pos_world_desired(0, 0) - P_param(3, 0);
+            r_y_left = left_leg->foot_pos_world_desired(1, 0) - P_param(4, 0);
             r_z_left = -P_param(5, 0);
         }
         else  { // If in stance phase, tell the MPC where the foot actually is, not where the MPC expects it to be
@@ -1347,8 +1347,8 @@ int main(int _argc, char **_argv)
         }
 
         if(right_leg->swing_phase) {
-            r_x_right = right_leg->foot_pos_world_desired(0, 0) - (double)P_param(3, 0);
-            r_y_right = right_leg->foot_pos_world_desired(1, 0) - (double)P_param(4, 0);
+            r_x_right = right_leg->foot_pos_world_desired(0, 0) - P_param(3, 0);
+            r_y_right = right_leg->foot_pos_world_desired(1, 0) - P_param(4, 0);
             r_z_right = -P_param(5, 0);
         }
         else { // If in stance phase, tell the MPC where the foot actually is, not where the MPC expects it to be
