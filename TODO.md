@@ -3,9 +3,12 @@
 - Move legs 5cm closer to CoM, so that overall distance is 20cm, if not good enough move even closer
 - FIX VARIBABLE NAMING!!!!!!
 - 2 DOF ankle
+- Autowrap for Python Notebooks, user more accurate naming for joints (instead of hip1 etc.)
+- Properly automate conversion from Sympy expressions to C (maybe have the notebook create actual seperate files with the functions to prevent any user error)
 - Make every dependency in setup.sh build from source so that it works on any OS
 - Test more distros and their versions, then update README.md to mention that every version starting from Ubuntu 18.04 LTS and up will work
 - Test different solvers
+- Ask Embedded Discord how to properly handle multithreading and code optimization in general, wrapping everything in `get()` function with mutex cannot be the right way to do it
 - Check simulation paused in gazebo plugin and stop sending states to pause control plugin as well, otherwise simulation breaks after resuming
 - For compiling casadi: `-DWITH_THREAD=ON` and install HSL solver with -NUM_THREADS
 - Install MUMPS with multiple threads as shown in manual
@@ -45,7 +48,7 @@
 - Add slight yaw outwards on foot for better stability while walking
 - RT Kernel, isolcpu, taskset
 - Refactor code to use Eigen Matrix for r instead of seperate values
-- Use class for tcp / udp communication so that there is one standard communication module that can easily be altered / swapped out
+- Use class for tcp / udp communication so that there is one standard communication module that can easily be altered / swapped out (Protobuf messaging over TCP would be nice)
 - Replace AF_INET with AF_UNIX: https://stackoverflow.com/questions/20510016/client-server-socket-communication-af-unixa
 - Alpine Docker containr to build everything from source
 - InfluxDB live logging 
