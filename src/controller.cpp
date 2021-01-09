@@ -1366,7 +1366,9 @@ int main(int _argc, char **_argv)
 
         double pos_x_desired_temp = pos_x_desired;
         double pos_y_desired_temp = pos_y_desired;
+        double vel_x_desired_temp = vel_x_desired;// - 0.01;
         double vel_y_desired_temp = vel_y_desired;// - 0.01;
+
         double pos_z_desired_temp = pos_z_desired;
 
         double phi_desired_temp = phi_desired;
@@ -1374,10 +1376,21 @@ int main(int _argc, char **_argv)
         double psi_desired_temp = psi_desired;
         double omega_z_desired_temp = omega_z_desired;// - 0.02;
 
-        //Update reference trajectory
+        // Update reference trajectory
         for(int i = 0; i < N; ++i) {
-            // if (vel_y_desired_temp < 0.2) {
-            //     vel_y_desired_temp += 0.02;
+            // if (vel_x_desired_temp < 0.3) {
+            //     vel_x_desired_temp += 0.01;
+            // }
+
+            if(total_iterations <= contact_swap_interval - 1 && total_iterations + i >= contact_swap_interval - 1) {
+                vel_y_desired_temp = 0.3;
+            }
+            else {
+                vel_y_desired_temp = vel_y_desired;
+            }
+            
+            // if (vel_y_desired_temp < 0.3) {
+            //     vel_y_desired_temp += 0.01;
             // }
 
             // if (omega_z_desired_temp < 0.8) {
