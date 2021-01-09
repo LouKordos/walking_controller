@@ -1,5 +1,6 @@
 - Make internal class variables private, then only use get() and set() methods to make threadsafe
 - Add seperate log directory
+- Move legs 5cm closer to CoM, so that overall distance is 20cm, if not good enough move even closer
 - FIX VARIBABLE NAMING!!!!!!
 - 2 DOF ankle
 - Make every dependency in setup.sh build from source so that it works on any OS
@@ -48,3 +49,4 @@
 - Replace AF_INET with AF_UNIX: https://stackoverflow.com/questions/20510016/client-server-socket-communication-af-unixa
 - Alpine Docker containr to build everything from source
 - InfluxDB live logging 
+- vcpkg or conan
