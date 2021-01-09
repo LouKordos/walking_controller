@@ -1727,10 +1727,6 @@ int main(int _argc, char **_argv)
         x_mutex.unlock();
         
         sendto(sockfd, (const char *)s.str().c_str(), strlen(s.str().c_str()), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
-        
-        next_body_vel_mutex.lock();
-        next_body_vel = X_t.block<3, 1>(n*N+9, 0); // Update predicted velocity at next t_stance for impedance control thread calculating swing trajectory
-        next_body_vel_mutex.unlock();
 
         // Use this solution for the next iteration as a hotstart, only shifted one timestep
         X_t.block<n*N, 1>(0, 0) = solution_variables.block<n*N, 1>(n, 0);
