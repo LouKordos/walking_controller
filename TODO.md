@@ -16,6 +16,8 @@
 - Test removing IPOPT path update for casadi install as done in the VM
 - Current version for installing casADi: Install deps for casadi as instructed in github docs, install IPOPT from source (**USE 3.12 LINK TO SVN**), then install casADi with `cmake .. -DWITH_PYTHON3=ON -DWITH_PYTHON3=ON -DWITH_IPOPT=ON -DWITH_THREAD=ON` (be sure to install python3-dev and python3-matplotlib and **not** install casadi as requirement) 
 - GDB
+- `#define NUM_JOINTS X`
+- Use fmtlib instead of stringstream garbage if possible
 - Replace `std::endl` with `\n` where possible and use `std::flush` at the end to improve performance
 - Try if casadi compile works without installing any IPOPT version and what version it would use
 - Add array of state history to biped plugin to send previous correct state that was not NaN instead of 0
@@ -26,6 +28,8 @@
 - Maybe merge everything into one repository
 - Install Gazebo with Bullet engine!!!
 - Test setup script in WSL2
+- Maybe mpc_config as well
+- Decide proper naming scheme, either CamelCase or whatever_this_is_called
 - Somehow add footstep locations to decision variables, or make it seperate optimization problem (one combined optimization for motion planning would be better to give solver intuition about the effects different footstep locations have)
 - Consider rewriting NLP just using IPOPT and Pardiso/HSL solver to remove overhead and increase loop frequency, 60-100Hz should be the goal
 - Use running average solver time for discretization dt
