@@ -376,7 +376,7 @@ void calculate_left_leg_torques() {
             for(int i = 0; i < 5; ++i) {
                 constrain(left_leg->tau_setpoint(i), -200, 200);
             }
-            constrain(left_leg->tau_setpoint(4), -10, 10);
+            constrain(left_leg->tau_setpoint(4), -15, 15);
 
             // if(!left_leg->contactState.hasContact()) {
             //     left_leg->tau_setpoint = Eigen::ArrayXd::Zero(5, 1);
@@ -630,7 +630,7 @@ void calculate_right_leg_torques() {
             for(int i = 0; i < 5; ++i) {
                 constrain(right_leg->tau_setpoint(i), -200, 200);
             }
-            constrain(right_leg->tau_setpoint(4), -10, 10);
+            constrain(right_leg->tau_setpoint(4), -15, 15);
             
             // if(!right_leg->contactState.hasContact()) {
             //     right_leg->tau_setpoint = Eigen::ArrayXd::Zero(5, 1);
