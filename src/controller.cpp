@@ -1039,6 +1039,8 @@ int main(int _argc, char **_argv)
                 << "r_x_left,r_y_left,r_z_left,r_x_right,r_y_right,r_z_right,"
                 << "r_x_actual_left,r_y_actual_left,r_z_actual_left,"
                 << "r_x_actual_right,r_y_actual_right,r_z_actual_right,"
+                << "next_body_vel_x,next_body_vel_y,next_body_vel_z,"
+                << "contact_left,contact_right," 
                 << "foot_pos_body_frame_x_left,foot_pos_body_frame_y_left,foot_pos_body_frame_z_left,"
                 << "foot_pos_body_frame_x_right,foot_pos_body_frame_y_right,foot_pos_body_frame_z_right,"
                 << "foot_pos_world_desired_x_left,foot_pos_world_desired_y_left,foot_pos_world_desired_z_left,"
@@ -1537,7 +1539,7 @@ int main(int _argc, char **_argv)
 
                     left_leg->next_foot_pos_world_desired = left_leg->foot_pos_world_discretization;
                     right_leg->next_foot_pos_world_desired = right_leg->foot_pos_world_discretization;
-
+                    
                     //TEMPORARY FOR TESTING WITH LEGS HANGING:
                     // left_leg->next_foot_pos_world_desired(2, 0) = 0.4;
                     // right_leg->next_foot_pos_world_desired(2, 0) = 0.4;
@@ -1763,6 +1765,7 @@ int main(int _argc, char **_argv)
         right_leg->foot_pos_body_frame_mutex.lock();
         left_leg->next_foot_pos_world_desired_mutex.lock();
         right_leg->next_foot_pos_world_desired_mutex.lock();
+        next_body_vel_mutex.lock();
 
         // Log data to csv file
         ofstream data_file;
@@ -1774,6 +1777,8 @@ int main(int _argc, char **_argv)
                 << "," << r_x_right << "," << r_y_right << "," << r_z_right
                 << "," << r_x_actual_left << "," << r_y_actual_left << "," << r_z_actual_left
                 << "," << r_x_actual_right << "," << r_y_actual_right << "," << r_z_actual_right
+                << "," << next_body_vel(0, 0) << "," << next_body_vel(1, 0) << "," << next_body_vel(2, 0)
+                << "," << !left_leg->swing_phase * 0.1 << "," << !right_leg->swing_phase * 0.1
                 << "," << left_leg->foot_pos_body_frame(0, 0) << "," << left_leg->foot_pos_body_frame(1, 0) << "," << left_leg->foot_pos_body_frame(2, 0)
                 << "," << right_leg->foot_pos_body_frame(0, 0) << "," << right_leg->foot_pos_body_frame(1, 0) << "," << right_leg->foot_pos_body_frame(2, 0)
                 << "," << left_leg->foot_pos_world_desired(0, 0) << "," << left_leg->foot_pos_world_desired(1, 0) << "," << left_leg->foot_pos_world_desired(2, 0)
@@ -1785,6 +1790,7 @@ int main(int _argc, char **_argv)
                 << "," << P_param(1, 0) << "," << full_iteration_duration / 1000.0 << "," << solution_variables(n, 0) << std::endl;
         data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
 
+        next_body_vel_mutex.unlock();
         left_leg->foot_pos_world_desired_mutex.unlock();
         right_leg->foot_pos_world_desired_mutex.unlock();
         left_leg->foot_pos_body_frame_mutex.unlock();
