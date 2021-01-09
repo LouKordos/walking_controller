@@ -387,6 +387,8 @@ void calculate_left_leg_torques() {
             left_leg->tau_setpoint = Eigen::ArrayXd::Zero(5, 1);
         }
 
+        // left_leg->tau_setpoint(0, 0) = 0;
+
         stringstream s;
         s << left_leg->tau_setpoint(0, 0) << "|" << left_leg->tau_setpoint(1, 0) << "|" << left_leg->tau_setpoint(2, 0) << "|" << left_leg->tau_setpoint(3, 0) << "|" << left_leg->tau_setpoint(4, 0); // Write torque setpoints to stringstream
         sendto(sockfd, (const char *)s.str().c_str(), strlen(s.str().c_str()), 
@@ -640,6 +642,8 @@ void calculate_right_leg_torques() {
         if(simState->isPaused()) {
             right_leg->tau_setpoint = Eigen::ArrayXd::Zero(5, 1);
         }
+
+        // right_leg->tau_setpoint(0, 0) = 0;
 
         stringstream s;
         s << right_leg->tau_setpoint(0, 0) << "|" << right_leg->tau_setpoint(1, 0) << "|" << right_leg->tau_setpoint(2, 0) << "|" << right_leg->tau_setpoint(3, 0) << "|" << right_leg->tau_setpoint(4, 0); // Write torque setpoints to stringstream
@@ -947,6 +951,14 @@ int main(int _argc, char **_argv)
         lbx(i) = -DM::inf();
         ubx(i) = DM::inf();
     }
+
+    // const static double max_pos_z = 1.15;
+
+    // // Temporary z position hard constraint
+    // for(int i = 0; i < N+1; ++i) {
+    //     lbx(i * n + 5) = 0;
+    //     ubx(i * n + 5) = max_pos_z;
+    // }
 
     // Force constraints
     for(int i = 0; i < N; ++i) {
