@@ -211,5 +211,4 @@ void Leg::update_torque_setpoint() {
     for(int i = 0; i < 4; ++i) { // Loop through each torque setpoint vector element
             constrain(tau_setpoint(i, 0), config.lower_torque_limit, config.upper_torque_limit); // constrain element based on global torque limits
     }
-    constrain(tau_setpoint(4, 0), -15, 15);
 }
