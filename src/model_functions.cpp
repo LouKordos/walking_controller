@@ -201,16 +201,16 @@ void update_orientation(double theta_2, double theta_3, double theta_4, double t
 }
 
 void update_Kp(Eigen::Matrix<double, 3,3> &Lambda, Eigen::Matrix<double, 3, 1> omega_desired, double &Kp_orientation, Eigen::Matrix<double, 4, 4> &Kp) {
-    Kp << pow(omega_desired(0), 2) * Lambda(0, 0), 0, 0, 0;
-                    0, pow(omega_desired(1), 2) * Lambda(1, 1), 0, 0;
-                    0, 0, pow(omega_desired(2), 2) * Lambda(2, 2), 0;
+    Kp << pow(omega_desired(0), 2) * Lambda(0, 0), 0, 0, 0,
+                    0, pow(omega_desired(1), 2) * Lambda(1, 1), 0, 0,
+                    0, 0, pow(omega_desired(2), 2) * Lambda(2, 2), 0,
                     0, 0, 0, Kp_orientation;
 }
 
 void update_Kd(Eigen::Matrix<double, 3,3> &Lambda, Eigen::Matrix<double, 3, 1> omega_desired, Eigen::Matrix<double, 3, 3> &h, double &Kd_orientation, Eigen::Matrix<double, 4, 4> &Kd) {
-    Kd << 2 * h(0, 0) * Lambda(0, 0) * omega_desired(0), 0, 0, 0;
-            0, 2 * h(1, 1) * Lambda(1, 1) * omega_desired(1), 0, 0;
-            0, 0, 2 * h(2, 2) * Lambda(2, 2) * omega_desired(2), 0;
+    Kd << 2 * h(0, 0) * Lambda(0, 0) * omega_desired(0), 0, 0, 0,
+            0, 2 * h(1, 1) * Lambda(1, 1) * omega_desired(1), 0, 0,
+            0, 0, 2 * h(2, 2) * Lambda(2, 2) * omega_desired(2), 0,
             0, 0, 0, Kd_orientation;
 }
 

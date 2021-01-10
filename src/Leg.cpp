@@ -6,16 +6,16 @@ Leg::Leg(const double hip_offset_x, const double hip_offset_y, const double hip_
         0, 0.6, 0,
         0, 0, 0.6;
     
-    omega_desired << 100.0 * M_PI, 160.0 * M_PI, 100.0 * M_PI;
+    omega_desired << 10.0 * M_PI, 16.0 * M_PI, 10.0 * M_PI;
 
-    pos_desired << 0, 0, -1.115, 0, 0; // Cartesian xyz + euler roll and pitch
-    vel_desired << 0, 0, 0, 0, 0; // Cartesian xyz + euler roll and pitch
+    pos_desired << 0, 0, -1.115, 0; // Cartesian xyz + euler roll and pitch
+    vel_desired << 0, 0, 0, 0; // Cartesian xyz + euler roll and pitch
     accel_desired << 0, 0, 0; // Cartesian xyz
 
     update_foot_pos(theta2, theta3, theta4, theta5, phi, foot_pos, config);
 
-    Kp_orientation = 90;
-    Kd_orientation = 1.5;
+    Kp_orientation = 15;
+    Kd_orientation = 0.15;
 
     this->hip_offset_x = hip_offset_x;
     this->hip_offset_y = hip_offset_y;
