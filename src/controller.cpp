@@ -232,7 +232,8 @@ void calculate_left_leg_torques() {
                 << "foot_pos_x,foot_pos_y,foot_pos_z,"
                 << "foot_pos_x_desired,foot_pos_y_desired,foot_pos_z_desired,"
                 << "foot_vel_x,foot_vel_y,foot_vel_z,"
-                << "foot_vel_x_desired,foot_vel_y_desired,foot_vel_z_desired" << std::endl; // Add header to csv file
+                << "foot_vel_x_desired,foot_vel_y_desired,foot_vel_z_desired,"
+                << "foot_phi" << std::endl; // Add header to csv file
     data_file.close();
 
     bool time_switch = false; // used for running a two-phase trajectory, otherwise obsolete
@@ -320,20 +321,6 @@ void calculate_left_leg_torques() {
 
         // If swing, leg trajectory should be followed, if not, foot is in contact with the ground and MPC forces should be converted into torques and applied
         if(left_leg->swing_phase) {
-            
-            // left_leg->pos_desired << 0, 0, 0.1*sin(16*get_time()) - 0.95, 0, 0;
-            // left_leg->vel_desired << 0, 0, 1.6*cos(16*get_time()), 0, 0;
-            // left_leg->accel_desired << 0, 0, -25.6*sin(16*get_time());
-
-            // left_leg->pos_desired << 0, 0, -1, 0, 0;
-            // left_leg->vel_desired << 0, 0, 0, 0, 0;
-            // left_leg->accel_desired << 0, 0, 0;
-            
-            //TODO: Maybe rework to only use q and q_dot
-
-            // std::cout << "q: " << left_leg->q << std::endl;
-            // std::cout << "q_dot: " << left_leg->q_dot << std::endl;
-            
             left_leg->trajectory_start_time_mutex.lock();
             double current_trajectory_time = get_time() - left_leg->trajectory_start_time;
             left_leg->trajectory_start_time_mutex.unlock();
@@ -377,7 +364,8 @@ void calculate_left_leg_torques() {
                         << "," << left_leg->foot_pos(0) << "," << left_leg->foot_pos(1) << "," << left_leg->foot_pos(2)
                         << "," << left_leg->pos_desired(0, 0) << "," << left_leg->pos_desired(1, 0) << "," << left_leg->pos_desired(2, 0)
                         << "," << left_leg->foot_vel(0) << "," << left_leg->foot_vel(1) << "," << left_leg->foot_vel(2)
-                        << "," << left_leg->vel_desired(0, 0) << "," << left_leg->vel_desired(1, 0) << "," << left_leg->vel_desired(2, 0) << std::endl;
+                        << "," << left_leg->vel_desired(0, 0) << "," << left_leg->vel_desired(1, 0) << "," << left_leg->vel_desired(2, 0)
+                        << "," << left_leg->foot_pos(3, 0) << std::endl;
             data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
         }
 
@@ -451,7 +439,8 @@ void calculate_right_leg_torques() {
                 << "foot_pos_x,foot_pos_y,foot_pos_z,"
                 << "foot_pos_x_desired,foot_pos_y_desired,foot_pos_z_desired,"
                 << "foot_vel_x,foot_vel_y,foot_vel_z,"
-                << "foot_vel_x_desired,foot_vel_y_desired,foot_vel_z_desired" << std::endl; // Add header to csv file
+                << "foot_vel_x_desired,foot_vel_y_desired,foot_vel_z_desired,"
+                << "foot_phi" << std::endl; // Add header to csv file
     data_file.close();
 
     bool time_switch = false; // used for running a two-phase trajectory, otherwise obsolete
@@ -539,19 +528,28 @@ void calculate_right_leg_torques() {
         right_leg->update();
 
         // If swing phase, leg trajectory should be followed, if not, foot is in contact with the ground and MPC forces should be converted into torques and applied
-        if(right_leg->swing_phase) {
+        if(true) {
             
-            right_leg->trajectory_start_time_mutex.lock();
-            double current_trajectory_time = get_time() - right_leg->trajectory_start_time;
-            right_leg->trajectory_start_time_mutex.unlock();
+            // right_leg->trajectory_start_time_mutex.lock();
+            // double current_trajectory_time = get_time() - right_leg->trajectory_start_time;
+            // right_leg->trajectory_start_time_mutex.unlock();
 
-            right_leg->foot_trajectory_mutex.lock();
+            // right_leg->foot_trajectory_mutex.lock();
 
-            right_leg->pos_desired << (right_leg->H_hip_body.inverse() * (Eigen::Matrix<double, 4, 1>() << right_leg->foot_trajectory.get_trajectory_pos(current_trajectory_time), 1).finished()).block<3, 1>(0, 0), 0, 0;
-            right_leg->vel_desired << right_leg->foot_trajectory.get_trajectory_vel(current_trajectory_time), 0, 0;
-            right_leg->accel_desired << right_leg->foot_trajectory.get_trajectory_accel(current_trajectory_time);
+            // right_leg->pos_desired << (right_leg->H_hip_body.inverse() * (Eigen::Matrix<double, 4, 1>() << right_leg->foot_trajectory.get_trajectory_pos(current_trajectory_time), 1).finished()).block<3, 1>(0, 0), 0;
+            // std::cout << "right foot pos_desired:\n" << right_leg->pos_desired << "\n" << "right foot current position:\n" << right_leg->foot_pos << std::endl;
+            // right_leg->vel_desired << right_leg->foot_trajectory.get_trajectory_vel(current_trajectory_time), 0;
+            // right_leg->accel_desired << right_leg->foot_trajectory.get_trajectory_accel(current_trajectory_time);
 
-            right_leg->foot_trajectory_mutex.unlock();
+            // right_leg->foot_trajectory_mutex.unlock();
+
+            right_leg->pos_desired << 0, 0, 0.1*sin(16*get_time()) - 0.95, 0;
+            right_leg->vel_desired << 0, 0, 1.6*cos(16*get_time()), 0;
+            right_leg->accel_desired << 0, 0, -25.6*sin(16*get_time());
+
+            // right_leg->pos_desired << 0, 0, -1, 0.25;
+            // right_leg->vel_desired << 0, 0, 0, 0;
+            // right_leg->accel_desired << 0, 0, 0;
 
             right_leg->update_torque_setpoint();
         }
@@ -567,7 +565,6 @@ void calculate_right_leg_torques() {
         if(simState->isPaused()) {
             right_leg->tau_setpoint = Eigen::ArrayXd::Zero(4, 1);
         }
-
 
         stringstream s;
         s << right_leg->tau_setpoint(0, 0) << "|" << right_leg->tau_setpoint(1, 0) << "|" << right_leg->tau_setpoint(2, 0) << "|" << right_leg->tau_setpoint(3, 0); // Write torque setpoints to stringstream
@@ -594,7 +591,8 @@ void calculate_right_leg_torques() {
                         << "," << right_leg->foot_pos(0) << "," << right_leg->foot_pos(1) << "," << right_leg->foot_pos(2)
                         << "," << right_leg->pos_desired(0, 0) << "," << right_leg->pos_desired(1, 0) << "," << right_leg->pos_desired(2, 0)
                         << "," << right_leg->foot_vel(0) << "," << right_leg->foot_vel(1) << "," << right_leg->foot_vel(2)
-                        << "," << right_leg->vel_desired(0, 0) << "," << right_leg->vel_desired(1, 0) << "," << right_leg->vel_desired(2, 0) << std::endl;
+                        << "," << right_leg->vel_desired(0, 0) << "," << right_leg->vel_desired(1, 0) << "," << right_leg->vel_desired(2, 0) 
+                        << "," << right_leg->foot_pos(3, 0) << std::endl;
                 
             data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
         }
@@ -776,7 +774,7 @@ int main(int _argc, char **_argv)
     
     // Bind functions to threads
     // left_leg_state_thread = std::thread(std::bind(update_left_leg_state));
-    left_leg_torque_thread = std::thread(std::bind(calculate_left_leg_torques));
+    // left_leg_torque_thread = std::thread(std::bind(calculate_left_leg_torques));
     right_leg_torque_thread = std::thread(std::bind(calculate_right_leg_torques));
     
     //mpc_thread = std::thread(std::bind(run_mpc));
