@@ -139,8 +139,8 @@ struct leg_config {
 
     double g = 9.81;
 
-    double upper_torque_limit = 60;
-    double lower_torque_limit = -60;
+    double upper_torque_limit = 150;
+    double lower_torque_limit = -150;
 };
 
 #endif
