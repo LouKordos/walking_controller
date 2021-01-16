@@ -1204,7 +1204,10 @@ int main(int _argc, char **_argv)
         Eigen::Matrix<double, 3, 1> vel_vector = (Eigen::Matrix<double, 3, 1>() << P_param(9, 0), P_param(10, 0), P_param(11, 0)).finished();
         Eigen::Matrix<double, 3, 1> vel_desired_vector = (Eigen::Matrix<double, 3, 1>() << vel_x_desired, 0.1, vel_z_desired).finished();
         Eigen::Matrix<double, 3, 1> omega_desired_vector = (Eigen::Matrix<double, 3, 1>() << omega_x_desired, omega_y_desired, omega_z_desired).finished();
-        
+
+        constrain(vel_vector(1, 0), 0, 0.1);
+        std::cout << vel_vector(1, 0) << std::endl;
+
         left_leg->foot_pos_world_desired_mutex.lock();
         right_leg->foot_pos_world_desired_mutex.lock();
 
@@ -1446,6 +1449,9 @@ int main(int _argc, char **_argv)
             Eigen::Matrix<double, 3, 1> vel_desired_vector = (Eigen::Matrix<double, 3, 1>() << vel_x_desired, 0.1, vel_z_desired).finished();
             Eigen::Matrix<double, 3, 1> omega_desired_vector = (Eigen::Matrix<double, 3, 1>() << omega_x_desired, omega_y_desired, omega_z_desired).finished();
             // Only change where forces are applied when in swing phase, foot cannot move while in contact
+
+            constrain(vel_vector(1, 0), 0, 0.1);
+
             if(swing_left_horizon) {
                 left_leg->foot_pos_world_discretization = adjusted_pos_vector_left + (t_stance/2.0) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(pos_z_t) / 9.81) * vel_vector.cross(omega_desired_vector);
                 
