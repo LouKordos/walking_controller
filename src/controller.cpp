@@ -528,28 +528,28 @@ void calculate_right_leg_torques() {
         right_leg->update();
 
         // If swing phase, leg trajectory should be followed, if not, foot is in contact with the ground and MPC forces should be converted into torques and applied
-        if(true) {
+        if(right_leg->swing_phase) {
             
-            // right_leg->trajectory_start_time_mutex.lock();
-            // double current_trajectory_time = get_time() - right_leg->trajectory_start_time;
-            // right_leg->trajectory_start_time_mutex.unlock();
+            right_leg->trajectory_start_time_mutex.lock();
+            double current_trajectory_time = get_time() - right_leg->trajectory_start_time;
+            right_leg->trajectory_start_time_mutex.unlock();
 
-            // right_leg->foot_trajectory_mutex.lock();
+            right_leg->foot_trajectory_mutex.lock();
 
-            // right_leg->pos_desired << (right_leg->H_hip_body.inverse() * (Eigen::Matrix<double, 4, 1>() << right_leg->foot_trajectory.get_trajectory_pos(current_trajectory_time), 1).finished()).block<3, 1>(0, 0), 0;
+            right_leg->pos_desired << (right_leg->H_hip_body.inverse() * (Eigen::Matrix<double, 4, 1>() << right_leg->foot_trajectory.get_trajectory_pos(current_trajectory_time), 1).finished()).block<3, 1>(0, 0), 0;
             // std::cout << "right foot pos_desired:\n" << right_leg->pos_desired << "\n" << "right foot current position:\n" << right_leg->foot_pos << std::endl;
-            // right_leg->vel_desired << right_leg->foot_trajectory.get_trajectory_vel(current_trajectory_time), 0;
-            // right_leg->accel_desired << right_leg->foot_trajectory.get_trajectory_accel(current_trajectory_time);
+            right_leg->vel_desired << right_leg->foot_trajectory.get_trajectory_vel(current_trajectory_time), 0;
+            right_leg->accel_desired << right_leg->foot_trajectory.get_trajectory_accel(current_trajectory_time);
 
-            // right_leg->foot_trajectory_mutex.unlock();
+            right_leg->foot_trajectory_mutex.unlock();
 
-            right_leg->pos_desired << 0, 0, 0.1*sin(16*get_time()) - 0.95, 0;
-            right_leg->vel_desired << 0, 0, 1.6*cos(16*get_time()), 0;
-            right_leg->accel_desired << 0, 0, -25.6*sin(16*get_time());
+            // right_leg->pos_desired << 0, 0, 0.1*sin(16*get_time()) - 0.95, 0;
+            // right_leg->vel_desired << 0, 0, 1.6*cos(16*get_time()), 0;
+            // right_leg->accel_desired << 0, 0, -25.6*sin(16*get_time());
 
-            // right_leg->pos_desired << 0, 0, -1, 0.25;
-            // right_leg->vel_desired << 0, 0, 0, 0;
-            // right_leg->accel_desired << 0, 0, 0;
+            // // right_leg->pos_desired << 0, 0, -1, 0.25;
+            // // right_leg->vel_desired << 0, 0, 0, 0;
+            // // right_leg->accel_desired << 0, 0, 0;
 
             right_leg->update_torque_setpoint();
         }
@@ -774,7 +774,7 @@ int main(int _argc, char **_argv)
     
     // Bind functions to threads
     // left_leg_state_thread = std::thread(std::bind(update_left_leg_state));
-    // left_leg_torque_thread = std::thread(std::bind(calculate_left_leg_torques));
+    left_leg_torque_thread = std::thread(std::bind(calculate_left_leg_torques));
     right_leg_torque_thread = std::thread(std::bind(calculate_right_leg_torques));
     
     //mpc_thread = std::thread(std::bind(run_mpc));
