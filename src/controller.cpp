@@ -1048,7 +1048,7 @@ int main(int _argc, char **_argv)
             }
         }
 
-        pos_y_desired = P_param(4, 0);
+        // pos_y_desired = P_param(4, 0);
         
         stringstream temp;
         temp << "x_t:" << x_t(0, 0) << "," << x_t(1, 0) << "," << x_t(2, 0) << "," << x_t(3, 0) << "," << x_t(4, 0) << "," << x_t(5, 0) << "," << x_t(6, 0) << "," << x_t(7, 0) << "," << x_t(8, 0) << "," << x_t(9, 0) << "," << x_t(10, 0) << "," << x_t(11, 0) << "," << x_t(12, 0);
