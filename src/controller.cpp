@@ -770,7 +770,7 @@ int main(int _argc, char **_argv)
     right_leg->foot_pos_world_desired << 0.15, 0, 0;
 
     alternate_contacts = true;
-    left_leg->swing_phase = true;
+    left_leg->swing_phase = true; // Inverted because swap will occur at iteration 0, so set opposite to what you want here
     
     // Bind functions to threads
     // left_leg_state_thread = std::thread(std::bind(update_left_leg_state));
