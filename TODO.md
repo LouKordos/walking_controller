@@ -9,7 +9,14 @@
 - Make every dependency in setup.sh build from source so that it works on any OS
 - Test more distros and their versions, then update README.md to mention that every version starting from Ubuntu 18.04 LTS and up will work
 - Test different solvers
+- Other things to try: update foot trajectory at 1kHz as well? only relevant for high speed walking / running I think, try different gait_gain, try current changes on upper-hip-removed on branch without upper hip removed, see if it improves jittering, gait planner in function as discussed with WPBack, use MIT method
 - Calculate accurate mass of the entire biped using F360
+- Use Raisim for more accurate simulation
+- `#define NUM_JOINTS X`
+- Maybe mpc_config header as well
+- Decide proper naming scheme, either CamelCase or whatever_this_is_called
+- Use fmtlib instead of stringstream garbage if possible
+- Maybe move to VS Code for Jupyter Notebooks as well?
 - Ask Embedded Discord how to properly handle multithreading and code optimization in general, wrapping everything in `get()` function with mutex cannot be the right way to do it
 - Check simulation paused in gazebo plugin and stop sending states to pause control plugin as well, otherwise simulation breaks after resuming
 - For compiling casadi: `-DWITH_THREAD=ON` and install HSL solver with -NUM_THREADS
@@ -55,3 +62,4 @@
 - Alpine Docker containr to build everything from source
 - InfluxDB live logging 
 - vcpkg or conan
+- Do actual performance validation and test suite with gazebo server docker container
