@@ -131,7 +131,8 @@ struct leg_config {
     double l1_z_com = 0;
     double l2_z_com = 0.145;
     double l3_z_com = 0.145;
-    double l4_z_com = l4_z / 2 + 0.03716;
+    double l4_z_com = l4_z / 2 + 0.018;
+    // double l4_z_com = l4_z / 2 + 0.3716;
     double l5_z_com = l5_z / 2;
     double l6_z_com = l6_z - 0.01;
 
