@@ -701,9 +701,9 @@ void calculate_right_leg_torques() {
     }
 }
 
-static const Eigen::MatrixXd I_body = (Eigen::Matrix<double, 3, 3>() << 0.5, 0.0, 0.0,
-                                                                        0.0, 0.62288, 0.0,
-                                                                        0.0, 0.0, 0.68).finished(); // Inertia around CoM, meaning in Body Frame
+static const Eigen::MatrixXd I_body = (Eigen::Matrix<double, 3, 3>() << 0.208, 0.0, 0.0,
+                                                                        0.0, 0.639, 0.0,
+                                                                        0.0, 0.0, 0.584).finished(); // Inertia around CoM, meaning in Body Frame
 
 static const double Ixx = I_body(0, 0);
 static const double Ixy = I_body(0, 1);
