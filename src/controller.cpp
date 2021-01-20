@@ -701,9 +701,10 @@ void calculate_right_leg_torques() {
     }
 }
 
+// Inertia around CoM in Body frame, calculated from CAD with Hip actuator mass 1kg each. The values below consist of torso inertia and upper two hip actuators per leg combined 
 static const Eigen::MatrixXd I_body = (Eigen::Matrix<double, 3, 3>() << 0.208, 0.0, 0.0,
                                                                         0.0, 0.639, 0.0,
-                                                                        0.0, 0.0, 0.584).finished(); // Inertia around CoM, meaning in Body Frame
+                                                                        0.0, 0.0, 0.584).finished();
 
 static const double Ixx = I_body(0, 0);
 static const double Ixy = I_body(0, 1);
