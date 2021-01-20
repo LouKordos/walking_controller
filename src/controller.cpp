@@ -1020,7 +1020,7 @@ int main(int _argc, char **_argv)
     double omega_y_desired = 0;
     double omega_z_desired = 0;
 
-    const double gait_gain = 0.3; // Rename to more accurate name
+    const double gait_gain = 0.1; // Rename to more accurate name
 
     const double r_x_limit = 0.1; // r_x_limit +/- hip_offset is the maximum position the feet will be allowed to move (in body frame)
 
