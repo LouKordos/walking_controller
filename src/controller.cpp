@@ -1210,22 +1210,24 @@ int main(int _argc, char **_argv)
                 ++contactSwapsTemp;
             }
             
-            // Only override planned contact values if there recently was a contact switch or there will be.
-            if(contactSwapsTemp < 1 && ((total_iterations - iterationsAtLastContact) > 5 && ((int)(contact_swap_interval / dt) - (total_iterations - iterationsAtLastContact)) < 5)) { // Only override contact values up until next contact swap
-                if(contactLeft && left_leg->swing_phase) {
-                    swing_left_temp = false;
-                }
-                else if(!contactLeft && !left_leg->swing_phase) {
-                    swing_left_temp = true;
-                }
+            // // Only override planned contact values if there recently was a contact switch or there will be.
+            // int iterationsSinceLastContact = total_iterations - iterationsAtLastContact;
+            // if(contactSwapsTemp < 1 && iterationsSinceLastContact > 5 || iterationsSinceLastContact < 5) { // Only override contact values up until next contact swap
+            //     if(contactLeft && left_leg->swing_phase) {
+            //         swing_left_temp = false;
+            //     }
+            //     else if(!contactLeft && !left_leg->swing_phase) {
+            //         swing_left_temp = true;
+            //     }
                 
-                if(contactRight && right_leg->swing_phase) {
-                    swing_right_temp = false;
-                }
-                else if(!contactRight && !right_leg->swing_phase) {
-                    swing_right_temp = true;
-                }
-            }
+            //     if(contactRight && right_leg->swing_phase) {
+            //         swing_right_temp = false;
+            //     }
+            //     else if(!contactRight && !right_leg->swing_phase) {
+            //         swing_right_temp = true;
+            //     }
+            //     std::cout << "Early / Late contact compensation triggered." << std::endl;
+            // }
             
             D_k << swing_left_temp, 0, 0, 0, 0, 0,
                     0, swing_left_temp, 0, 0, 0, 0,
