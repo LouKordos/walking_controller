@@ -232,7 +232,9 @@ void calculate_left_leg_torques() {
                 << "foot_pos_x,foot_pos_y,foot_pos_z,"
                 << "foot_pos_x_desired,foot_pos_y_desired,foot_pos_z_desired,"
                 << "foot_vel_x,foot_vel_y,foot_vel_z,"
-                << "foot_vel_x_desired,foot_vel_y_desired,foot_vel_z_desired" << std::endl; // Add header to csv file
+                << "foot_vel_x_desired,foot_vel_y_desired,foot_vel_z_desired,"
+                << "foot_phi,foot_theta,foot_psi," 
+                << "foot_phi_desired,foot_theta_desired,foot_psi_desired" << std::endl; // Add header to csv file
     data_file.close();
 
     bool time_switch = false; // used for running a two-phase trajectory, otherwise obsolete
@@ -414,7 +416,8 @@ void calculate_left_leg_torques() {
                         << "," << left_leg->foot_pos(0) << "," << left_leg->foot_pos(1) << "," << left_leg->foot_pos(2)
                         << "," << left_leg->pos_desired(0, 0) << "," << left_leg->pos_desired(1, 0) << "," << left_leg->pos_desired(2, 0)
                         << "," << left_leg->foot_vel(0) << "," << left_leg->foot_vel(1) << "," << left_leg->foot_vel(2)
-                        << "," << left_leg->vel_desired(0, 0) << "," << left_leg->vel_desired(1, 0) << "," << left_leg->vel_desired(2, 0) << std::endl;
+                        << "," << left_leg->vel_desired(0, 0) << "," << left_leg->vel_desired(1, 0) << "," << left_leg->vel_desired(2, 0) 
+                        << "," << left_leg->foot_pos(3, 0) << "," << left_leg->foot_pos(4, 0) << "," << 0 << std::endl;
                 
             data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
         }
@@ -489,7 +492,9 @@ void calculate_right_leg_torques() {
                 << "foot_pos_x,foot_pos_y,foot_pos_z,"
                 << "foot_pos_x_desired,foot_pos_y_desired,foot_pos_z_desired,"
                 << "foot_vel_x,foot_vel_y,foot_vel_z,"
-                << "foot_vel_x_desired,foot_vel_y_desired,foot_vel_z_desired" << std::endl; // Add header to csv file
+                << "foot_vel_x_desired,foot_vel_y_desired,foot_vel_z_desired"
+                << "foot_phi,foot_theta,foot_psi," 
+                << "foot_phi_desired,foot_theta_desired,foot_psi_desired" << std::endl; // Add header to csv file
     data_file.close();
 
     bool time_switch = false; // used for running a two-phase trajectory, otherwise obsolete
@@ -670,7 +675,8 @@ void calculate_right_leg_torques() {
                         << "," << right_leg->foot_pos(0) << "," << right_leg->foot_pos(1) << "," << right_leg->foot_pos(2)
                         << "," << right_leg->pos_desired(0, 0) << "," << right_leg->pos_desired(1, 0) << "," << right_leg->pos_desired(2, 0)
                         << "," << right_leg->foot_vel(0) << "," << right_leg->foot_vel(1) << "," << right_leg->foot_vel(2)
-                        << "," << right_leg->vel_desired(0, 0) << "," << right_leg->vel_desired(1, 0) << "," << right_leg->vel_desired(2, 0) << std::endl;
+                        << "," << right_leg->vel_desired(0, 0) << "," << right_leg->vel_desired(1, 0) << "," << right_leg->vel_desired(2, 0) 
+                        << "," << right_leg->foot_pos(3, 0) << "," << right_leg->foot_pos(4, 0) << "," << 0 << std::endl;
                 
             data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
         }
@@ -1052,7 +1058,8 @@ int main(int _argc, char **_argv)
                 << "r_x_actual_left,r_y_actual_left,r_z_actual_left,"
                 << "r_x_actual_right,r_y_actual_right,r_z_actual_right,"
                 << "next_body_vel_x,next_body_vel_y,next_body_vel_z,"
-                << "contact_left,contact_right," 
+                << "contact_left_desired,contact_right_desired,"
+                << "contact_left_actual,contact_right_actual,"
                 << "foot_pos_body_frame_x_left,foot_pos_body_frame_y_left,foot_pos_body_frame_z_left,"
                 << "foot_pos_body_frame_x_right,foot_pos_body_frame_y_right,foot_pos_body_frame_z_right,"
                 << "foot_pos_world_desired_x_left,foot_pos_world_desired_y_left,foot_pos_world_desired_z_left,"
@@ -1804,6 +1811,7 @@ int main(int _argc, char **_argv)
                 << "," << r_x_actual_right << "," << r_y_actual_right << "," << r_z_actual_right
                 << "," << next_body_vel(0, 0) << "," << next_body_vel(1, 0) << "," << next_body_vel(2, 0)
                 << "," << !left_leg->swing_phase * 0.1 << "," << !right_leg->swing_phase * 0.1
+                << "," << left_leg->contactState.hasContact() * 0.1 << "," << right_leg->contactState.hasContact() * 0.1
                 << "," << left_leg->foot_pos_body_frame(0, 0) << "," << left_leg->foot_pos_body_frame(1, 0) << "," << left_leg->foot_pos_body_frame(2, 0)
                 << "," << right_leg->foot_pos_body_frame(0, 0) << "," << right_leg->foot_pos_body_frame(1, 0) << "," << right_leg->foot_pos_body_frame(2, 0)
                 << "," << left_leg->foot_pos_world_desired(0, 0) << "," << left_leg->foot_pos_world_desired(1, 0) << "," << left_leg->foot_pos_world_desired(2, 0)
