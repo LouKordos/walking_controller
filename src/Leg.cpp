@@ -209,8 +209,8 @@ Eigen::Matrix<double, 3, 1> Leg::get_foot_pos_world(Eigen::Matrix<double, 13, 1>
 void Leg::update_torque_setpoint() {
     update_tau_setpoint(J_foot_combined, Kp, pos_desired, foot_pos, Kd, vel_desired, foot_vel, tau_ff, tau_setpoint);
 
-    for(int i = 0; i < 5; ++i) { // Loop through each torque setpoint vector element
+    for(int i = 0; i < 4; ++i) { // Loop through each torque setpoint vector element
             constrain(tau_setpoint(i, 0), config.lower_torque_limit, config.upper_torque_limit); // constrain element based on global torque limits
     }
-    constrain(tau_setpoint(4, 0), -5, 5);
+    constrain(tau_setpoint(4, 0), -15, 15);
 }
