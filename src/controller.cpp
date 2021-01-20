@@ -1086,7 +1086,7 @@ int main(int _argc, char **_argv)
             // alternate_contacts = true;
             // left_leg->swing_phase = true;
             // alternate_flag = true;
-            vel_y_desired = 0.1;
+            vel_y_desired = 0.0;
         }
 
         // while(simState->isPaused() && total_iterations > 3) {
@@ -1134,7 +1134,7 @@ int main(int _argc, char **_argv)
             }
         }
 
-        pos_y_desired = P_param(4, 0);
+        // pos_y_desired = P_param(4, 0);
         
         stringstream temp;
         temp << "x_t:" << x_t(0, 0) << "," << x_t(1, 0) << "," << x_t(2, 0) << "," << x_t(3, 0) << "," << x_t(4, 0) << "," << x_t(5, 0) << "," << x_t(6, 0) << "," << x_t(7, 0) << "," << x_t(8, 0) << "," << x_t(9, 0) << "," << x_t(10, 0) << "," << x_t(11, 0) << "," << x_t(12, 0);
@@ -1288,9 +1288,11 @@ int main(int _argc, char **_argv)
         Eigen::Matrix<double, 3, 1> adjusted_pos_vector_right = (H_body_world * (Eigen::Matrix<double, 4, 1>() << hip_offset, 0, 0, 1).finished()).block<3, 1>(0, 0);
         
         Eigen::Matrix<double, 3, 1> vel_vector = (Eigen::Matrix<double, 3, 1>() << P_param(9, 0), P_param(10, 0), P_param(11, 0)).finished();
-        Eigen::Matrix<double, 3, 1> vel_desired_vector = (Eigen::Matrix<double, 3, 1>() << vel_x_desired, 0.1, vel_z_desired).finished();
+        Eigen::Matrix<double, 3, 1> vel_desired_vector = (Eigen::Matrix<double, 3, 1>() << vel_x_desired, 0, vel_z_desired).finished();
         Eigen::Matrix<double, 3, 1> omega_desired_vector = (Eigen::Matrix<double, 3, 1>() << omega_x_desired, omega_y_desired, omega_z_desired).finished();
-        
+
+        // constrain(vel_vector(1, 0), 0, vel_y_desired); // Limit velocity used for calculating desired foot position to desired velocity, preventing steps too far out that slow the robot down too much
+
         left_leg->foot_pos_world_desired_mutex.lock();
         right_leg->foot_pos_world_desired_mutex.lock();
 
@@ -1529,8 +1531,11 @@ int main(int _argc, char **_argv)
             Eigen::Matrix<double, 3, 1> adjusted_pos_vector_right = (H_body_world * (Eigen::Matrix<double, 4, 1>() << hip_offset, 0, 0, 1).finished()).block<3, 1>(0, 0);
             
             Eigen::Matrix<double, 3, 1> vel_vector = (Eigen::Matrix<double, 3, 1>() << vel_x_t, vel_y_t, vel_z_t).finished();
-            Eigen::Matrix<double, 3, 1> vel_desired_vector = (Eigen::Matrix<double, 3, 1>() << vel_x_desired, 0.1, vel_z_desired).finished();
+            Eigen::Matrix<double, 3, 1> vel_desired_vector = (Eigen::Matrix<double, 3, 1>() << vel_x_desired, 0, vel_z_desired).finished();
             Eigen::Matrix<double, 3, 1> omega_desired_vector = (Eigen::Matrix<double, 3, 1>() << omega_x_desired, omega_y_desired, omega_z_desired).finished();
+
+            // constrain(vel_vector(1, 0), 0, vel_y_desired); // Limit velocity used for calculating desired foot position to desired velocity, preventing steps too far out that slow the robot down too much
+
             // Only change where forces are applied when in swing phase, foot cannot move while in contact
             if(swing_left_horizon) {
                 left_leg->foot_pos_world_discretization = adjusted_pos_vector_left + (t_stance/2.0) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(pos_z_t) / 9.81) * vel_vector.cross(omega_desired_vector);
