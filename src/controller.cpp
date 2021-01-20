@@ -60,7 +60,7 @@ static const double dt = 1/50.0; // Sampling interval, Timestep length in second
 static const int N = 20; // MPC Prediction Horizon Length in Number of Samples
 
 double f_min_z = 0; // Min contact Force in Z direction for MPC constraint, limits X and Y forces through friction constraint
-double f_max_z = 1000; // Max contact Force in Z direction for MPC constraint, limits X and Y forces through friction constraint
+double f_max_z = 800; // Max contact Force in Z direction for MPC constraint, limits X and Y forces through friction constraint
 
 static const double m_value = 30.0; // Combined robot mass in kg
 
