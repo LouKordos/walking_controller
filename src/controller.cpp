@@ -57,14 +57,14 @@ static const int n = 13; // Number of states in model
 static const int m = 6; // Number of control input variables in model
 
 static const double dt = 1/50.0; // Sampling interval, Timestep length in seconds
-static const int N = 20; // MPC Prediction Horizon Length in Number of Samples
+static const int N = 24; // MPC Prediction Horizon Length in Number of Samples
 
 double f_min_z = 0; // Min contact Force in Z direction for MPC constraint, limits X and Y forces through friction constraint
-double f_max_z = 800; // Max contact Force in Z direction for MPC constraint, limits X and Y forces through friction constraint
+double f_max_z = 1000; // Max contact Force in Z direction for MPC constraint, limits X and Y forces through friction constraint
 
 static const double m_value = 30.0; // Combined robot mass in kg
 
-const int contact_swap_interval = 16; // Interval at which the contact swaps from one foot to the other in Samples
+const int contact_swap_interval = (int)(1.0/3.0 / dt); // Interval at which the contact swaps from one foot to the other in Samples
 const double t_stance = contact_swap_interval * dt; // Duration that the foot will be in stance phase
 bool alternate_contacts;
 
