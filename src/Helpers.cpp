@@ -36,31 +36,6 @@ unsigned long long factorial(long n) {
     return temp;
 }
 
-//TODO: Make trajectory matrix length dynamic, it is currently 1 second long, assuming 1ms time steps
-// First three columns are position in XYZ, last three columns are velocities in XYZ
-Eigen::Matrix<double, 334, 6> get_swing_trajectory(const Eigen::Matrix<double, 3, 1> initial_pos, const Eigen::Matrix<double, 3, 1> middle_pos, const Eigen::Matrix<double, 3, 1> target_pos, 
-                                                    const Eigen::Matrix<double, 3, 1> initial_vel, const Eigen::Matrix<double, 3, 1> target_vel, const double duration) {
-    Eigen::Matrix<double, 334, 6> trajectory;
-    
-    for(int i = 0; i < 3; ++i) {
-        double a = -2*(duration*initial_vel(i, 0) - duration*target_vel(i, 0) + 4*initial_pos(i, 0) + 4*target_pos(i, 0) - 8*middle_pos(i, 0))/pow(duration,4);
-        double b = (5*duration*initial_vel(i, 0) - 3*duration*target_vel(i, 0) + 18*initial_pos(i, 0) + 14*target_pos(i, 0) - 32*middle_pos(i, 0))/pow(duration,3);
-        double c = -(4*duration*initial_vel(i, 0) - duration*target_vel(i, 0) + 11*initial_pos(i, 0) + 5*target_pos(i, 0) - 16*middle_pos(i, 0))/pow(duration,2);
-        double d = initial_vel(i, 0);
-        double e = initial_pos(i, 0);
-
-        int index = 0;
-        
-        for(double t = 0.0; t < duration; t += duration/334.0) {
-            trajectory(index, i+0) = a * pow(t, 4) + b * pow(t, 3) + c * pow(t, 2) + d * t + e;
-            trajectory(index, i+3) = 4 * a * pow(t, 3) + 3 * b * pow(t, 2) + 2 * c * t + d;
-            ++index;
-        }
-    }
-    
-    return trajectory;
-}
-
 // Helper function for splitting string by delimiter character
 std::vector<std::string> split_string(std::string str, char delimiter) {
     std::vector<std::string> results;

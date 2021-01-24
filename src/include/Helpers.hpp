@@ -22,9 +22,6 @@ void constrain_int(int &value, int lower_limit, int upper_limit);
 
 unsigned long long factorial(long n);
 
-Eigen::Matrix<double, 334, 6> get_swing_trajectory(const Eigen::Matrix<double, 3, 1> initial_pos, const Eigen::Matrix<double, 3, 1> middle_pos, const Eigen::Matrix<double, 3, 1> target_pos, 
-                                                    const Eigen::Matrix<double, 3, 1> initial_vel, const Eigen::Matrix<double, 3, 1> target_vel, const double duration);
-
 std::vector<std::string> split_string(std::string str, char delimiter);
 
 Eigen::Matrix<double, 5, 1> get_joint_torques(Eigen::Matrix<double, 3, 1> f, double theta1, double theta2, double theta3, double theta4, double theta5, double phi, double theta, double psi, leg_config &config);
