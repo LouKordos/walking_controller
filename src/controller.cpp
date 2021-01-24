@@ -856,7 +856,7 @@ int main(int _argc, char **_argv)
 
     // Inverted because swap will occur at iteration 0, so set opposite contact state of what you want here
     alternate_contacts = true;
-    left_leg->swing_phase = true; 
+    left_leg->swing_phase = true;
     
     // Bind functions to threads
     // left_leg_state_thread = std::thread(std::bind(update_left_leg_state));
@@ -1036,6 +1036,18 @@ int main(int _argc, char **_argv)
     double r_y_right = 0;
     double r_z_right = -x_t(5, 0);
 
+    // // Initialize values used by trajectory planner because they are not updated until after first contact swap
+    // left_leg->lift_off_pos << -0.15, 0, -x_t(5, 0);
+    // right_leg->lift_off_pos << 0.15, 0, -x_t(5, 0);
+
+    // left_leg->lift_off_vel << 0, 0, 0;
+    // right_leg->lift_off_vel << 0, 0, 0;
+    
+    // // Just assume it will reach desired velocity for now
+    // next_body_vel << -vel_x_desired, -vel_y_desired, -vel_z_desired;
+
+    // TODO: Init next_foot_pos_world as well, maybe by integrating vel in all directions and using formula based on the resulting position
+
     Eigen::Matrix<double, n, n> A_c = Eigen::ArrayXXd::Zero(n, n); // A Matrix in Continuous time
     Eigen::Matrix<double, n, m> B_c = Eigen::ArrayXXd::Zero(n, m); // B Matrix in Continuous time
     
@@ -1199,8 +1211,6 @@ int main(int _argc, char **_argv)
         // Loop through prediction horizon
         bool contactLeft = left_leg->contactState.hasContact();
         bool contactRight = right_leg->contactState.hasContact();
-        // bool contactLeft = !left_leg->swing_phase;
-        // bool contactRight = !right_leg->swing_phase;
         // If contactState = true and swing_phase = true, set all swing_phase_temp until next swap to false to account for unexpected contact
         // If contactState = false and swing_phase = false, set all swing_phase_temp until next swap to true account for unexpected swing phase / contact loss
         int contactSwapsTemp = 0;
@@ -1281,8 +1291,7 @@ int main(int _argc, char **_argv)
             }
         }
 
-        ; // Transformation matrix from body frame to world frame
-        //ZYX order
+        // Transformation matrix from body frame to world frame, ZYX order
         Eigen::Matrix<double, 4, 4> H_body_world = (Eigen::Matrix<double, 4, 4>() << 
                 cos(P_param(2, 0))*cos(P_param(1, 0)), sin(P_param(0, 0))*sin(P_param(1, 0))*cos(P_param(2, 0)) - sin(P_param(2, 0))*cos(P_param(0, 0)), sin(P_param(0, 0))*sin(P_param(2, 0)) + sin(P_param(1, 0))*cos(P_param(0, 0))*cos(P_param(2, 0)), P_param(3, 0),
                 sin(P_param(2, 0))*cos(P_param(1, 0)), sin(P_param(0, 0))*sin(P_param(2, 0))*sin(P_param(1, 0)) + cos(P_param(0, 0))*cos(P_param(2, 0)), -sin(P_param(0, 0))*cos(P_param(2, 0)) + sin(P_param(2, 0))*sin(P_param(1, 0))*cos(P_param(0, 0)), P_param(4, 0),
