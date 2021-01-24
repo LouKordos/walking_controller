@@ -1305,8 +1305,10 @@ int main(int _argc, char **_argv)
         Eigen::Matrix<double, 3, 1> vel_vector = (Eigen::Matrix<double, 3, 1>() << P_param(9, 0), P_param(10, 0), P_param(11, 0)).finished();
         Eigen::Matrix<double, 3, 1> vel_desired_vector = (Eigen::Matrix<double, 3, 1>() << vel_x_desired, vel_y_desired, vel_z_desired).finished();
         Eigen::Matrix<double, 3, 1> omega_desired_vector = (Eigen::Matrix<double, 3, 1>() << omega_x_desired, omega_y_desired, omega_z_desired).finished();
-
-        // constrain(vel_vector(1, 0), 0, vel_y_desired); // Limit velocity used for calculating desired foot position to desired velocity, preventing steps too far out that slow the robot down too much
+        
+        if(vel_y_desired != 0) {
+            constrain(vel_vector(1, 0), 0, vel_y_desired); // Limit velocity used for calculating desired foot position to desired velocity, preventing steps too far out that slow the robot down too much
+        }
 
         left_leg->foot_pos_world_desired_mutex.lock();
         right_leg->foot_pos_world_desired_mutex.lock();
@@ -1550,7 +1552,9 @@ int main(int _argc, char **_argv)
             Eigen::Matrix<double, 3, 1> vel_desired_vector = (Eigen::Matrix<double, 3, 1>() << vel_x_desired, vel_y_desired, vel_z_desired).finished();
             Eigen::Matrix<double, 3, 1> omega_desired_vector = (Eigen::Matrix<double, 3, 1>() << omega_x_desired, omega_y_desired, omega_z_desired).finished();
 
-            // constrain(vel_vector(1, 0), 0, vel_y_desired); // Limit velocity used for calculating desired foot position to desired velocity, preventing steps too far out that slow the robot down too much
+            if(vel_y_desired != 0) {
+                constrain(vel_vector(1, 0), 0, vel_y_desired); // Limit velocity used for calculating desired foot position to desired velocity, preventing steps too far out that slow the robot down too much
+            }
 
             // Only change where forces are applied when in swing phase, foot cannot move while in contact
             if(swing_left_horizon) {
