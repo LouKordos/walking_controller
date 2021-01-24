@@ -809,7 +809,7 @@ int main(int _argc, char **_argv)
     log("--------------------------------", INFO);
     log("--------------------------------", INFO);
 
-    // is 0.065 because it's the difference between torso COM height and Hip Actuator Center Height, negative because just think about it or calculate an example value with negative and positive z displacement. 
+    // is 0.065 because it's the difference between torso CoM height and Hip Actuator Center Height, negative because just think about it or calculate an example value with negative and positive z displacement. 
     // A point expressed in hip frame (i.e. [0, 0, 0]) will obviously be at negative Z in a frame that is located above the hip frame, meaning you need negative Z displacement in the transformation matrix.
     left_leg = new Leg(-0.15, 0, -0.065, left_leg_contact_state_port);
     right_leg = new Leg(0.15, 0, -0.065, right_leg_contact_state_port);
@@ -869,7 +869,7 @@ int main(int _argc, char **_argv)
     // while(true) { }
     stringstream temp;
     temp << "\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
-            << "If you're running this in a docker container, make sure to use the --net=host option when running it.\n"
+            << "If you're running this in a docker container, make sure to use the --net=host option and set the env variable IS_DOCKER=Y when running it.\n"
             << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
     print_threadsafe(temp.str(), "main()", WARN, false);
 
@@ -1021,7 +1021,7 @@ int main(int _argc, char **_argv)
     double omega_y_desired = 0;
     double omega_z_desired = 0;
 
-    const double gait_gain = 0.1; // Rename to more accurate name
+    const double gait_gain = 0.1; // Try much lower value here, rename to more accurate name
 
     const double r_x_limit = 0.1; // r_x_limit +/- hip_offset is the maximum position the feet will be allowed to move (in body frame)
 
@@ -1087,7 +1087,7 @@ int main(int _argc, char **_argv)
             // alternate_contacts = true;
             // left_leg->swing_phase = true;
             // alternate_flag = true;
-            vel_y_desired = 0.0;
+            // vel_y_desired = 0.3;
         }
 
         // while(simState->isPaused() && total_iterations > 3) {
@@ -1103,7 +1103,7 @@ int main(int _argc, char **_argv)
         //     vel_y_desired += 0.01;
         // }
 
-        // if(omega_z_desired < 0.8) {
+        // if(omega_z_desired < 0.3) {
         //     omega_z_desired += 0.02;
         // }
 
@@ -1122,6 +1122,8 @@ int main(int _argc, char **_argv)
             //P_param(i,0) = x_t(i, 0);
         }
         x_mutex.unlock();
+        
+        // P_param.block<n,1>(0, 0) = x_t;
         
         // Step the model one timestep and use the resulting state as the initial state for the solver. This compensates for the roughly 1 sample delay due to the solver time
         P_param.block<n,1>(0, 0) = step_discrete_model(x_t, u_t, r_x_left, r_x_right, r_y_left, r_y_right, r_z_left, r_z_right);
@@ -1396,18 +1398,18 @@ int main(int _argc, char **_argv)
             //     vel_x_desired_temp += 0.01;
             // }
 
-            if(total_iterations <= contact_swap_interval - 1 && total_iterations + i >= contact_swap_interval - 1) {
-                vel_y_desired_temp = 0.3;
-            }
-            else {
-                vel_y_desired_temp = vel_y_desired;
-            }
+            // if(total_iterations <= contact_swap_interval - 1 && total_iterations + i >= contact_swap_interval - 1) {
+            //     vel_y_desired_temp = 0.3;
+            // }
+            // else {
+            //     vel_y_desired_temp = vel_y_desired;
+            // }
             
             // if (vel_y_desired_temp < 0.3) {
             //     vel_y_desired_temp += 0.01;
             // }
 
-            // if (omega_z_desired_temp < 0.8) {
+            // if (omega_z_desired_temp < 0.3) {
             //     omega_z_desired_temp += 0.02;
             // }
 
@@ -1477,6 +1479,7 @@ int main(int _argc, char **_argv)
 
         // Discretization loop for Prediction Horizon
         for(int i = 0; i < N; ++i) {
+            // TODO: Simplify this by just using a single discretization state vector instead of seperate variables
             if (i < N-1) {
                 phi_t = X_t(n*(i+1) + 0, 0);
                 theta_t = X_t(n*(i+1) + 1, 0);
@@ -1521,11 +1524,12 @@ int main(int _argc, char **_argv)
             }
             
             if((total_iterations+i) % contact_swap_interval == 0 && i != 0) { // Go to next contact swap in prediction horizon and get desired foot position for trajectory planner. The if + if statement is badly written and should be refactored
+            if((total_iterations+i) % contact_swap_interval == 0 && i != 0) {
                 swing_left_horizon = !swing_left_horizon;
                 swing_right_horizon = !swing_right_horizon;
             }
 
-            // See comments before, same procedure here, also ZYX order
+            // See comments above, same procedure here, also ZYX order
             Eigen::Matrix<double, 4, 4> H_body_world = (Eigen::Matrix<double, 4, 4>() << cos(psi_t)*cos(theta_t), sin(phi_t)*sin(theta_t)*cos(psi_t) - sin(psi_t)*cos(phi_t), sin(phi_t)*sin(psi_t) + sin(theta_t)*cos(phi_t)*cos(psi_t), pos_x_t,
                                                         sin(psi_t)*cos(theta_t), sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t), -sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t), pos_y_t,
                                                         -sin(theta_t), sin(phi_t)*cos(theta_t), cos(phi_t)*cos(theta_t), pos_z_t,
@@ -1563,7 +1567,7 @@ int main(int _argc, char **_argv)
             if(swing_right_horizon) {
                 right_leg->foot_pos_world_discretization = adjusted_pos_vector_right + (t_stance/2.0) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(pos_z_t) / 9.81) * vel_vector.cross(omega_desired_vector);
 
-                //TODO: Instead of using inverse, either solve the inverse symbolically in python or just ues Transpose as shown in Modern Robotics Video
+                // TODO: Instead of using inverse, either solve the inverse symbolically in Python or just use Transpose as shown in Modern Robotics Video
                 Eigen::Matrix<double, 3, 1> right_foot_pos_body = (H_body_world.inverse() * (Eigen::Matrix<double, 4, 1>() << right_leg->foot_pos_world_discretization, 1).finished()).block<3,1>(0, 0);
 
                 if (right_foot_pos_body(0, 0) > r_x_limit + hip_offset) {
@@ -1613,7 +1617,7 @@ int main(int _argc, char **_argv)
                         (sin(phi_t)*sin(psi_t) + sin(theta_t)*cos(phi_t)*cos(psi_t))*(Ixz*sin(psi_t)*cos(theta_t) + Iyz*(sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t)) + Izz*(-sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t))) + (sin(phi_t)*sin(theta_t)*cos(psi_t) - sin(psi_t)*cos(phi_t))*(Ixy*(-sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t)) + Ixy*sin(psi_t)*cos(theta_t) + Iyy*(sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t))) + (Ixx*sin(psi_t)*cos(theta_t) + Iyx*(sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t)) + Izx*(-sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t)))*cos(psi_t)*cos(theta_t), (-sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t))*(Ixz*sin(psi_t)*cos(theta_t) + Iyz*(sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t)) + Izz*(-sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t))) + (sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t))*(Ixy*(-sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t)) + Ixy*sin(psi_t)*cos(theta_t) + Iyy*(sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t))) + (Ixx*sin(psi_t)*cos(theta_t) + Iyx*(sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t)) + Izx*(-sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t)))*sin(psi_t)*cos(theta_t), (Ixy*(-sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t)) + Ixy*sin(psi_t)*cos(theta_t) + Iyy*(sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t)))*sin(phi_t)*cos(theta_t) - (Ixx*sin(psi_t)*cos(theta_t) + Iyx*(sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t)) + Izx*(-sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t)))*sin(theta_t) + (Ixz*sin(psi_t)*cos(theta_t) + Iyz*(sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t)) + Izz*(-sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t)))*cos(phi_t)*cos(theta_t),
                         (sin(phi_t)*sin(psi_t) + sin(theta_t)*cos(phi_t)*cos(psi_t))*(-Ixz*sin(theta_t) + Iyz*sin(phi_t)*cos(theta_t) + Izz*cos(phi_t)*cos(theta_t)) + (sin(phi_t)*sin(theta_t)*cos(psi_t) - sin(psi_t)*cos(phi_t))*(-Ixy*sin(theta_t) + Ixy*cos(phi_t)*cos(theta_t) + Iyy*sin(phi_t)*cos(theta_t)) + (-Ixx*sin(theta_t) + Iyx*sin(phi_t)*cos(theta_t) + Izx*cos(phi_t)*cos(theta_t))*cos(psi_t)*cos(theta_t), (-sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t))*(-Ixz*sin(theta_t) + Iyz*sin(phi_t)*cos(theta_t) + Izz*cos(phi_t)*cos(theta_t)) + (sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t))*(-Ixy*sin(theta_t) + Ixy*cos(phi_t)*cos(theta_t) + Iyy*sin(phi_t)*cos(theta_t)) + (-Ixx*sin(theta_t) + Iyx*sin(phi_t)*cos(theta_t) + Izx*cos(phi_t)*cos(theta_t))*sin(psi_t)*cos(theta_t), -(-Ixx*sin(theta_t) + Iyx*sin(phi_t)*cos(theta_t) + Izx*cos(phi_t)*cos(theta_t))*sin(theta_t) + (-Ixy*sin(theta_t) + Ixy*cos(phi_t)*cos(theta_t) + Iyy*sin(phi_t)*cos(theta_t))*sin(phi_t)*cos(theta_t) + (-Ixz*sin(theta_t) + Iyz*sin(phi_t)*cos(theta_t) + Izz*cos(phi_t)*cos(theta_t))*cos(phi_t)*cos(theta_t);
             
-            //TODO: Maybe use functions for this
+            // TODO: Maybe use functions for this
             r_left_skew_symmetric << 0, -r_z_left, r_y_left,
                                         r_z_left, 0, -r_x_left,
                                         -r_y_left, r_x_left, 0;
@@ -1622,7 +1626,7 @@ int main(int _argc, char **_argv)
                                         r_z_right, 0, -r_x_right,
                                         -r_y_right, r_x_right, 0;
             
-            // See MIT Paper for Rotation Matrix explanation
+            // See MIT Paper for Rotation Matrix explanation, the version below is accounting for all 3 DOF's though
             A_c << 0, 0, 0, 0, 0, 0, cos(psi_t) / cos(theta_t), sin(psi_t) / cos(theta_t), 0, 0, 0, 0, 0,
                     0, 0, 0, 0, 0, 0, -sin(psi_t), cos(psi_t), 0, 0, 0, 0, 0,
                     0, 0, 0, 0, 0, 0, cos(psi_t) * tan(theta_t), sin(psi_t)*tan(theta_t), 1, 0, 0, 0, 0,
@@ -1656,7 +1660,7 @@ int main(int _argc, char **_argv)
             Eigen::Matrix<double, n, n> A_d_t = Eigen::ArrayXXd::Zero(n, n);
             Eigen::Matrix<double, n, m> B_d_t = Eigen::ArrayXXd::Zero(n, m);
 
-            discretize_state_space_matrices(A_c, B_c, dt, A_d_t, B_d_t); // Actually discretize continuous state space matrices
+            discretize_state_space_matrices(A_c, B_c, dt, A_d_t, B_d_t); // Discretize continuous state space matrices
             // Copy them over to P_Param used for solver
             P_param.block<n, n>(0, 1 + N + (i*n)) = A_d_t;
             P_param.block<n, m>(0, 1 + N + n * N + (i*m)) = B_d_t;
@@ -1722,7 +1726,8 @@ int main(int _argc, char **_argv)
 
         u_mutex.lock();
         x_mutex.lock();
-
+        
+        // TODO: Use block notation here
         u_t << solution_variables(n*(N+1)+0),
                 solution_variables(n*(N+1)+1),
                 solution_variables(n*(N+1)+2),
@@ -1741,7 +1746,7 @@ int main(int _argc, char **_argv)
         double r_x_actual_left = foot_pos_world_left(0, 0) - P_param(3, 0);
         double r_y_actual_left = foot_pos_world_left(1, 0) - P_param(4, 0);
         double r_z_actual_left = -P_param(5, 0);
-
+        
         double r_x_actual_right = foot_pos_world_right(0, 0) - P_param(3, 0);
         double r_y_actual_right = foot_pos_world_right(1, 0) - P_param(4, 0);
         double r_z_actual_right = -P_param(5, 0);
@@ -1847,6 +1852,8 @@ int main(int _argc, char **_argv)
 
         u_mutex.unlock();
         x_mutex.unlock();
+
+        // x_t = step_discrete_model(x_t, u_t, r_x_left, r_x_right, r_y_left, r_y_right, r_z_left, r_z_right);
 
         long long remainder = (dt * 1e+6 - full_iteration_duration) * 1e+3;
         //std::cout << "Remainder: " << remainder << " microseconds" << std::endl;
