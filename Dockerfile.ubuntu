@@ -9,19 +9,19 @@ RUN apt-get install coinor-libipopt-dev -y
 ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
 ENV OMP_NUM_THREADS=8
 
-COPY coinhsl-archive-2014.01.17.tar.gz /coinhsl-archive-2014.01.17.tar.gz
+
 RUN wget http://glaros.dtc.umn.edu/gkhome/fetch/sw/metis/OLD/metis-4.0.3.tar.gz
 RUN tar -xvf metis-4.0.3.tar.gz
-RUN tar -xvf coinhsl-archive-2014.01.17.tar.gz
-WORKDIR /coinhsl-archive-2014.01.17
-RUN mv ../metis-4.0.3 .
-RUN ./configure --prefix=/usr LIBS="-llapack" --with-blas="-L/usr/lib -lblas" CXXFLAGS="-g -O2 -fopenmp" FCFLAGS="-g -O2 -fopenmp" CFLAGS="-g -O2 -fopenmp"
 
+COPY coinhsl-2015.06.23.tar.gz /coinhsl-2015.06.23.tar.gz
+RUN tar -xvf coinhsl-2015.06.23.tar.gz
+WORKDIR /coinhsl-2015.06.23
+RUN mv ../metis-4.0.3 .
+
+RUN ./configure --prefix=/usr LIBS="-llapack" --with-blas="-L/usr/lib -lblas" CXXFLAGS="-g -O2 -fopenmp" FCFLAGS="-g -O2 -fopenmp" CFLAGS="-g -O2 -fopenmp"
 RUN make
 RUN make install
-RUN ls -a /usr/lib 
 RUN ln -s /usr/lib/libcoinhsl.so /usr/lib/libhsl.so
-
 
 WORKDIR /
 # Install casadi
@@ -57,4 +57,4 @@ WORKDIR /src/build
 RUN cmake .. -DCMAKE_BUILD_TYPE=Release
 RUN make -j$(nproc)
 
-CMD "./controller"
+CMD "./mpc_benchmark"
