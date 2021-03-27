@@ -56,8 +56,8 @@ static const int udp_buffer_size = 4096; // Buffer size for receiving leg state 
 static const int n = 13; // Number of states in model
 static const int m = 6; // Number of control input variables in model
 
-static const double dt = 1/50.0; // Sampling interval, Timestep length in seconds
-static const int N = 24; // MPC Prediction Horizon Length in Number of Samples
+static const double dt = 1/40.0; // Sampling interval, Timestep length in seconds
+static const int N = 20; // MPC Prediction Horizon Length in Number of Samples
 
 double f_min_z = 0; // Min contact Force in Z direction for MPC constraint, limits X and Y forces through friction constraint
 double f_max_z = 1000; // Max contact Force in Z direction for MPC constraint, limits X and Y forces through friction constraint
@@ -247,7 +247,6 @@ void calculate_left_leg_torques() {
         start = high_resolution_clock::now();
 
         //Declaring angle and angular velocity variables for updating matrices
-        
         double theta1 = 0;
         double theta2 = 0;
         double theta3 = 0;
