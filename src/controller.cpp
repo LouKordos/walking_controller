@@ -853,8 +853,8 @@ int main(int _argc, char **_argv)
     left_leg->foot_pos_world_desired << -0.15, 0, 0;
     right_leg->foot_pos_world_desired << 0.15, 0, 0;
 
-    // Inverted because swap will occur at iteration 0, so set opposite contact state of what you want here
     alternate_contacts = true;
+    // Inverted because swap will occur at iteration 0, so set opposite contact state of what you want here
     left_leg->swing_phase = true;
     
     // Bind functions to threads
