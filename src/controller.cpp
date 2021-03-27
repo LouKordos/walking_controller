@@ -322,7 +322,7 @@ void calculate_left_leg_torques() {
             left_leg->theta4dot = theta4_dot;
             left_leg->theta5dot = theta5_dot;
         }
-        // Update no matter the gait phase to keep foot state updated
+        // Update no matter the gait phase to keep foot model state updated
         left_leg->update();
 
         // If swing, leg trajectory should be followed, if not, foot is in contact with the ground and MPC forces should be converted into torques and applied
@@ -583,7 +583,7 @@ void calculate_right_leg_torques() {
             right_leg->theta5dot = theta5_dot;
         }
 
-        //TODO: Maybe rework to only use q and q_dot
+        // Update no matter the gait phase to keep foot model state updated
         right_leg->update();
 
         // If swing, leg trajectory should be followed, if not, foot is in contact with the ground and MPC forces should be converted into torques and applied
