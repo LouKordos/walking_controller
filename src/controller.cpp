@@ -775,16 +775,16 @@ Eigen::Matrix<double, n, 1> step_discrete_model(Eigen::Matrix<double, n, 1> x, E
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
 
     B_c << 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0,   
-        I_world.inverse() * r_left_skew_symmetric_test, I_world.inverse() * r_right_skew_symmetric_test,
-        1/m_value, 0, 0, 1/m_value, 0, 0,
-        0, 1/m_value, 0, 0, 1/m_value, 0,
-        0, 0, 1/m_value, 0, 0, 1/m_value,
-        0, 0, 0, 0, 0, 0;
+           0, 0, 0, 0, 0, 0,
+           0, 0, 0, 0, 0, 0,
+           0, 0, 0, 0, 0, 0,
+           0, 0, 0, 0, 0, 0,
+           0, 0, 0, 0, 0, 0,   
+           I_world.inverse() * r_left_skew_symmetric_test, I_world.inverse() * r_right_skew_symmetric_test,
+           1/m_value, 0, 0, 1/m_value, 0, 0,
+           0, 1/m_value, 0, 0, 1/m_value, 0,
+           0, 0, 1/m_value, 0, 0, 1/m_value,
+           0, 0, 0, 0, 0, 0;
 
     Eigen::Matrix<double, n, n> A_d = Eigen::ArrayXXd::Zero(n, n);
     Eigen::Matrix<double, n, m> B_d = Eigen::ArrayXXd::Zero(n, m);
