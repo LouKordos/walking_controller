@@ -717,6 +717,24 @@ static const double Izx = I_body(2, 0);
 static const double Izy = I_body(2, 1);
 static const double Izz = I_body(2, 2);
 
+// https://en.wikipedia.org/wiki/Discretization#Discretization_of_linear_state_space_models calculated symbolically in Jupyter Notebook
+// Function for getting the integral part that is multiplied with the B_c (continuous B matrix) to get the discrete time B matrix B_d (see Jupyter Notebook)
+Eigen::Matrix<double, n, n> discretization_integral_function(double tau, double phi, double theta, double psi) {
+    return (Eigen::Matrix<double, n, n>() << tau, 0, 0, 0, 0, 0, pow(tau, 2)*cos(phi)/(2*cos(theta)), pow(tau, 2)*sin(psi)/(2*cos(theta)), 0, 0, 0, 0, 0, 
+                                            0, tau, 0, 0, 0, 0, pow(tau, 2)*sin(psi)/2, pow(tau, 2)*cos(psi)/2, 0, 0, 0, 0, 0, 
+                                            0, 0, tau, 0, 0, 0, pow(tau, 2)*cos(psi)*tan(theta)/2, pow(tau, 2)*sin(psi)*tan(theta)/2, pow(tau, 2)/2, 0, 0, 0, 0, 
+                                            0, 0, 0, tau, 0, 0, 0, 0, 0, pow(tau, 2)/2, 0, 0, 0, 
+                                            0, 0, 0, 0, tau, 0, 0, 0, 0, 0, pow(tau, 2)/2, 0, 0, 
+                                            0, 0, 0, 0, 0, tau, 0, 0, 0, 0, 0, pow(tau, 2)/2, pow(tau, 3)/6, 
+                                            0, 0, 0, 0, 0, 0, tau, 0, 0, 0, 0, 0, 0, 
+                                            0, 0, 0, 0, 0, 0, 0, tau, 0, 0, 0, 0, 0, 
+                                            0, 0, 0, 0, 0, 0, 0, 0, tau, 0, 0, 0, 0, 
+                                            0, 0, 0, 0, 0, 0, 0, 0, 0, tau, 0, 0, 0, 
+                                            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, tau, 0, 0, 
+                                            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, tau, pow(tau, 2)/2, 
+                                            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, tau).finished();
+}
+
 // Discretize the set of continuous state space matrices with a given timestep length based on https://en.wikipedia.org/wiki/Discretization#Discretization_of_linear_state_space_models
 void discretize_state_space_matrices(Eigen::Matrix<double, n, n> &A_c_temp, Eigen::Matrix<double, n, m> &B_c_temp, const double &dt, Eigen::Matrix<double, n, n> &A_d_temp, Eigen::Matrix<double, n, m> &B_d_temp) {
     Eigen::Matrix<double, n+m, n+m> A_B = Eigen::ArrayXXd::Zero(n+m, n+m);
@@ -996,7 +1014,7 @@ int main(int _argc, char **_argv)
     static Eigen::Matrix<double, n, N> x_ref = Eigen::ArrayXXd::Zero(n, N); // N states "stacked" horizontally, containing the reference state trajectory for the prediction horizon
 
     static const int P_rows = n;
-    static const int P_cols = 1 + N + n * N + m * N + N * m; // 1 for initial state, N for N reference states, N A matrices, N B matrices, N D matrices for contact
+    static const int P_cols = 1 + N + n * N + n * N + N * m; // 1 for initial state, N for N reference states, N A matrices, N B matrices, N D matrices for contact
     static Eigen::Matrix<double, P_rows, P_cols> P_param = Eigen::ArrayXXd::Zero(P_rows, P_cols);
 
     Eigen::Matrix<double, 3, 3> I_world = Eigen::ArrayXXd::Zero(3, 3); // Body inertia in World frame
@@ -1252,41 +1270,41 @@ int main(int _argc, char **_argv)
         }
 
         // Update P_param
-        P_param.block<m, m*N> (0, 1 + N + n*N + m*N) = D_vector;
+        P_param.block<m, m*N> (0, 1 + N + n*N + n*N) = D_vector;
 
         //Set U_ref depending on contact combination present
         for(int k = 0; k < N; ++k) {
-            if(P_param(0, 1+N+n*N+m*N+k*m) == 1 && P_param(3, 1+N+n*N+m*N+k*m+3) == 1) { // No feet in contact
-                P_param(m+0, 1 + N + n*N + m*N + k*m) = 0;
-                P_param(m+1, 1 + N + n*N + m*N + k*m) = 0;
-                P_param(m+2, 1 + N + n*N + m*N + k*m) = 0;
-                P_param(m+3, 1 + N + n*N + m*N + k*m) = 0;
-                P_param(m+4, 1 + N + n*N + m*N + k*m) = 0;
-                P_param(m+5, 1 + N + n*N + m*N + k*m) = 0;
+            if(P_param(0, 1+N+n*N+n*N+k*m) == 1 && P_param(3, 1+N+n*N+n*N+k*m+3) == 1) { // No feet in contact
+                P_param(m+0, 1 + N + n*N + n*N + k*m) = 0;
+                P_param(m+1, 1 + N + n*N + n*N + k*m) = 0;
+                P_param(m+2, 1 + N + n*N + n*N + k*m) = 0;
+                P_param(m+3, 1 + N + n*N + n*N + k*m) = 0;
+                P_param(m+4, 1 + N + n*N + n*N + k*m) = 0;
+                P_param(m+5, 1 + N + n*N + n*N + k*m) = 0;
             }
-            else if(P_param(0, 1+N+n*N+m*N+k*m) == 1 && P_param(3, 1+N+n*N+m*N+k*m+3) == 0) { // Right foot in contact
-                P_param(m+0, 1 + N + n*N + m*N + k*m) = 0;
-                P_param(m+1, 1 + N + n*N + m*N + k*m) = 0;
-                P_param(m+2, 1 + N + n*N + m*N + k*m) = 0;
-                P_param(m+3, 1 + N + n*N + m*N + k*m) = 0;
-                P_param(m+4, 1 + N + n*N + m*N + k*m) = 0;
-                P_param(m+5, 1 + N + n*N + m*N + k*m) = m_value * 9.81;
+            else if(P_param(0, 1+N+n*N+n*N+k*m) == 1 && P_param(3, 1+N+n*N+n*N+k*m+3) == 0) { // Right foot in contact
+                P_param(m+0, 1 + N + n*N + n*N + k*m) = 0;
+                P_param(m+1, 1 + N + n*N + n*N + k*m) = 0;
+                P_param(m+2, 1 + N + n*N + n*N + k*m) = 0;
+                P_param(m+3, 1 + N + n*N + n*N + k*m) = 0;
+                P_param(m+4, 1 + N + n*N + n*N + k*m) = 0;
+                P_param(m+5, 1 + N + n*N + n*N + k*m) = m_value * 9.81;
             }
-            else if(P_param(0, 1+N+n*N+m*N+k*m) == 0 && P_param(3, 1+N+n*N+m*N+k*m+3) == 1) { // Left foot in contact
-                P_param(m+0, 1 + N + n*N + m*N + k*m) = 0;
-                P_param(m+1, 1 + N + n*N + m*N + k*m) = 0;
-                P_param(m+2, 1 + N + n*N + m*N + k*m) = m_value * 9.81;
-                P_param(m+3, 1 + N + n*N + m*N + k*m) = 0;
-                P_param(m+4, 1 + N + n*N + m*N + k*m) = 0;
-                P_param(m+5, 1 + N + n*N + m*N + k*m) = 0;
+            else if(P_param(0, 1+N+n*N+n*N+k*m) == 0 && P_param(3, 1+N+n*N+n*N+k*m+3) == 1) { // Left foot in contact
+                P_param(m+0, 1 + N + n*N + n*N + k*m) = 0;
+                P_param(m+1, 1 + N + n*N + n*N + k*m) = 0;
+                P_param(m+2, 1 + N + n*N + n*N + k*m) = m_value * 9.81;
+                P_param(m+3, 1 + N + n*N + n*N + k*m) = 0;
+                P_param(m+4, 1 + N + n*N + n*N + k*m) = 0;
+                P_param(m+5, 1 + N + n*N + n*N + k*m) = 0;
             }
-            else if(P_param(0, 1+N+n*N+m*N+k*m) == 0 && P_param(3, 1+N+n*N+m*N+k*m+3) == 0) { // Both feet in contact
-                P_param(m+0, 1 + N + n*N + m*N + k*m) = 0;
-                P_param(m+1, 1 + N + n*N + m*N + k*m) = 0;
-                P_param(m+2, 1 + N + n*N + m*N + k*m) = (m_value * 9.81) / 2;
-                P_param(m+3, 1 + N + n*N + m*N + k*m) = 0;
-                P_param(m+4, 1 + N + n*N + m*N + k*m) = 0;
-                P_param(m+5, 1 + N + n*N + m*N + k*m) = (m_value * 9.81) / 2;
+            else if(P_param(0, 1+N+n*N+n*N+k*m) == 0 && P_param(3, 1+N+n*N+n*N+k*m+3) == 0) { // Both feet in contact
+                P_param(m+0, 1 + N + n*N + n*N + k*m) = 0;
+                P_param(m+1, 1 + N + n*N + n*N + k*m) = 0;
+                P_param(m+2, 1 + N + n*N + n*N + k*m) = (m_value * 9.81) / 2;
+                P_param(m+3, 1 + N + n*N + n*N + k*m) = 0;
+                P_param(m+4, 1 + N + n*N + n*N + k*m) = 0;
+                P_param(m+5, 1 + N + n*N + n*N + k*m) = (m_value * 9.81) / 2;
             }
         }
 
@@ -1656,17 +1674,8 @@ int main(int _argc, char **_argv)
                     
                     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
 
-            B_c << 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0,
-                    I_world.inverse() * r_left_skew_symmetric, I_world.inverse() * r_right_skew_symmetric,
-                    1/m_value, 0, 0, 1/m_value, 0, 0,
-                    0, 1/m_value, 0, 0, 1/m_value, 0,
-                    0, 0, 1/m_value, 0, 0, 1/m_value,
-                    0, 0, 0, 0, 0, 0;
+            //         0, 0, 0, 0, 0, 0,
+            //         0, 0, 0, 0, 0, 0,
 
             Eigen::Matrix<double, n, n> A_d_t = Eigen::ArrayXXd::Zero(n, n);
             Eigen::Matrix<double, n, m> B_d_t = Eigen::ArrayXXd::Zero(n, m);
@@ -1674,7 +1683,7 @@ int main(int _argc, char **_argv)
             discretize_state_space_matrices(A_c, B_c, dt, A_d_t, B_d_t); // Discretize continuous state space matrices
             // Copy them over to P_Param used for solver
             P_param.block<n, n>(0, 1 + N + (i*n)) = A_d_t;
-            P_param.block<n, m>(0, 1 + N + n * N + (i*m)) = B_d_t;
+            P_param.block<n, n>(0, 1 + N + n * N + (i*n)) = discretization_integral_function(dt, phi_t, theta_t, psi_t) - discretization_integral_function(0, phi_t, theta_t, psi_t);
         }
 
         r_x_left = r_x_left_prev;
