@@ -31,7 +31,7 @@
 #include <sys/socket.h> // for socket creation
 #include <netinet/in.h> //contains constants and structures needed for internet domain addresses
 
-#include <iomanip> //   
+#include <iomanip> // 
 #include "casadi/casadi.hpp" // casADi for solving NLP's
 #include <eigen3/unsupported/Eigen/MatrixFunctions> // Officially unsupported matrix operations like matrix exponential
 
@@ -46,10 +46,10 @@ using namespace std::chrono;
 
 static const int left_leg_torque_port = 4200;
 static const int right_leg_torque_port = 4201;
-static const int mpc_port = 4801;
 static const int sim_state_port = 4202;
 static const int left_leg_contact_state_port = 4203;
 static const int right_leg_contact_state_port = 4204;
+static const int mpc_port = 4801;
 
 static const int udp_buffer_size = 4096; // Buffer size for receiving leg state from gazebosim
 
