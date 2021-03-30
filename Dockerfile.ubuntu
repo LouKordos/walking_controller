@@ -47,7 +47,6 @@ WORKDIR /eigen/build
 RUN cmake .. -DCMAKE_BUILD_TYPE=Release && make install
 
 COPY ./src /src
-COPY ./nlp.so /
 
 WORKDIR /src
 
@@ -56,5 +55,7 @@ WORKDIR /src/build
 
 RUN cmake .. -DCMAKE_BUILD_TYPE=Release
 RUN make -j$(nproc)
+
+COPY ./nlp.so /
 
 CMD "./controller"
