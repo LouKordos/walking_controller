@@ -34,7 +34,9 @@ angle_ax = angle_fig.add_subplot(111)
 
 linewidth = 0.8
 
-plot_every_predicted = 1  # Only plot in steps of plot_every_predicted, so that plot does not get too crowded
+plot_every_predicted = 5  # Only plot in steps of plot_every_predicted, so that plot does not get too crowded
+
+delay_flag = True # Determine whether or not delay compensation is applied
 
 # Determine params based on logs (logs should eventually include those values)
 N = len(dataframe['X_t'][0].split(";")) - 1
@@ -78,7 +80,11 @@ for i in range(0, len(dataframe['t'])):
             X_t.append(state)
 
         X_t = [item for sublist in X_t for item in sublist] # Flatten
-        phi_ax.plot(tuple(numeric_range(dataframe['t'][i], dataframe['t'][i] + (N + 1) * dt, dt)), X_t[0::n], linewidth=linewidth * 0.75, linestyle='--')
+        if delay_flag:
+            phi_ax.plot(tuple(numeric_range(dataframe['t'][i] - dt, dataframe['t'][i] - dt + (N + 1) * dt, dt)), X_t[0::n], linewidth=linewidth * 0.75, linestyle='--')
+        else:
+            phi_ax.plot(tuple(numeric_range(dataframe['t'][i], dataframe['t'][i] + (N + 1) * dt, dt)), X_t[0::n], linewidth=linewidth * 0.75, linestyle='--')
+
 
 phi_ax.set_title("Phi (Roll) vs predicted Phi (Roll) in World Frame")
 phi_ax.set_ylabel("Phi (Roll) [rad]", fontsize=14)
@@ -105,7 +111,10 @@ for i in range(0, len(dataframe['t'])):
             X_t.append(state)
 
         X_t = [item for sublist in X_t for item in sublist] # Flatten
-        theta_ax.plot(tuple(numeric_range(dataframe['t'][i], dataframe['t'][i] + (N + 1) * dt, dt)), X_t[1::n], linewidth=linewidth * 0.75, linestyle='--')
+        if delay_flag:
+            theta_ax.plot(tuple(numeric_range(dataframe['t'][i] - dt, dataframe['t'][i] - dt + (N + 1) * dt, dt)), X_t[1::n], linewidth=linewidth * 0.75, linestyle='--')
+        else:
+            theta_ax.plot(tuple(numeric_range(dataframe['t'][i], dataframe['t'][i]+ (N + 1) * dt, dt)), X_t[1::n], linewidth=linewidth * 0.75, linestyle='--')
 
 theta_ax.set_title("Theta (Pitch) vs predicted Theta (Pitch) in World Frame")
 theta_ax.set_ylabel("Theta (Pitch) [rad]", fontsize=14)
@@ -132,7 +141,10 @@ for i in range(0, len(dataframe['t'])):
             X_t.append(state)
 
         X_t = [item for sublist in X_t for item in sublist] # Flatten
-        psi_ax.plot(tuple(numeric_range(dataframe['t'][i], dataframe['t'][i] + (N + 1) * dt, dt)), X_t[2::n], linewidth=linewidth * 0.75, linestyle='--')
+        if delay_flag:
+            psi_ax.plot(tuple(numeric_range(dataframe['t'][i] - dt, dataframe['t'][i] - dt + (N + 1) * dt, dt)), X_t[2::n], linewidth=linewidth * 0.75, linestyle='--')
+        else:
+            psi_ax.plot(tuple(numeric_range(dataframe['t'][i], dataframe['t'][i] + (N + 1) * dt, dt)), X_t[2::n], linewidth=linewidth * 0.75, linestyle='--')
 
 psi_ax.set_title("Psi (Yaw) vs predicted Psi (Yaw) in World Frame")
 psi_ax.set_ylabel("Psi (Yaw) [rad]", fontsize=14)
