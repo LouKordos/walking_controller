@@ -16,8 +16,8 @@ save_dpi = 500 * scaling_factor
 relative_width_pos = 5 # inches I think
 relative_height_pos = 50 / 25.4 # inches I think
 
-relative_width_angle = 5 # inches I think
-relative_height_angle = 50 / 25.4 # inches I think
+relative_width_angle = 8 # inches I think
+relative_height_angle = 100 / 25.4 # inches I think
 
 relative_width_force = 10 # inches I think
 relative_height_force = 55 / 25.4 # inches I think
