@@ -8,7 +8,8 @@ find_package(casadi)
 #set(COMMUNICATIONS_LIBS zcm)
 
 add_compile_options(-std=c++17 -Wpedantic -L /usr/local/lib)
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
+# set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
+set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
 
 include_directories("${PROJECT_SOURCE_DIR}/include")
 include_directories("/usr/local/include/")
