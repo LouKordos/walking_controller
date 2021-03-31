@@ -9,6 +9,9 @@ RUN apt-get install coinor-libipopt-dev -y
 # Debugging
 RUN apt-get install libc6-dbg gdb valgrind vim -y
 
+# Reduce size
+RUN  rm -rf /var/lib/apt/lists/*
+
 ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
 ENV OMP_NUM_THREADS=8
 
