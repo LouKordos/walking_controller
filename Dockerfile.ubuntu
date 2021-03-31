@@ -6,6 +6,9 @@ RUN apt-get update -y && apt-get upgrade -y
 RUN apt-get install gcc g++ wget gfortran libblas3 libblas-dev git cmake liblapack-dev pkg-config libboost-all-dev --install-recommends -y
 RUN apt-get install coinor-libipopt-dev -y
 
+# Debugging
+RUN apt-get install libc6-dbg gdb valgrind vim -y
+
 ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
 ENV OMP_NUM_THREADS=8
 
