@@ -1095,7 +1095,7 @@ int main(int _argc, char **_argv)
         auto start = high_resolution_clock::now();
         auto start_total = high_resolution_clock::now();
 
-        if(total_iterations == contact_swap_interval-1) {
+        if(total_iterations == contact_swap_interval - 1) {
             // alternate_contacts = true;
             // left_leg->swing_phase = true;
             // alternate_flag = true;
