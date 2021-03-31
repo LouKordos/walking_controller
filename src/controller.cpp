@@ -1082,7 +1082,7 @@ int main(int _argc, char **_argv)
                 << "foot_pos_body_frame_desired_x_right,foot_pos_body_frame_desired_y_right,foot_pos_body_frame_desired_z_right,"
                 << "next_foot_pos_world_desired_x_left,next_foot_pos_world_desired_y_left,next_foot_pos_world_desired_z_left,"
                 << "next_foot_pos_world_desired_x_right,next_foot_pos_world_desired_y_right, next_foot_pos_world_desired_z_right,"
-                << "theta_delay_compensation,full_iteration_time,phi_delay_compensation" << std::endl; // Add header to csv file
+                << "theta_delay_compensation,full_iteration_time,phi_delay_compensation,X_t,U_t" << std::endl; // Add header to csv file
     data_file.close();
 
     struct timespec deadline; // timespec struct for storing time that execution thread should sleep for
@@ -1847,8 +1847,7 @@ int main(int _argc, char **_argv)
                 << "," << right_leg->foot_trajectory.get_trajectory_pos(1.0 / 3.0)(0, 0) << "," << right_leg->foot_trajectory.get_trajectory_pos(1.0 / 3.0)(1, 0) << "," << right_leg->foot_trajectory.get_trajectory_pos(1.0 / 3.0)(2, 0)
                 << "," << left_leg->next_foot_pos_world_desired(0, 0) << "," << left_leg->next_foot_pos_world_desired(1, 0) << "," << left_leg->next_foot_pos_world_desired(2, 0)
                 << "," << right_leg->next_foot_pos_world_desired(0, 0) << "," << right_leg->next_foot_pos_world_desired(1, 0) << "," << right_leg->next_foot_pos_world_desired(2, 0)
-                << "," << P_param(1, 0) << "," << full_iteration_duration / 1000.0 << "," << solution_variables(n, 0) << std::endl;
-        data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
+                << "," << P_param(1, 0) << "," << full_iteration_duration / 1000.0 << "," << solution_variables(n, 0) << ",";
 
         next_body_vel_mutex.unlock();
         left_leg->foot_pos_world_desired_mutex.unlock();
@@ -1864,6 +1863,45 @@ int main(int _argc, char **_argv)
 
         u_mutex.unlock();
         x_mutex.unlock();
+
+        auto before_logging = high_resolution_clock::now();
+
+        stringstream future_states;
+
+        for(int timestep = 0; timestep < N+1; timestep++) {
+            for(int state = 0; state < n; state++) {
+                data_file << solution_variables(n * timestep + state, 0);
+                if(state != n - 1) { // append separator except after last state
+                    data_file << "|";
+                }
+            }
+            
+            if(timestep != (N+1) - 1) { // append separator except after last state sequence
+                data_file << ";";
+            }
+        }
+
+        data_file << ",";
+
+        for(int timestep = 0; timestep < N; ++timestep) {
+            for(int control = 0; control < m; ++control) {
+                data_file << solution_variables(n * (N+1) + m * timestep + control, 0); // Offset by n * (N + 1) since solution_variables also contains vertically stacked sequence of prediction horizon states
+                if(control != m - 1) {
+                    data_file << "|";
+                }
+            }
+
+            if(timestep != N - 1) {
+                data_file << ";";
+            }
+        }
+
+        auto after_logging = high_resolution_clock::now();
+
+        std::cout << "Logging future states took " << duration_cast<microseconds>(after_logging - before_logging).count() << "µS\n";
+
+        data_file << std::endl;
+        data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
 
         // x_t = step_discrete_model(x_t, u_t, r_x_left, r_x_right, r_y_left, r_y_right, r_z_left, r_z_right);
 
