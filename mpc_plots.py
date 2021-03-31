@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import pandas as pd
+from more_itertools import numeric_range # Prediction plots
 
 home_dir = os.environ['HOME']
 
@@ -37,10 +38,30 @@ angle_ax.plot(dataframe['t'], dataframe["phi"], label=r"$\phi$", color=[1.0, 0.0
 angle_ax.plot(dataframe['t'], dataframe["theta"], label=r"$\theta$", color=[0.5, 0.0, 1.0], linewidth=linewidth)
 angle_ax.plot(dataframe['t'], dataframe["psi"], label=r"$\psi$", color=[0.0, 0.0, 1.0], linewidth=linewidth)
 
+# Determine params based on logs (logs should eventually include those values)
+N = len(dataframe['X_t'][0].split(";")) - 1
+n = len(dataframe['X_t'][0].split(";")[0].split("|"))
+dt = dataframe['t'][1] - dataframe['t'][0] # Simply subtract two time points.
+print("N:", N)
+print("dt:", dt)
+
+for i in range(0, len(dataframe['t'])):
+    X_t_raw = dataframe['X_t'][i].split(";")
+    X_t = []
+    for timestep in X_t_raw:
+        state = [float(x) for x in timestep.split("|")]
+        #print("state:", state)
+        X_t.append(state)
+
+    X_t = [item for sublist in X_t for item in sublist] # Flatten
+
+    print("X_t:", X_t)
+    angle_ax.plot(tuple(numeric_range(dataframe['t'][i], dataframe['t'][i] + (N + 1) * dt, dt)), X_t[0::n], linewidth=linewidth, linestyle='--')
+
 angle_ax.set_title("Euler Angles in World Frame")
 angle_ax.set_ylabel("Euler Angles [rad]", fontsize=14)
-angle_ax.set_xlim([0, 10])
-angle_ax.set_ylim([-0.15, 0.15])
+#angle_ax.set_xlim([0, 10])
+angle_ax.set_ylim([-0.3, 0.3])
 angle_ax.set_xlabel("Time [s]", fontsize=14)
 angle_ax.legend(loc='upper right')
 
@@ -70,8 +91,8 @@ pos_ax2.set_ylabel("Position [m]", fontsize=14)
 pos_ax2.yaxis.set_label_coords(-0.08,1.1)
 pos_ax2.set_xlabel("Time [s]", fontsize=14)
 
-pos_ax1.set_xlim([0, 10])
-pos_ax2.set_xlim([0, 10])
+#pos_ax1.set_xlim([0, 10])
+#pos_ax2.set_xlim([0, 10])
 
 pos_ax1.set_ylim([1, 1.2])
 pos_ax2.set_ylim([-0.15, 0.15])
@@ -106,7 +127,7 @@ force_ax.plot(dataframe['t'], dataframe["f_z_right"], label=r"$f_{{right}_z}$", 
 
 force_ax.set_title("Contact Forces in World Frame")
 force_ax.set_ylabel("Forces [N]", fontsize=14)
-force_ax.set_xlim([0, 10])
+#force_ax.set_xlim([0, 10])
 force_ax.set_ylim([-300, 1000])
 force_ax.set_xlabel("Time [s]", fontsize=14)
 force_ax.legend(loc='upper right')
