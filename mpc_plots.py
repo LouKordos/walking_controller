@@ -34,7 +34,7 @@ angle_ax = angle_fig.add_subplot(111)
 
 linewidth = 0.8
 
-plot_every_predicted = 5  # Only plot in steps of plot_every_predicted, so that plot does not get too crowded
+plot_every_predicted = 1  # Only plot in steps of plot_every_predicted, so that plot does not get too crowded
 
 delay_flag = True # Determine whether or not delay compensation is applied
 
@@ -239,6 +239,6 @@ phi_fig.savefig(plot_image_dir + "phi_actual_vs_mpc.pdf", dpi=save_dpi, bbox_inc
 theta_fig.savefig(plot_image_dir + "theta_actual_vs_mpc.pdf", dpi=save_dpi, bbox_inches='tight')
 psi_fig.savefig(plot_image_dir + "psi_actual_vs_mpc.pdf", dpi=save_dpi, bbox_inches='tight')
 
-plt.show()
-
 print("Raw data:\n", dataframe)
+
+plt.show()
