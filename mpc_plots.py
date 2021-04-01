@@ -230,8 +230,8 @@ force_ax.set_xlabel("Time [s]", fontsize=14)
 force_ax.legend(loc='upper right')
 force_ax.grid()
 
-print("Max full iteration time excluding first iteration (fix that!):", max(dataframe['full_iteration_time'][1:]))
-print("Average full iteration time excluding first iteration (fix that!):", np.mean(dataframe['full_iteration_time'][1:]))
+print("Max full iteration time excluding first iteration (fix that!):", max(dataframe['full_iteration_time'][1:]), "[ms]")
+print("Average full iteration time excluding first iteration (fix that!):", np.mean(dataframe['full_iteration_time'][1:]), "[ms]")
 
 print("Saving plots to pdf in dir:", plot_image_dir)
 
