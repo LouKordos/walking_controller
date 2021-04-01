@@ -61,6 +61,7 @@ angle_ax.set_ylabel("Euler Angles [rad]", fontsize=14)
 #angle_ax.set_ylim([-0.3, 0.3])
 angle_ax.set_xlabel("Time [s]", fontsize=14)
 angle_ax.legend(loc='upper right')
+angle_ax.grid()
 
 print("Generating MPC predicted Phi vs. actual Phi plot...")
 
@@ -92,6 +93,7 @@ phi_ax.set_ylabel("Phi (Roll) [rad]", fontsize=14)
 #angle_ax.set_ylim([-0.3, 0.3])
 phi_ax.set_xlabel("Time [s]", fontsize=14)
 phi_ax.legend(loc='upper right')
+phi_ax.grid()
 
 print("Generating MPC predicted Theta vs. actual Theta plot...")
 
@@ -122,6 +124,7 @@ theta_ax.set_ylabel("Theta (Pitch) [rad]", fontsize=14)
 #angle_ax.set_ylim([-0.3, 0.3])
 theta_ax.set_xlabel("Time [s]", fontsize=14)
 theta_ax.legend(loc='upper right')
+theta_ax.grid()
 
 print("Generating MPC predicted Psi vs. actual Psi plot...")
 
@@ -152,6 +155,7 @@ psi_ax.set_ylabel("Psi (Yaw) [rad]", fontsize=14)
 #angle_ax.set_ylim([-0.3, 0.3])
 psi_ax.set_xlabel("Time [s]", fontsize=14)
 psi_ax.legend(loc='upper right')
+psi_ax.grid()
 
 print("Generating position plot...")
 
@@ -186,6 +190,8 @@ pos_ax1.set_ylim([1, 1.2])
 pos_ax2.set_ylim([-0.15, 0.15])
 pos_ax1.legend(loc='upper right')
 pos_ax2.legend(loc='lower right')
+pos_ax1.grid()
+pos_ax2.grid()
 
 pos_ax1.spines['bottom'].set_visible(False)
 pos_ax2.spines['top'].set_visible(False)
@@ -221,6 +227,7 @@ force_ax.set_ylabel("Forces [N]", fontsize=14)
 force_ax.set_ylim([-300, 1000])
 force_ax.set_xlabel("Time [s]", fontsize=14)
 force_ax.legend(loc='upper right')
+force_ax.grid()
 
 print("Saving plots to pdf in dir:", plot_image_dir)
 
