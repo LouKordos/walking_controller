@@ -796,86 +796,6 @@ Eigen::Matrix<double, n, 1> step_discrete_model(Eigen::Matrix<double, n, 1> x, E
 }
 
 void run_mpc() {
-
-}
-
-int main(int _argc, char **_argv)
-{
-    log("--------------------------------", INFO);
-    log("--------------------------------", INFO);
-    log("--------------------------------", INFO);
-    log("Starting walking controller...",   INFO);
-    log("--------------------------------", INFO);
-    log("--------------------------------", INFO);
-    log("--------------------------------", INFO);
-
-    // is 0.065 because it's the difference between torso CoM height and Hip Actuator Center Height, negative because just think about it or calculate an example value with negative and positive z displacement. 
-    // A point expressed in hip frame (i.e. [0, 0, 0]) will obviously be at negative Z in a frame that is located above the hip frame, meaning you need negative Z displacement in the transformation matrix.
-    left_leg = new Leg(-0.15, 0, -0.065, left_leg_contact_state_port);
-    right_leg = new Leg(0.15, 0, -0.065, right_leg_contact_state_port);
-
-    simState = new SimState(sim_state_port);
-
-    char* pPath;
-    pPath = getenv ("IS_DOCKER");
-    if (pPath == "Y" || pPath == "YES") {
-        plotDataDirPath = "/plot_data/";
-    }
-    else {
-        plotDataDirPath = "../.././plot_data/";
-    }
-    
-    // Find largest index in plot_data and use the next one as file name for log files
-    DIR *dir;
-    struct dirent *ent;
-    if ((dir = opendir (plotDataDirPath.c_str())) != NULL) {
-        /* print all the files and directories within directory */
-        while ((ent = readdir (dir)) != NULL) {
-            //printf ("%s\n", ent->d_name);
-            std::string temp_filename = split_string(ent->d_name, '/').back();
-            //std::cout << temp_filename << std::endl;
-
-            int index = atoi(split_string(temp_filename, '.')[0].c_str());
-            if(index > largest_index) {
-                largest_index = index;
-            }
-            //std::cout << "Largest index: " << largest_index << std::endl;
-        }
-        closedir (dir);
-    }
-    else {
-        /* could not open directory */
-        perror ("Could not open directory to get latest plot file.");
-    }
-
-    filename = std::to_string(largest_index + 1);
-    std::cout << "filename: " << filename << std::endl;
-
-    left_leg->foot_pos_world_desired << -0.15, 0, 0;
-    right_leg->foot_pos_world_desired << 0.15, 0, 0;
-
-    // Inverted because swap will occur at iteration 0, so set opposite contact state of what you want here
-    alternate_contacts = true;
-    left_leg->swing_phase = true;
-    
-    // Bind functions to threads
-    // left_leg_state_thread = std::thread(std::bind(update_left_leg_state));
-    left_leg_torque_thread = std::thread(std::bind(calculate_left_leg_torques));
-    right_leg_torque_thread = std::thread(std::bind(calculate_right_leg_torques));
-    
-    //mpc_thread = std::thread(std::bind(run_mpc));
-    time_thread = std::thread(std::bind(update_time));
-
-    // while(true) { }
-    stringstream temp;
-    temp << "\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
-            << "If you're running this in a docker container, make sure to use the --net=host option and set the env variable IS_DOCKER=Y when running it.\n"
-            << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
-    print_threadsafe(temp.str(), "main()", WARN, false);
-
-    std::cout << "left_leg omega_desired is currently: " << left_leg->omega_desired(0) << ", " << left_leg->omega_desired(1) << ", " << left_leg->omega_desired(2) << std::endl; // Print out current natural frequency
-    std::cout << std::endl;
-
     int sockfd;
     char buffer[udp_buffer_size];
     struct sockaddr_in servaddr, cliaddr;
@@ -1911,10 +1831,85 @@ int main(int _argc, char **_argv)
         deadline.tv_sec = 0;
         clock_nanosleep(CLOCK_REALTIME, 0, &deadline, NULL);
     }
+}
 
-    while(true) {
-        
+int main(int _argc, char **_argv)
+{
+    log("--------------------------------", INFO);
+    log("--------------------------------", INFO);
+    log("--------------------------------", INFO);
+    log("Starting walking controller...",   INFO);
+    log("--------------------------------", INFO);
+    log("--------------------------------", INFO);
+    log("--------------------------------", INFO);
+
+    // is 0.065 because it's the difference between torso CoM height and Hip Actuator Center Height, negative because just think about it or calculate an example value with negative and positive z displacement. 
+    // A point expressed in hip frame (i.e. [0, 0, 0]) will obviously be at negative Z in a frame that is located above the hip frame, meaning you need negative Z displacement in the transformation matrix.
+    left_leg = new Leg(-0.15, 0, -0.065, left_leg_contact_state_port);
+    right_leg = new Leg(0.15, 0, -0.065, right_leg_contact_state_port);
+
+    simState = new SimState(sim_state_port);
+
+    char* pPath;
+    pPath = getenv ("IS_DOCKER");
+    if (pPath == "Y" || pPath == "YES") {
+        plotDataDirPath = "/plot_data/";
     }
+    else {
+        plotDataDirPath = "../.././plot_data/";
+    }
+    
+    // Find largest index in plot_data and use the next one as file name for log files
+    DIR *dir;
+    struct dirent *ent;
+    if ((dir = opendir (plotDataDirPath.c_str())) != NULL) {
+        /* print all the files and directories within directory */
+        while ((ent = readdir (dir)) != NULL) {
+            //printf ("%s\n", ent->d_name);
+            std::string temp_filename = split_string(ent->d_name, '/').back();
+            //std::cout << temp_filename << std::endl;
+
+            int index = atoi(split_string(temp_filename, '.')[0].c_str());
+            if(index > largest_index) {
+                largest_index = index;
+            }
+            //std::cout << "Largest index: " << largest_index << std::endl;
+        }
+        closedir (dir);
+    }
+    else {
+        /* could not open directory */
+        perror ("Could not open directory to get latest plot file.");
+    }
+
+    filename = std::to_string(largest_index + 1);
+    std::cout << "Filename: " << filename << std::endl;
+
+    left_leg->foot_pos_world_desired << -0.15, 0, 0;
+    right_leg->foot_pos_world_desired << 0.15, 0, 0;
+
+    // Inverted because swap will occur at iteration 0, so set opposite contact state of what you want here
+    alternate_contacts = true;
+    left_leg->swing_phase = true;
+    
+    // Bind functions to threads
+    // left_leg_state_thread = std::thread(std::bind(update_left_leg_state));
+    left_leg_torque_thread = std::thread(std::bind(calculate_left_leg_torques));
+    right_leg_torque_thread = std::thread(std::bind(calculate_right_leg_torques));
+    
+    mpc_thread = std::thread(std::bind(run_mpc));
+    time_thread = std::thread(std::bind(update_time));
+
+
+    // while(true) { }
+    stringstream temp;
+    temp << "\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
+            << "If you're running this in a docker container, make sure to use the --net=host option and set the env variable IS_DOCKER=Y when running it.\n"
+            << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
+    print_threadsafe(temp.str(), "main()", WARN, false);
+
+    std::cout << "left_leg omega_desired is currently: " << left_leg->omega_desired(0) << ", " << left_leg->omega_desired(1) << ", " << left_leg->omega_desired(2) << std::endl; // Print out current natural frequency
+    std::cout << std::endl;
     
     std::this_thread::sleep_for(std::chrono::hours(69));
 
