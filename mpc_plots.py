@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+import numpy as np
 import pandas as pd
 from more_itertools import numeric_range # Prediction plots
 
@@ -228,6 +229,9 @@ force_ax.set_ylim([-300, 1000])
 force_ax.set_xlabel("Time [s]", fontsize=14)
 force_ax.legend(loc='upper right')
 force_ax.grid()
+
+print("Max full iteration time excluding first iteration (fix that!):", max(dataframe['full_iteration_time'][1:]))
+print("Average full iteration time excluding first iteration (fix that!):", np.mean(dataframe['full_iteration_time'][1:]))
 
 print("Saving plots to pdf in dir:", plot_image_dir)
 
