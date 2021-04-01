@@ -1900,6 +1900,38 @@ int main(int _argc, char **_argv)
     mpc_thread = std::thread(std::bind(run_mpc));
     time_thread = std::thread(std::bind(update_time));
 
+    // Create a cpu_set_t object representing a set of CPUs. Clear it and mark only CPU i as set.
+    // Source: https://eli.thegreenplace.net/2016/c11-threads-affinity-and-hyperthreading/
+    // Extra scope to avoid redeclaration error
+    {
+        cpu_set_t cpuset;
+        CPU_ZERO(&cpuset);
+        CPU_SET(1, &cpuset);
+        int rc = pthread_setaffinity_np(mpc_thread.native_handle(), sizeof(cpu_set_t), &cpuset);
+        if (rc != 0) {
+            std::cerr << "Error calling pthread_setaffinity_np while trying to set MPC thread to CPU 1: " << rc << "\n";
+        }
+    }
+    // Extra scopes to avoid redeclaration error
+    {
+        cpu_set_t cpuset;
+        CPU_ZERO(&cpuset);
+        CPU_SET(2, &cpuset);
+        int rc = pthread_setaffinity_np(left_leg_torque_thread.native_handle(), sizeof(cpu_set_t), &cpuset);
+        if (rc != 0) {
+            std::cerr << "Error calling pthread_setaffinity_np while trying to set left leg impedance control thread to CPU 2: " << rc << "\n";
+        }
+    }
+    // Extra scope to avoid redeclaration error
+    {
+        cpu_set_t cpuset;
+        CPU_ZERO(&cpuset);
+        CPU_SET(8, &cpuset);
+        int rc = pthread_setaffinity_np(right_leg_torque_thread.native_handle(), sizeof(cpu_set_t), &cpuset);
+        if (rc != 0) {
+            std::cerr << "Error calling pthread_setaffinity_np while trying to set right leg impedance control thread to CPU 8: " << rc << "\n";
+        }
+    }
 
     // while(true) { }
     stringstream temp;
