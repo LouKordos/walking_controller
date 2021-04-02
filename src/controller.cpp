@@ -1002,7 +1002,7 @@ void run_mpc() {
                 << "foot_pos_body_frame_desired_x_right,foot_pos_body_frame_desired_y_right,foot_pos_body_frame_desired_z_right,"
                 << "next_foot_pos_world_desired_x_left,next_foot_pos_world_desired_y_left,next_foot_pos_world_desired_z_left,"
                 << "next_foot_pos_world_desired_x_right,next_foot_pos_world_desired_y_right, next_foot_pos_world_desired_z_right,"
-                << "theta_delay_compensation,full_iteration_time,phi_delay_compensation,X_t,U_t" << std::endl; // Add header to csv file
+                << "theta_delay_compensation,full_iteration_time,phi_delay_compensation,X_t,U_t,P_param_full" << std::endl; // Add header to csv file
     data_file.close();
 
     struct timespec deadline; // timespec struct for storing time that execution thread should sleep for
@@ -1820,7 +1820,14 @@ void run_mpc() {
 
         // std::cout << "Logging future states took " << duration_cast<microseconds>(after_logging - before_logging).count() << "µS\n";
 
+        data_file << ",";
 
+        for(int i = 0; i < n; i++) {
+            data_file << P_param(i, 0);
+            if (i < n - 1) {
+                data_file << "|";
+            }
+        }
 
         data_file << std::endl;
         data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
