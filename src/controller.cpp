@@ -1784,7 +1784,7 @@ void run_mpc() {
         u_mutex.unlock();
         x_mutex.unlock();
 
-        auto before_logging = high_resolution_clock::now();
+        // auto before_logging = high_resolution_clock::now();
 
         stringstream future_states;
 
@@ -1816,9 +1816,11 @@ void run_mpc() {
             }
         }
 
-        auto after_logging = high_resolution_clock::now();
+        // auto after_logging = high_resolution_clock::now();
 
-        std::cout << "Logging future states took " << duration_cast<microseconds>(after_logging - before_logging).count() << "µS\n";
+        // std::cout << "Logging future states took " << duration_cast<microseconds>(after_logging - before_logging).count() << "µS\n";
+
+
 
         data_file << std::endl;
         data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
