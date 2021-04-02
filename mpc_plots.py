@@ -43,6 +43,8 @@ plot_every_predicted = 1  # Only plot in steps of plot_every_predicted, so that 
 
 delay_flag = True # Determine whether or not delay compensation is applied
 
+ylim_flag = False
+
 # Determine params based on logs (logs should eventually include those values)
 N = len(dataframe['X_t'][0].split(";")) - 1
 n = len(dataframe['X_t'][0].split(";")[0].split("|"))
@@ -80,7 +82,8 @@ if delay_flag:
         delay_angle_axes[index].legend(loc='upper right')
         delay_angle_axes[index].grid()
         #delay_angle_axes[0].set_xlim([0, 10])
-        delay_angle_axes[index].set_ylim([-0.3, 0.3])
+        if ylim_flag:
+            delay_angle_axes[index].set_ylim([-0.3, 0.3])
     
     # Cartesian position 
     delay_pos_fig, delay_pos_axes = plt.subplots(3, figsize=delay_fig_size, dpi=save_dpi)
@@ -136,7 +139,8 @@ if delay_flag:
         delay_angular_vel_axes[index].set_xlabel("Time [s]", fontsize=14)
         delay_angular_vel_axes[index].legend(loc='upper right')
         delay_angular_vel_axes[index].grid()
-        #delay_angular_vel_axes[index].set_ylim([-0.8, 0.8])
+        if ylim_flag:
+            delay_angular_vel_axes[index].set_ylim([-0.8, 0.8])
 
     # Cartesian velocities
     delay_cartesian_vel_fig, delay_cartesian_vel_axes = plt.subplots(3, figsize=delay_fig_size, dpi=save_dpi)
