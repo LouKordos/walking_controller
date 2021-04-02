@@ -18,17 +18,21 @@ scaling_factor = 0.75
 save_dpi = 500 * scaling_factor
 
 relative_width_pos = 5 # inches I think
-relative_height_pos = 50 / 25.4 # inches I think
+relative_height_pos = 100 / 25.4 # inches I think
 
 relative_width_angle = 8 # inches I think
 relative_height_angle = 100 / 25.4 # inches I think
 
 relative_width_force = 10 # inches I think
-relative_height_force = 55 / 25.4 # inches I think
+relative_height_force = 100 / 25.4 # inches I think
+
+relative_width_delay = 10 # inches I think
+relative_height_delay = 12 # inches I think
 
 angle_fig_size = (relative_width_angle * (1/scaling_factor), relative_height_angle * (1/scaling_factor))
 pos_fig_size = (relative_width_pos * (1/scaling_factor), relative_height_pos * (1/scaling_factor))
 force_fig_size = (relative_width_force * (1/scaling_factor), relative_height_force * (1/scaling_factor))
+delay_fig_size = (relative_width_delay * (1/scaling_factor), relative_height_delay * (1/scaling_factor))
 
 angle_fig = plt.figure(figsize=angle_fig_size, dpi=save_dpi)
 angle_ax = angle_fig.add_subplot(111)
@@ -47,6 +51,124 @@ print("N:", N)
 print("dt:", dt)
 
 print("Parameters initialized.")
+
+if delay_flag:
+    print("Generating actual vs delay compensated state plots...")
+
+    # Euler angles
+    delay_angle_fig, delay_angle_axes = plt.subplots(3, figsize=delay_fig_size, dpi=save_dpi)
+    
+    delay_angle_axes[0].plot(dataframe["t"], dataframe["phi"], label=r"$\phi$", color=[1.0, 0.0, 1.0], linewidth=linewidth)
+    delay_angle_axes[1].plot(dataframe["t"], dataframe["theta"], label=r"$\theta$", color=[0.5, 0.0, 1.0], linewidth=linewidth)
+    delay_angle_axes[2].plot(dataframe["t"], dataframe["psi"], label=r"$\psi$", color=[0.0, 0.0, 1.0], linewidth=linewidth)
+
+    delay_angle_axes[0].plot(dataframe["t"][1:], [float(x[0]) for x in [state.split("|") for state in dataframe["P_param_full"][:-1]]], label=r"$\phi$-compensated (shifted)", linewidth=linewidth)
+    delay_angle_axes[1].plot(dataframe["t"][1:], [float(x[1]) for x in [state.split("|") for state in dataframe["P_param_full"][:-1]]], label=r"$\theta$-compensated (shifted)", linewidth=linewidth)
+    delay_angle_axes[2].plot(dataframe["t"][1:], [float(x[2]) for x in [state.split("|") for state in dataframe["P_param_full"][:-1]]], label=r"$\psi$-compensated (shifted)", linewidth=linewidth)
+
+    delay_angle_axes[0].set_title("Actual Roll vs Delay compensation Roll")
+    delay_angle_axes[0].set_ylabel("Phi / Roll [rad]", fontsize=14)
+
+    delay_angle_axes[1].set_title("Actual Pitch vs Delay compensation Pitch")
+    delay_angle_axes[1].set_ylabel("Theta / Pitch [rad]", fontsize=14)
+
+    delay_angle_axes[2].set_title("Actual Yaw vs Delay compensation Yaw")
+    delay_angle_axes[2].set_ylabel("Psi / Yaw [rad]", fontsize=14)
+   
+    for index in range(len(delay_angle_axes)):
+        delay_angle_axes[index].set_xlabel("Time [s]", fontsize=14)
+        delay_angle_axes[index].legend(loc='upper right')
+        delay_angle_axes[index].grid()
+        #delay_angle_axes[0].set_xlim([0, 10])
+        delay_angle_axes[index].set_ylim([-0.3, 0.3])
+    
+    # Cartesian position 
+    delay_pos_fig, delay_pos_axes = plt.subplots(3, figsize=delay_fig_size, dpi=save_dpi)
+    
+    delay_pos_axes[0].plot(dataframe["t"], dataframe["pos_x"], label=r"$p_x$", color=[1.0, 0.0, 1.0], linewidth=linewidth)
+    delay_pos_axes[1].plot(dataframe["t"], dataframe["pos_y"], label=r"$p_y$", color=[0.5, 0.0, 1.0], linewidth=linewidth)
+    delay_pos_axes[2].plot(dataframe["t"], dataframe["pos_z"], label=r"$p_z$", color=[0.0, 0.0, 1.0], linewidth=linewidth)
+
+    delay_pos_axes[0].plot(dataframe["t"][1:], [float(x[3]) for x in [state.split("|") for state in dataframe["P_param_full"][:-1]]], label=r"$p_x$-compensated (shifted)", linewidth=linewidth)
+    delay_pos_axes[1].plot(dataframe["t"][1:], [float(x[4]) for x in [state.split("|") for state in dataframe["P_param_full"][:-1]]], label=r"$p_y$-compensated (shifted)", linewidth=linewidth)
+    delay_pos_axes[2].plot(dataframe["t"][1:], [float(x[5]) for x in [state.split("|") for state in dataframe["P_param_full"][:-1]]], label=r"$p_z$-compensated (shifted)", linewidth=linewidth)
+
+    delay_pos_axes[0].set_title("Actual X Position vs Delay compensation X Position")
+    delay_pos_axes[0].set_ylabel("Pos X [m]", fontsize=14)
+
+    delay_pos_axes[1].set_title("Actual Y Position vs Delay compensation Y Position")
+    delay_pos_axes[1].set_ylabel("Pos Y [m]", fontsize=14)
+
+    delay_pos_axes[2].set_title("Actual Z Position vs Delay compensation Z Position")
+    delay_pos_axes[2].set_ylabel("Pos Z [m]", fontsize=14)
+   
+    #delay_pos_axes[0].set_xlim([0, 10])
+   
+    for index in range(len(delay_pos_axes)):
+        delay_pos_axes[index].set_xlabel("Time [s]", fontsize=14)
+        delay_pos_axes[index].legend(loc='upper right')
+        delay_pos_axes[index].grid()
+        #delay_pos_axes[index].set_ylim([-0.3, 0.3])
+
+    # Angular velocities
+    delay_angular_vel_fig, delay_angular_vel_axes = plt.subplots(3, figsize=delay_fig_size, dpi=save_dpi)
+    
+    delay_angular_vel_axes[0].plot(dataframe["t"], dataframe["omega_x"], label=r"$\omega_x$", color=[1.0, 0.0, 1.0], linewidth=linewidth)
+    delay_angular_vel_axes[1].plot(dataframe["t"], dataframe["omega_y"], label=r"$\omega_y$", color=[0.5, 0.0, 1.0], linewidth=linewidth)
+    delay_angular_vel_axes[2].plot(dataframe["t"], dataframe["omega_z"], label=r"$\omega_z$", color=[0.0, 0.0, 1.0], linewidth=linewidth)
+
+    delay_angular_vel_axes[0].plot(dataframe["t"][1:], [float(x[6]) for x in [state.split("|") for state in dataframe["P_param_full"][:-1]]], label=r"$\omega_x$-compensated (shifted)", linewidth=linewidth)
+    delay_angular_vel_axes[1].plot(dataframe["t"][1:], [float(x[7]) for x in [state.split("|") for state in dataframe["P_param_full"][:-1]]], label=r"$\omega_y$-compensated (shifted)", linewidth=linewidth)
+    delay_angular_vel_axes[2].plot(dataframe["t"][1:], [float(x[8]) for x in [state.split("|") for state in dataframe["P_param_full"][:-1]]], label=r"$\omega_z$-compensated (shifted)", linewidth=linewidth)
+
+    delay_angular_vel_axes[0].set_title("Actual X Angular Velocity vs Delay compensation X Angular Velocity")
+    delay_angular_vel_axes[0].set_ylabel("Omega X [rad/s]", fontsize=14)
+
+    delay_angular_vel_axes[1].set_title("Actual Y Angular Velocity vs Delay compensation Y Angular Velocity")
+    delay_angular_vel_axes[1].set_ylabel("Omega Y [rad/s]", fontsize=14)
+
+    delay_angular_vel_axes[2].set_title("Actual Z Angular Velocity vs Delay compensation Z Angular Velocity")
+    delay_angular_vel_axes[2].set_ylabel("Omega Z [rad/s]", fontsize=14)
+    
+    #delay_angular_vel_axes[0].set_xlim([0, 10])
+    
+    for index in range(len(delay_angle_axes)):
+        delay_angular_vel_axes[index].set_xlabel("Time [s]", fontsize=14)
+        delay_angular_vel_axes[index].legend(loc='upper right')
+        delay_angular_vel_axes[index].grid()
+        #delay_angular_vel_axes[index].set_ylim([-0.8, 0.8])
+
+    # Cartesian velocities
+    delay_cartesian_vel_fig, delay_cartesian_vel_axes = plt.subplots(3, figsize=delay_fig_size, dpi=save_dpi)
+    
+    delay_cartesian_vel_axes[0].plot(dataframe["t"], dataframe["vel_x"], label=r"$vel_x$", color=[1.0, 0.0, 1.0], linewidth=linewidth)
+    delay_cartesian_vel_axes[1].plot(dataframe["t"], dataframe["vel_y"], label=r"$vel_y$", color=[0.5, 0.0, 1.0], linewidth=linewidth)
+    delay_cartesian_vel_axes[2].plot(dataframe["t"], dataframe["vel_z"], label=r"$vel_z$", color=[0.0, 0.0, 1.0], linewidth=linewidth)
+
+    delay_cartesian_vel_axes[0].plot(dataframe["t"][1:], [float(x[9]) for x in [state.split("|") for state in dataframe["P_param_full"][:-1]]], label=r"$vel_x$-compensated (shifted)", linewidth=linewidth)
+    delay_cartesian_vel_axes[1].plot(dataframe["t"][1:], [float(x[10]) for x in [state.split("|") for state in dataframe["P_param_full"][:-1]]], label=r"$vel_y$-compensated (shifted)", linewidth=linewidth)
+    delay_cartesian_vel_axes[2].plot(dataframe["t"][1:], [float(x[11]) for x in [state.split("|") for state in dataframe["P_param_full"][:-1]]], label=r"$vel_z$-compensated (shifted)", linewidth=linewidth)
+
+    delay_cartesian_vel_axes[0].set_title("Actual X Cartesian Velocity vs Delay compensation X Cartesian Velocity")
+    delay_cartesian_vel_axes[0].set_ylabel("Vel X [m/s]", fontsize=14)
+
+    delay_cartesian_vel_axes[1].set_title("Actual Y Cartesian Velocity vs Delay compensation Y Cartesian Velocity")
+    delay_cartesian_vel_axes[1].set_ylabel("Vel Y [m/s]", fontsize=14)
+
+    delay_cartesian_vel_axes[2].set_title("Actual Z Cartesian Velocity vs Delay compensation Z Cartesian Velocity")
+    delay_cartesian_vel_axes[2].set_ylabel("Vel Z [m/s]", fontsize=14)
+    
+    #delay_angular_vel_axes[0].set_xlim([0, 10])
+    
+    for index in range(len(delay_angle_axes)):
+        delay_cartesian_vel_axes[index].set_xlabel("Time [s]", fontsize=14)
+        delay_cartesian_vel_axes[index].legend(loc='upper right')
+        delay_cartesian_vel_axes[index].grid()
+        #delay_cartesian_vel_axes[index].set_ylim([-0.8, 0.8])
+
+
+else:
+    print("Delay flag is set to False, skipping delay compensation plots.")
 
 print("Generating angle plots...")
 
@@ -242,6 +364,10 @@ pos_fig.savefig(plot_image_dir + "position.pdf", dpi=save_dpi, bbox_inches='tigh
 phi_fig.savefig(plot_image_dir + "phi_actual_vs_mpc.pdf", dpi=save_dpi, bbox_inches='tight')
 theta_fig.savefig(plot_image_dir + "theta_actual_vs_mpc.pdf", dpi=save_dpi, bbox_inches='tight')
 psi_fig.savefig(plot_image_dir + "psi_actual_vs_mpc.pdf", dpi=save_dpi, bbox_inches='tight')
+delay_angle_fig.savefig(plot_image_dir + "angles_actual_vs_compensated.pdf", dpi=save_dpi, bbox_inches='tight')
+delay_pos_fig.savefig(plot_image_dir + "position_actual_vs_compensated.pdf", dpi=save_dpi, bbox_inches='tight')
+delay_angular_vel_fig.savefig(plot_image_dir + "angular_vel_actual_vs_compensated.pdf", dpi=save_dpi, bbox_inches='tight')
+delay_cartesian_vel_fig.savefig(plot_image_dir + "cartesian_vel_actual_vs_compensated.pdf", dpi=save_dpi, bbox_inches='tight')
 
 print("Raw data:\n", dataframe)
 
