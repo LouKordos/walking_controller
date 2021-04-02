@@ -1791,12 +1791,12 @@ void run_mpc() {
         for(int timestep = 0; timestep < N+1; timestep++) {
             for(int state = 0; state < n; state++) {
                 data_file << solution_variables(n * timestep + state, 0);
-                if(state != n - 1) { // append separator except after last state
+                if(state < n - 1) { // append separator except after last state
                     data_file << "|";
                 }
             }
             
-            if(timestep != (N+1) - 1) { // append separator except after last state sequence
+            if(timestep < (N+1) - 1) { // append separator except after last state sequence
                 data_file << ";";
             }
         }
@@ -1806,12 +1806,12 @@ void run_mpc() {
         for(int timestep = 0; timestep < N; ++timestep) {
             for(int control = 0; control < m; ++control) {
                 data_file << solution_variables(n * (N+1) + m * timestep + control, 0); // Offset by n * (N + 1) since solution_variables also contains vertically stacked sequence of prediction horizon states
-                if(control != m - 1) {
+                if(control < m - 1) {
                     data_file << "|";
                 }
             }
 
-            if(timestep != N - 1) {
+            if(timestep < N - 1) {
                 data_file << ";";
             }
         }
