@@ -237,6 +237,11 @@ void calculate_left_leg_torques() {
                 << "foot_phi_desired,foot_theta_desired,foot_psi_desired" << std::endl; // Add header to csv file
     data_file.close();
 
+    ofstream torque_function_file;
+    torque_function_file.open(plotDataDirPath  + filename + "_torque_function_left.csv");
+    torque_function_file << "t,iteration,theta1,theta2,theta3,theta4,theta5,f_x,f_y,f_z,phi,theta,psi" << std::endl;
+    torque_function_file.close();
+
     bool time_switch = false; // used for running a two-phase trajectory, otherwise obsolete
 
     while(first_iteration_flag) { // Only start running Leg code after first MPC iteration to prevent problems with non-updated values
@@ -374,6 +379,13 @@ void calculate_left_leg_torques() {
         else {
             // IMPORTANT AND DANGEROUS MISTAKE: WHEN COPYING LEFT_LEG CODE AND REPLACING ALL LEFT WITH RIGHT, INDEX IS NOT CHANGED AND LEFT LEG TORQUES WILL BE USED FOR BOTH LEGS
             // left_leg->tau_setpoint = Eigen::ArrayXd::Zero(5, 1);
+            
+            /*"t,iteration,theta1,theta2,theta3,theta4,theta5,f_x,f_y,f_z,phi,theta,psi"*/
+            ofstream torque_function_file;
+            torque_function_file.open(plotDataDirPath  + filename + "_torque_function_left.csv", ios::app);
+            torque_function_file << get_time() << "," << iteration_counter << "," << left_leg->theta1 << "," << left_leg->theta2 << "," << left_leg->theta3 << "," << left_leg->theta4 << "," << left_leg->theta5
+                                    << "," << -u_t(3, 0) << "," << -u_t(4, 0) << "," << -u_t(5, 0) << "," << x(0, 0) << "," << x(1, 0) << "," << x(2, 0) << std::endl;
+ 
             left_leg->tau_setpoint = get_joint_torques(-u_t.block<3, 1>(0, 0), left_leg->theta1, left_leg->theta2, left_leg->theta3, left_leg->theta4, left_leg->theta5, x(0, 0), x(1, 0), x(2, 0), left_leg->config);
             for(int i = 0; i < 5; ++i) {
                 constrain(left_leg->tau_setpoint(i), -200, 200);
@@ -483,6 +495,11 @@ void calculate_right_leg_torques() {
     
     int msg_length; 
     socklen_t len;
+
+    ofstream torque_function_file;
+    torque_function_file.open(plotDataDirPath  + filename + "_torque_function_right.csv");
+    torque_function_file << "t,iteration,theta1,theta2,theta3,theta4,theta5,f_x,f_y,f_z,phi,theta,psi" << std::endl;
+    torque_function_file.close();
 
     ofstream data_file;
     data_file.open(plotDataDirPath + filename + "_right.csv");
@@ -633,6 +650,12 @@ void calculate_right_leg_torques() {
         else {
             // IMPORTANT AND DANGEROUS MISTAKE: WHEN COPYING LEFT_LEG CODE AND REPLACING ALL LEFT WITH RIGHT, INDEX IS NOT CHANGED AND LEFT LEG TORQUES WILL BE USED FOR BOTH LEGS
             // right_leg->tau_setpoint = Eigen::ArrayXd::Zero(5, 1);
+
+            // ofstream torque_function_file;
+            torque_function_file.open(plotDataDirPath  + filename + "_torque_function_right.csv", ios::app);
+            torque_function_file << get_time() << "," << iteration_counter << "," << right_leg->theta1 << "," << right_leg->theta2 << "," << right_leg->theta3 << "," << right_leg->theta4 << "," << right_leg->theta5
+                                    << "," << -u_t(0, 0) << "," << -u_t(1, 0) << "," << -u_t(2, 0) << "," << x(0, 0) << "," << x(1, 0) << "," << x(2, 0) << std::endl;
+            
             right_leg->tau_setpoint = get_joint_torques(-u_t.block<3, 1>(3, 0), right_leg->theta1, right_leg->theta2, right_leg->theta3, right_leg->theta4, right_leg->theta5, x(0, 0), x(1, 0), x(2, 0), right_leg->config);
             for(int i = 0; i < 5; ++i) {
                 constrain(right_leg->tau_setpoint(i), -200, 200);
