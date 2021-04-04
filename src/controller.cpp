@@ -969,6 +969,9 @@ void run_mpc() {
     double omega_z_desired = 0;
 
     const double gait_gain = 0.1; // Try much lower value here, rename to more accurate name
+    const Eigen::Matrix<double, 3, 3> pos_error_gain = (Eigen::Matrix<double, 3, 3>() << 0.5, 0, 0,
+                                                                                         0, 2.5, 0,
+                                                                                         0, 0, 0.5).finished(); // Gain for feeding back CoM / Torso position error into foot position
 
     const double r_x_limit = 0.1; // r_x_limit +/- hip_offset is the maximum position the feet will be allowed to move (in body frame)
 
@@ -1250,11 +1253,12 @@ void run_mpc() {
         Eigen::Matrix<double, 3, 1> hip_pos_world_right = (H_body_world * (Eigen::Matrix<double, 4, 1>() << hip_offset, 0, 0, 1).finished()).block<3, 1>(0, 0);
         
         Eigen::Matrix<double, 3, 1> vel_vector = (Eigen::Matrix<double, 3, 1>() << P_param(9, 0), P_param(10, 0), P_param(11, 0)).finished();
-        Eigen::Matrix<double, 3, 1> vel_desired_vector = (Eigen::Matrix<double, 3, 1>() << vel_x_desired, vel_y_desired, vel_z_desired).finished();
+        Eigen::Matrix<double, 3, 1> pos_desired_vector = (Eigen::Matrix<double, 3, 1>() << pos_x_desired, pos_y_desired, pos_z_desired).finished();
+        Eigen::Matrix<double, 3, 1> vel_desired_vector = (Eigen::Matrix<double, 3, 1>() << vel_x_desired, vel_y_desired, vel_z_desired).finished() - pos_error_gain * (P_param.block<3, 1>(3, 0) - pos_desired_vector);
         Eigen::Matrix<double, 3, 1> omega_desired_vector = (Eigen::Matrix<double, 3, 1>() << omega_x_desired, omega_y_desired, omega_z_desired).finished();
         
         if(vel_y_desired != 0) {
-            constrain(vel_vector(1, 0), 0, vel_y_desired); // Limit velocity used for calculating desired foot position to desired velocity, preventing steps too far out that slow the robot down too much
+            constrain(vel_vector(1, 0), -vel_y_desired, vel_y_desired); // Limit velocity used for calculating desired foot position to desired velocity, preventing steps too far out that slow the robot down too much
         }
 
         left_leg->foot_pos_world_desired_mutex.lock();
@@ -1262,7 +1266,9 @@ void run_mpc() {
 
         // Only change where forces are applied when in swing phase, foot cannot move while in contact
         if(left_leg->swing_phase) {
-            left_leg->foot_pos_world_desired = hip_pos_world_left + (t_stance/2.0) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(P_param(5, 0)) / 9.81) * vel_vector.cross(omega_desired_vector);
+            // pos_error_gain * (P_param[3:6, 0].reshape(3, 1) - np.array([[pos_x_desired], [pos_y_desired], [pos_z_desired]])
+            left_leg->foot_pos_world_desired = /*pos_error_gain * (P_param.block<3, 1>(3, 0) - pos_desired_vector) +*/ hip_pos_world_left + (t_stance/2.0) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(P_param(5, 0)) / 9.81) * vel_vector.cross(omega_desired_vector);
+            
             //TODO: Instead of using inverse, either solve the inverse symbolically in python or just ues Transpose as shown in Modern Robotics Video
             // Find foot position in body frame to limit it in order to account for leg reachability, collision with other leg and reasonable values
             //H_body_world.inverse() is H_world_body
@@ -1282,7 +1288,8 @@ void run_mpc() {
 
         // Only change where forces are applied when in swing phase, foot cannot move while in contact
         if(right_leg->swing_phase) {
-            right_leg->foot_pos_world_desired = hip_pos_world_right + (t_stance/2.0) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(P_param(5, 0)) / 9.81) * vel_vector.cross(omega_desired_vector);
+            right_leg->foot_pos_world_desired = /*pos_error_gain * (P_param.block<3, 1>(3, 0) - pos_desired_vector) +*/ hip_pos_world_right + (t_stance/2.0) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(P_param(5, 0)) / 9.81) * vel_vector.cross(omega_desired_vector);
+           
             //TODO: Instead of using inverse, either solve the inverse symbolically in python or just ues Transpose as shown in Modern Robotics Video
             // Find foot position in body frame to limit it in order to account for leg reachability, collision with other leg and reasonable values
             //H_body_world.inverse() is H_world_body
@@ -1496,16 +1503,19 @@ void run_mpc() {
             Eigen::Matrix<double, 3, 1> hip_pos_world_right = (H_body_world * (Eigen::Matrix<double, 4, 1>() << hip_offset, 0, 0, 1).finished()).block<3, 1>(0, 0);
             
             Eigen::Matrix<double, 3, 1> vel_vector = (Eigen::Matrix<double, 3, 1>() << vel_x_t, vel_y_t, vel_z_t).finished();
-            Eigen::Matrix<double, 3, 1> vel_desired_vector = (Eigen::Matrix<double, 3, 1>() << vel_x_desired, vel_y_desired, vel_z_desired).finished();
-            Eigen::Matrix<double, 3, 1> omega_desired_vector = (Eigen::Matrix<double, 3, 1>() << omega_x_desired, omega_y_desired, omega_z_desired).finished();
+            Eigen::Matrix<double, 3, 1> pos_vector = (Eigen::Matrix<double, 3, 1>() << pos_x_t, pos_y_t, pos_z_t).finished();
 
-            if(vel_y_desired != 0) {
-                constrain(vel_vector(1, 0), 0, vel_y_desired); // Limit velocity used for calculating desired foot position to desired velocity, preventing steps too far out that slow the robot down too much
+            Eigen::Matrix<double, 3, 1> pos_desired_vector = x_ref.block<3, 1>(3, i);
+            Eigen::Matrix<double, 3, 1> omega_desired_vector = x_ref.block<3, 1>(6, i);
+            Eigen::Matrix<double, 3, 1> vel_desired_vector = x_ref.block<3, 1>(9, i) - pos_error_gain * (pos_vector - pos_desired_vector);
+
+            if(x_ref(10, i) != 0) {
+                constrain(vel_vector(1, 0), -x_ref(10, i), x_ref(10, i)); // Limit velocity used for calculating desired foot position to desired velocity, preventing steps too far out that slow the robot down too much
             }
 
             // Only change where forces are applied when in swing phase, foot cannot move while in contact
             if(swing_left_horizon) {
-                left_leg->foot_pos_world_discretization = hip_pos_world_left + (t_stance/2.0) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(pos_z_t) / 9.81) * vel_vector.cross(omega_desired_vector);
+                left_leg->foot_pos_world_discretization = /*pos_error_gain * (pos_vector - pos_desired_vector) +*/ hip_pos_world_left + (t_stance/2.0) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(pos_z_t) / 9.81) * vel_vector.cross(omega_desired_vector);
                 
                 //TODO: Instead of using inverse, either solve the inverse symbolically in python or just ues Transpose as shown in Modern Robotics Video
                 Eigen::Matrix<double, 3, 1> left_foot_pos_body = (H_body_world.inverse() * (Eigen::Matrix<double, 4, 1>() << left_leg->foot_pos_world_discretization, 1).finished()).block<3,1>(0, 0);
@@ -1524,7 +1534,7 @@ void run_mpc() {
 
             // Only change where forces are applied when in swing phase, foot cannot move while in contact
             if(swing_right_horizon) {
-                right_leg->foot_pos_world_discretization = hip_pos_world_right + (t_stance/2.0) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(pos_z_t) / 9.81) * vel_vector.cross(omega_desired_vector);
+                right_leg->foot_pos_world_discretization = /*pos_error_gain * (pos_vector - pos_desired_vector) +*/ hip_pos_world_right + (t_stance/2.0) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(pos_z_t) / 9.81) * vel_vector.cross(omega_desired_vector);
 
                 // TODO: Instead of using inverse, either solve the inverse symbolically in Python or just use Transpose as shown in Modern Robotics Video
                 Eigen::Matrix<double, 3, 1> right_foot_pos_body = (H_body_world.inverse() * (Eigen::Matrix<double, 4, 1>() << right_leg->foot_pos_world_discretization, 1).finished()).block<3,1>(0, 0);
