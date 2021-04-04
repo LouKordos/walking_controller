@@ -1897,9 +1897,9 @@ int main(int _argc, char **_argv)
 
     simState = new SimState(sim_state_port);
 
-    char* pPath;
-    pPath = getenv ("IS_DOCKER");
-    if (pPath == "Y" || pPath == "YES") {
+    char* is_docker;
+    is_docker = getenv ("IS_DOCKER");
+    if (is_docker == "Y" || is_docker == "YES") {
         plotDataDirPath = "/plot_data/";
     }
     else {
