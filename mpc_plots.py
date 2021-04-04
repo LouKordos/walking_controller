@@ -42,8 +42,8 @@ linewidth = 0.8
 plot_every_predicted = 1  # Only plot in steps of plot_every_predicted, so that plot does not get too crowded
 
 delay_flag = True # Determine whether or not delay compensation is applied
-
-ylim_flag = False
+ylim_flag = False # Determines whether or not y limits are added to the plots
+show_plots = False # Determines whether or not plots should be shown interactively after having saved them
 
 # Determine params based on logs (logs should eventually include those values)
 N = len(dataframe['X_t'][0].split(";")) - 1
@@ -375,4 +375,6 @@ delay_cartesian_vel_fig.savefig(plot_image_dir + "cartesian_vel_actual_vs_compen
 
 print("Raw data:\n", dataframe)
 
-plt.show()
+if show_plots:
+    print("Showing plots.")
+    plt.show()
