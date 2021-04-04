@@ -1089,6 +1089,7 @@ void run_mpc() {
         
         // Step the model one timestep and use the resulting state as the initial state for the solver. This compensates for the roughly 1 sample delay due to the solver time
         P_param.block<n,1>(0, 0) = step_discrete_model(x_t, u_t, r_x_left, r_x_right, r_y_left, r_y_right, r_z_left, r_z_right);
+        // P_param(7, 0) = x_t(7, 0);
 
         if (total_iterations == 0) {
             // Give solver better guess for first iteration to reduce solver time and generate more fitting solution
@@ -1165,7 +1166,7 @@ void run_mpc() {
         // If contactState = false and swing_phase = false, set all swing_phase_temp until next swap to true account for unexpected swing phase / contact loss
         int contactSwapsTemp = 0;
         for(int k = 0; k < N; ++k) {
-            // If contact_swap_interval iterations in future have passed, alternate again. the k != 0 check is there to prevent swapping twice if it swapped before simulating the future contacts already.
+            // If contact_swap_interval iterations in future have passed, alternate again. The k != 0 check is there to prevent swapping twice if it swapped before simulating the future contacts already.
             if((total_iterations + k) % contact_swap_interval == 0 && k != 0 && alternate_contacts) {
                 swing_right_temp = !swing_right_temp;
                 swing_left_temp = !swing_left_temp;
