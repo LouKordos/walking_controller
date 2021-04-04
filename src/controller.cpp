@@ -217,7 +217,7 @@ void calculate_left_leg_torques() {
     // Bind the socket with the server address 
     if ( bind(sockfd, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0 ) 
     { 
-        perror("bind failed"); 
+        perror("Left leg impedance control UDP socket creation failed."); 
         exit(EXIT_FAILURE);
     }
     
@@ -477,7 +477,7 @@ void calculate_right_leg_torques() {
     // Bind the socket with the server address 
     if ( bind(sockfd, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0 ) 
     { 
-        perror("bind failed"); 
+        perror("Right leg impedance control UDP socket creation failed."); 
         exit(EXIT_FAILURE);
     }
     
@@ -817,7 +817,7 @@ void run_mpc() {
     // Bind the socket with the server address
     if ( bind(sockfd, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0 )
     {
-        perror("bind failed");
+        perror("MPC Socket creation failed.");
         exit(EXIT_FAILURE);
     }
     
