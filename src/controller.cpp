@@ -954,10 +954,10 @@ void run_mpc() {
     // Desired state values
     double pos_x_desired = 0;
     double pos_y_desired = 0.0;
-    double pos_z_desired = 1.1;
+    double pos_z_desired = 1.0;
 
     double vel_x_desired = 0.0;
-    double vel_y_desired = 0.0;
+    double vel_y_desired = 0.3;
     double vel_z_desired = 0.0;
 
     double phi_desired = 0;
