@@ -409,14 +409,15 @@ void calculate_left_leg_torques() {
                 MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len); // Send the torque setpoint string to the simulation
 
         if(iteration_counter % 1 == 0) {
-            /*
-                << "t,"
+            /*  << "t,"
                 << "theta1,theta2,theta3,theta4,theta5,theta1_dot,theta2_dot,theta3_dot,theta4_dot,theta5_dot,"
                 << "tau_1,tau_2,tau_3,tau_4,tau_5,"
                 << "foot_pos_x,foot_pos_y,foot_pos_z,"
-                << "foot_pos_x_desired,foot_pos_y_desired,foot_pos_z_desired"
+                << "foot_pos_x_desired,foot_pos_y_desired,foot_pos_z_desired,"
                 << "foot_vel_x,foot_vel_y,foot_vel_z,"
-                << "foot_vel_x_desired,foot_vel_y_desired,foot_vel_z_desired" << std::endl;
+                << "foot_vel_x_desired,foot_vel_y_desired,foot_vel_z_desired"
+                << "foot_phi,foot_theta,foot_psi," 
+                << "foot_phi_desired,foot_theta_desired,foot_psi_desired"
             */
             
             ofstream data_file;
@@ -429,7 +430,8 @@ void calculate_left_leg_torques() {
                         << "," << left_leg->pos_desired(0, 0) << "," << left_leg->pos_desired(1, 0) << "," << left_leg->pos_desired(2, 0)
                         << "," << left_leg->foot_vel(0) << "," << left_leg->foot_vel(1) << "," << left_leg->foot_vel(2)
                         << "," << left_leg->vel_desired(0, 0) << "," << left_leg->vel_desired(1, 0) << "," << left_leg->vel_desired(2, 0) 
-                        << "," << left_leg->foot_pos(3, 0) << "," << left_leg->foot_pos(4, 0) << "," << 0 << std::endl;
+                        << "," << left_leg->foot_pos(3, 0) << "," << left_leg->foot_pos(4, 0) << "," << 0 
+                        << "," << left_leg->pos_desired(3, 0) << "," << left_leg->pos_desired(4, 0) << "," << 0 << std::endl;
                 
             data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
         }
@@ -509,8 +511,8 @@ void calculate_right_leg_torques() {
                 << "foot_pos_x,foot_pos_y,foot_pos_z,"
                 << "foot_pos_x_desired,foot_pos_y_desired,foot_pos_z_desired,"
                 << "foot_vel_x,foot_vel_y,foot_vel_z,"
-                << "foot_vel_x_desired,foot_vel_y_desired,foot_vel_z_desired"
-                << "foot_phi,foot_theta,foot_psi," 
+                << "foot_vel_x_desired,foot_vel_y_desired,foot_vel_z_desired,"
+                << "foot_phi,foot_theta,foot_psi,"
                 << "foot_phi_desired,foot_theta_desired,foot_psi_desired" << std::endl; // Add header to csv file
     data_file.close();
 
@@ -679,14 +681,15 @@ void calculate_right_leg_torques() {
                 MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len); // Send the torque setpoint string to the simulation
 
         if(iteration_counter % 1 == 0) {
-            /*
-                << "t,"
+            /*  << "t" << ","
                 << "theta1,theta2,theta3,theta4,theta5,theta1_dot,theta2_dot,theta3_dot,theta4_dot,theta5_dot,"
                 << "tau_1,tau_2,tau_3,tau_4,tau_5,"
                 << "foot_pos_x,foot_pos_y,foot_pos_z,"
-                << "foot_pos_x_desired,foot_pos_y_desired,foot_pos_z_desired"
+                << "foot_pos_x_desired,foot_pos_y_desired,foot_pos_z_desired,"
                 << "foot_vel_x,foot_vel_y,foot_vel_z,"
-                << "foot_vel_x_desired,foot_vel_y_desired,foot_vel_z_desired" << std::endl;
+                << "foot_vel_x_desired,foot_vel_y_desired,foot_vel_z_desired"
+                << "foot_phi,foot_theta,foot_psi," 
+                << "foot_phi_desired,foot_theta_desired,foot_psi_desired"
             */
             
             ofstream data_file;
@@ -694,12 +697,13 @@ void calculate_right_leg_torques() {
             data_file << get_time() // Write plot values to csv file
                         << "," << theta1 << "," << theta2 << "," << theta3 << "," << theta4 << "," << theta5
                         << "," << theta1_dot << "," << theta2_dot << "," << theta3_dot << "," << theta4_dot << "," << theta5_dot
-                        << "," << right_leg->tau_setpoint(0) << "," << right_leg->tau_setpoint(1) << "," << right_leg->tau_setpoint(2) << "," << right_leg->tau_setpoint(3) << "," << right_leg->tau_setpoint(4)
-                        << "," << right_leg->foot_pos(0) << "," << right_leg->foot_pos(1) << "," << right_leg->foot_pos(2)
+                        << "," << right_leg->tau_setpoint(0, 0) << "," << right_leg->tau_setpoint(1, 0) << "," << right_leg->tau_setpoint(2, 0) << "," << right_leg->tau_setpoint(3, 0) << "," << right_leg->tau_setpoint(4, 0)
+                        << "," << right_leg->foot_pos(0, 0) << "," << right_leg->foot_pos(1, 0) << "," << right_leg->foot_pos(2, 0)
                         << "," << right_leg->pos_desired(0, 0) << "," << right_leg->pos_desired(1, 0) << "," << right_leg->pos_desired(2, 0)
-                        << "," << right_leg->foot_vel(0) << "," << right_leg->foot_vel(1) << "," << right_leg->foot_vel(2)
+                        << "," << right_leg->foot_vel(0, 0) << "," << right_leg->foot_vel(1, 0) << "," << right_leg->foot_vel(2, 0)
                         << "," << right_leg->vel_desired(0, 0) << "," << right_leg->vel_desired(1, 0) << "," << right_leg->vel_desired(2, 0) 
-                        << "," << right_leg->foot_pos(3, 0) << "," << right_leg->foot_pos(4, 0) << "," << 0 << std::endl;
+                        << "," << right_leg->foot_pos(3, 0) << "," << right_leg->foot_pos(4, 0) << "," << 0
+                        << "," << right_leg->pos_desired(3, 0) << "," << right_leg->pos_desired(4, 0) << "," << 0 << std::endl;
                 
             data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
         }
