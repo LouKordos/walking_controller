@@ -1469,7 +1469,6 @@ void run_mpc() {
         
         double pos_x_t = 0.0;
         double pos_y_t = 0.0;
-        double pos_y_t_next = 0.0;
         double pos_z_t = 0.0;
 
         int swap_counter = 0; // Keeping track of contact swaps that have happened during prediction horizon so that only the first contact swap sets next_foot_pos_world_desired
@@ -1491,7 +1490,6 @@ void run_mpc() {
                 
                 pos_x_t = X_t(n*(i+1)+3, 0);
                 pos_y_t = X_t(n*(i+1)+4, 0);
-                pos_y_t_next = X_t(n*(i+2)+4, 0);
                 pos_z_t = X_t(n*(i+1)+5, 0);
             }
             else {
@@ -1505,7 +1503,6 @@ void run_mpc() {
                 
                 pos_x_t = X_t(n*(N-1) + 3, 0);
                 pos_y_t = X_t(n*(N-1) + 4, 0);
-                pos_y_t_next = X_t(n*N + 4, 0);
                 pos_z_t = X_t(n*(N-1) + 5, 0);
             }
 
