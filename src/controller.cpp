@@ -1288,9 +1288,12 @@ void run_mpc() {
         Eigen::Matrix<double, 3, 1> pos_desired_vector = (Eigen::Matrix<double, 3, 1>() << pos_x_desired, pos_y_desired, pos_z_desired).finished();
         Eigen::Matrix<double, 3, 1> vel_desired_vector = (Eigen::Matrix<double, 3, 1>() << vel_x_desired, vel_y_desired, vel_z_desired).finished() - pos_error_gain * (P_param.block<3, 1>(3, 0) - pos_desired_vector);
         Eigen::Matrix<double, 3, 1> omega_desired_vector = (Eigen::Matrix<double, 3, 1>() << omega_x_desired, omega_y_desired, omega_z_desired).finished();
-        
-        if(vel_y_desired != 0) {
-            constrain(vel_vector(1, 0), -vel_y_desired, vel_y_desired); // Limit velocity used for calculating desired foot position to desired velocity, preventing steps too far out that slow the robot down too much
+
+        if(vel_y_desired < 0) {
+            constrain(vel_vector(1, 0), vel_y_desired, 0); // Limit velocity used for calculating desired foot position to desired velocity, preventing steps too far out that slow the robot down too much
+        }
+        else if(vel_y_desired > 0) {
+            constrain(vel_vector(1, 0), 0, vel_y_desired); // Limit velocity used for calculating desired foot position to desired velocity, preventing steps too far out that slow the robot down too much
         }
 
         left_leg->foot_pos_world_desired_mutex.lock();
@@ -1543,8 +1546,12 @@ void run_mpc() {
             Eigen::Matrix<double, 3, 1> omega_desired_vector = x_ref.block<3, 1>(6, i);
             Eigen::Matrix<double, 3, 1> vel_desired_vector = x_ref.block<3, 1>(9, i) - pos_error_gain * (pos_vector - pos_desired_vector);
 
-            if(x_ref(10, i) != 0) {
-                constrain(vel_vector(1, 0), -x_ref(10, i), x_ref(10, i)); // Limit velocity used for calculating desired foot position to desired velocity, preventing steps too far out that slow the robot down too much
+            // Limit velocity used for calculating desired foot position to desired velocity, preventing steps too far out that slow the robot down too much
+            if(x_ref(10, i) < 0) {
+                constrain(vel_vector(1, 0), x_ref(10, i), 0);
+            }
+            else if (x_ref(10, i) > 0) {
+                constrain(vel_vector(1, 0), 0, x_ref(10, i));
             }
 
             // Only change where forces are applied when in swing phase, foot cannot move while in contact
