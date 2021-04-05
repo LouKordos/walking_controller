@@ -332,7 +332,7 @@ void calculate_left_leg_torques() {
         left_leg->update();
 
         // If swing, leg trajectory should be followed, if not, foot is in contact with the ground and MPC forces should be converted into torques and applied
-        if(left_leg->swing_phase) {
+        if(left_leg->swing_phase /*&& !left_leg->contactState.hasContact()*/) {
             
             // left_leg->pos_desired << 0, 0, 0.1*sin(16*get_time()) - 0.95, 0, 0;
             // left_leg->vel_desired << 0, 0, 1.6*cos(16*get_time()), 0, 0;
@@ -607,7 +607,7 @@ void calculate_right_leg_torques() {
         right_leg->update();
 
         // If swing, leg trajectory should be followed, if not, foot is in contact with the ground and MPC forces should be converted into torques and applied
-        if(right_leg->swing_phase) {
+        if(right_leg->swing_phase /*&& !right_leg->contactState.hasContact()*/) {
             
             // right_leg->pos_desired << 0, 0, 0.1*sin(16*get_time()) - 0.95, 0, 0;
             // right_leg->vel_desired << 0, 0, 1.6*cos(16*get_time()), 0, 0;
@@ -1081,7 +1081,7 @@ void run_mpc() {
         x_mutex.lock();
         for(int i = 0; i < n; ++i) {
             x_t(i, 0) = atof(com_state[i].c_str());
-            //P_param(i,0) = x_t(i, 0);
+            // P_param(i,0) = x_t(i, 0);
         }
         x_mutex.unlock();
         
@@ -1099,8 +1099,8 @@ void run_mpc() {
                 }
             }
         }
-
-        // pos_y_desired = P_param(4, 0);
+        // if (pos_y - pos_y_desired )
+        // pos_y_desired = P_param(4, 0) + 0.1;
         
         stringstream temp;
         temp << "x_t:" << x_t(0, 0) << "," << x_t(1, 0) << "," << x_t(2, 0) << "," << x_t(3, 0) << "," << x_t(4, 0) << "," << x_t(5, 0) << "," << x_t(6, 0) << "," << x_t(7, 0) << "," << x_t(8, 0) << "," << x_t(9, 0) << "," << x_t(10, 0) << "," << x_t(11, 0) << "," << x_t(12, 0);
@@ -1190,6 +1190,7 @@ void run_mpc() {
             //     else if(!contactRight && !right_leg->swing_phase) {
             //         swing_right_temp = true;
             //     }
+
             //     std::cout << "Early / Late contact compensation triggered." << std::endl;
             // }
             
@@ -1493,6 +1494,8 @@ void run_mpc() {
                 swing_left_horizon = !swing_left_horizon;
                 swing_right_horizon = !swing_right_horizon;
             }
+
+            // x_ref(4, i) = pos_y_t + 0.1;
 
             // See comments above, same procedure here, also ZYX order
             Eigen::Matrix<double, 4, 4> H_body_world = (Eigen::Matrix<double, 4, 4>() << cos(psi_t)*cos(theta_t), sin(phi_t)*sin(theta_t)*cos(psi_t) - sin(psi_t)*cos(phi_t), sin(phi_t)*sin(psi_t) + sin(theta_t)*cos(phi_t)*cos(psi_t), pos_x_t,
@@ -1889,7 +1892,6 @@ int main(int _argc, char **_argv)
     log("--------------------------------", INFO);
     log("--------------------------------", INFO);
     log("--------------------------------", INFO);
-
     // is 0.065 because it's the difference between torso CoM height and Hip Actuator Center Height, negative because just think about it or calculate an example value with negative and positive z displacement. 
     // A point expressed in hip frame (i.e. [0, 0, 0]) will obviously be at negative Z in a frame that is located above the hip frame, meaning you need negative Z displacement in the transformation matrix.
     left_leg = new Leg(-0.15, 0, -0.065, left_leg_contact_state_port);
@@ -1989,6 +1991,19 @@ int main(int _argc, char **_argv)
 
     std::cout << "left_leg omega_desired is currently: " << left_leg->omega_desired(0) << ", " << left_leg->omega_desired(1) << ", " << left_leg->omega_desired(2) << std::endl; // Print out current natural frequency
     std::cout << std::endl;
+
+    // std::cout << get_joint_torques((Eigen::Matrix<double, 3, 1>() << 9.27674E-08, 5.15002E-07, 7.39966E-07).finished(), 0.10758, -0.181937, -0.618552, 1.63269, -1.14421, -1.10713, 0.0841922, -0.128379, right_leg->config) << std::endl << std::endl; // 7572 impedance, 378 MPC
+    // std::cout << get_joint_torques((Eigen::Matrix<double, 3, 1>() << 9.27674E-08, 5.15002E-07, 7.39966E-07).finished(), 0.106407, -0.181005, -0.62839, 1.65222, -1.15599, -1.10713, 0.0841922, -0.128379, right_leg->config) << std::endl << std::endl; // 7573 impedance, 378 MPC
+    // std::cout << get_joint_torques((Eigen::Matrix<double, 3, 1>() << 9.27674E-08, 5.15002E-07, 7.39966E-07).finished(), 0.104137, -0.179022, -0.648729, 1.69224, -1.17908, -1.10713, 0.0841922, -0.128379, right_leg->config) << std::endl << std::endl; // 7575 impedance, 378 MPC
+    // std::cout << get_joint_torques((Eigen::Matrix<double, 3, 1>() << 9.27674E-08, 5.15002E-07, 7.39966E-07).finished(), 0.102607, -0.178227, -0.65954, 1.71362, -1.19633, -1.10713, 0.0841922, -0.128379, right_leg->config) << std::endl << std::endl; // 7576 impedance, 378 MPC
+    // std::cout << get_joint_torques((Eigen::Matrix<double, 3, 1>() << 9.27674E-08, 5.15002E-07, 7.39966E-07).finished(), 0.100745, -0.177594, -0.670744, 1.73645, -1.21707, -1.10713, 0.0841922, -0.128379, right_leg->config) << std::endl << std::endl; // 7577 impedance, 378 MPC
+
+    // std::cout << get_joint_torques((Eigen::Matrix<double, 3, 1>() << -8.14568E-05, 0.000151078, 0.000223384).finished(), 0.10758, -0.181937, -0.618552, 1.63269, -1.14421, -1.3905, 0.131733, -0.0464198, right_leg->config) << std::endl << std::endl; // 7572 impedance, 379 MPC
+    // std::cout << get_joint_torques((Eigen::Matrix<double, 3, 1>() << -8.14568E-05, 0.000151078, 0.000223384).finished(), 0.106407, -0.181005, -0.62839, 1.65222, -1.15599, -1.3905, 0.131733, -0.0464198, right_leg->config) << std::endl << std::endl; // 7573 impedance, 379 MPC
+    // std::cout << get_joint_torques((Eigen::Matrix<double, 3, 1>() << -8.14568E-05, 0.000151078, 0.000223384).finished(), 0.104137, -0.179022, -0.648729, 1.69224, -1.17908, -1.3905, 0.131733, -0.0464198, right_leg->config) << std::endl << std::endl; // 7575 impedance, 379 MPC
+    // std::cout << get_joint_torques((Eigen::Matrix<double, 3, 1>() << -8.14568E-05, 0.000151078, 0.000223384).finished(), 0.102607, -0.178227, -0.65954, 1.71362, -1.19633, -1.3905, 0.131733, -0.0464198, right_leg->config) << std::endl << std::endl; // 7576 impedance, 379 MPC
+    // std::cout << get_joint_torques((Eigen::Matrix<double, 3, 1>() << -8.14568E-05, 0.000151078, 0.000223384).finished(), 0.100745, -0.177594, -0.670744, 1.73645, -1.21707, -1.3905, 0.131733, -0.0464198, right_leg->config) << std::endl << std::endl; // 7577 impedance, 379 MPC
+
     
     std::this_thread::sleep_for(std::chrono::hours(69));
 

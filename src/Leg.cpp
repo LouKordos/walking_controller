@@ -86,31 +86,10 @@ void Leg::update_foot_trajectory(Eigen::Matrix<double, 13, 1> &com_state, Eigen:
     
     foot_pos_desired_body_frame_mutex.lock();
 
-    // Eigen::Matrix<double, 3, 1> middle_pos = (Eigen::Matrix<double, 3, 1>() << (lift_off_pos(0, 0) - foot_pos_desired_body_frame(0, 0)) / 2, (lift_off_pos(1, 0) - foot_pos_desired_body_frame(1, 0)) / 2, step_height_body).finished();
-    Eigen::Matrix<double, 3, 1> middle_pos = (lift_off_pos + foot_pos_desired_body_frame) / 2;
+    Eigen::Matrix<double, 3, 1> middle_pos = (lift_off_pos + foot_pos_desired_body_frame) / 2; // In World frame
     middle_pos(2, 0) = step_height_body;
 
     foot_trajectory.update(lift_off_pos, middle_pos, foot_pos_desired_body_frame, -lift_off_vel, -next_body_vel, t_stance);
-
-    // TEMPORARY: Use 0 velocities for current and target for debugging, use above version for real testing when walking etc.
-        // foot_trajectory = get_swing_trajectory(lift_off_pos,
-        //     (Eigen::Matrix<double, 3, 1>() << (lift_off_pos(0, 0) - foot_pos_desired_body_frame(0, 0)) / 2, (lift_off_pos(1, 0) - foot_pos_desired_body_frame(1, 0)) / 2, step_height_body).finished(), foot_pos_desired_body_frame, 
-        //     lift_off_vel, -next_body_vel,
-        //     t_stance);
-    
-    // std::stringstream temp;
-    // temp << "lift_off_pos: " << lift_off_pos(0, 0) << "," << lift_off_pos(1, 0) << "," << lift_off_pos(2, 0)
-    // //             << "\nnext_body_vel: " << next_body_vel(0, 0) << "," << next_body_vel(1, 0) << "," << next_body_vel(2, 0)
-    //                << "\nnext_foot_pos_world_desired: " << next_foot_pos_world_desired(0, 0) << "," << next_foot_pos_world_desired(1, 0) << "," << next_foot_pos_world_desired(2, 0);
-    //             // << "\nfoot_pos_world: " << foot_pos_world_desired(0, 0) << "," << foot_pos_world_desired(1, 0) << "," << foot_pos_world_desired(2, 0)
-    //             // << "\ntarget_foot_pos_body: " << foot_pos_desired_body_frame(0, 0) << "," << foot_pos_desired_body_frame(1, 0) << "," << foot_pos_desired_body_frame(2, 0) 
-
-    // temp << "Arguments given to trajectory planner (all in body frame):\n" << "initial_pos: " << lift_off_pos(0, 0) << "," << lift_off_pos(1, 0) << "," << lift_off_pos(2, 0)
-    //     << "\nmiddle_pos: " << middle_pos(0, 0) << "," << middle_pos(1, 0) << "," << middle_pos(2, 0)
-    //     << "\ntarget_pos: " << foot_pos_desired_body_frame(0, 0) << "," << foot_pos_desired_body_frame(1, 0) << "," << foot_pos_desired_body_frame(2, 0)
-    //     << "\ninitial_vel: " << -lift_off_vel(0, 0) << "," << -lift_off_vel(1, 0) << "," << -lift_off_vel(2, 0)
-    //     << "\ntarget_vel: " << -next_body_vel(0, 0) << "," << -next_body_vel(1, 0) << "," << -next_body_vel(2, 0);
-    // print_threadsafe(temp.str(), "mpc_thread", INFO);
 
     foot_pos_desired_body_frame_mutex.unlock();
     foot_trajectory_mutex.unlock();
