@@ -1547,6 +1547,12 @@ void run_mpc() {
             Eigen::Matrix<double, 3, 1> vel_desired_vector = x_ref.block<3, 1>(9, i) - pos_error_gain * (pos_vector - pos_desired_vector);
 
             // Limit velocity used for calculating desired foot position to desired velocity, preventing steps too far out that slow the robot down too much
+            // The idea of gait_gain * (vel_vector - vel_desired_vector) in foot_pos_world_desired is to get the foot in front of the torso during the first half of the contact time, 
+            // and behind the rest of the time. To do that, it should really have the mean of the velocity while in contact, 
+            // which is probably quite hard to find (maybe even impossible since it depends on where you put the foot). 
+            // So using current velocity is not really accurate since the velocity when touching down (or just before, when the contact position is "decided") 
+            // is probaby higher than the mean velocity, thus the foot will be placed too far ahead. 
+            // It is probably higher since it has to catch up a bit after loosing some velocity when touching down
             if(x_ref(10, i) < 0) {
                 constrain(vel_vector(1, 0), x_ref(10, i), 0);
             }
