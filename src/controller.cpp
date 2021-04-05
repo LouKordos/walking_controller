@@ -1176,12 +1176,27 @@ void run_mpc() {
             
             // // Only override planned contact values if there recently was a contact switch or there will be.
             // int iterationsSinceLastContact = total_iterations - iterationsAtLastContact;
-            // if(contactSwapsTemp < 1 && iterationsSinceLastContact > 5 || iterationsSinceLastContact < 5) { // Only override contact values up until next contact swap
+            // if(contactSwapsTemp < 1 && (iterationsSinceLastContact > 5 || iterationsSinceLastContact < 5)) { // Only override contact values up until next contact swap
             //     if(contactLeft && left_leg->swing_phase) {
             //         swing_left_temp = false;
             //     }
             //     else if(!contactLeft && !left_leg->swing_phase) {
             //         swing_left_temp = true;
+
+            //         left_leg->lift_off_pos_mutex.lock();
+            //         left_leg->lift_off_vel_mutex.lock();
+
+            //         Eigen::Matrix<double, n, 1> x_temp = P_param.block<n,1>(0, 0);
+
+            //         left_leg->update_foot_pos_body_frame(x_temp);
+            //         left_leg->foot_pos_body_frame_mutex.lock();
+            //         left_leg->lift_off_pos = left_leg->foot_pos_body_frame;
+            //         left_leg->foot_pos_body_frame_mutex.unlock();
+
+            //         left_leg->lift_off_vel = x_temp.block<3, 1>(9, 0);
+
+            //         left_leg->lift_off_pos_mutex.unlock();
+            //         left_leg->lift_off_vel_mutex.unlock();
             //     }
                 
             //     if(contactRight && right_leg->swing_phase) {
@@ -1189,6 +1204,21 @@ void run_mpc() {
             //     }
             //     else if(!contactRight && !right_leg->swing_phase) {
             //         swing_right_temp = true;
+
+            //         right_leg->lift_off_pos_mutex.lock();
+            //         right_leg->lift_off_vel_mutex.lock();
+
+            //         Eigen::Matrix<double, n, 1> x_temp = P_param.block<n,1>(0, 0);
+
+            //         right_leg->update_foot_pos_body_frame(x_temp);
+            //         right_leg->foot_pos_body_frame_mutex.lock();
+            //         right_leg->lift_off_pos = right_leg->foot_pos_body_frame;
+            //         right_leg->foot_pos_body_frame_mutex.unlock();
+
+            //         right_leg->lift_off_vel = x_temp.block<3, 1>(9, 0);
+
+            //         right_leg->lift_off_pos_mutex.unlock();
+            //         right_leg->lift_off_vel_mutex.unlock();
             //     }
 
             //     std::cout << "Early / Late contact compensation triggered." << std::endl;
