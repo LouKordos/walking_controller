@@ -43,7 +43,7 @@ RUN cmake DCMAKE_BUILD_TYPE="Release" \
     ..
 
 # One compile job for every 2GB of memory
-RUN make -j$(expr $(grep MemTotal /proc/meminfo | awk '{print $2}') / 2 / 1000000) && make install
+RUN make -j$(awk '( $1 == "MemTotal:" ) { printf "%d", $2/2/1000000 }' /proc/meminfo) && make install
 RUN ldconfig
 
 WORKDIR /
@@ -62,7 +62,7 @@ WORKDIR /src/build
 
 RUN cmake .. -DCMAKE_BUILD_TYPE=Release
 # One compile job for every 2GB of memory
-RUN make -j$(expr $(grep MemTotal /proc/meminfo | awk '{print $2}') / 2 / 1000000)
+RUN make -j$(awk '( $1 == "MemTotal:" ) { printf "%d", $2/2/1000000 }' /proc/meminfo)
 
 COPY ./nlp.so /
 
