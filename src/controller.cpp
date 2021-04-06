@@ -194,7 +194,7 @@ void calculate_left_leg_torques() {
     struct timespec deadline; // timespec struct for storing time that execution thread should sleep for
 
     long long iteration_counter = 0; // Iteration counter of the timed loop used for calculating current loop "time" and debugging
-    double dt = torque_calculation_interval / 1000 / 1000; // Loop update interval in seconds for calculation current loop "time" based on iteration counter
+    const double dt = torque_calculation_interval / 1000 / 1000; // Loop update interval in seconds for calculation current loop "time" based on iteration counter
 
     // Setting up UDP server socket...
     int sockfd;
@@ -490,7 +490,7 @@ void calculate_right_leg_torques() {
     struct timespec deadline; // timespec struct for storing time that execution thread should sleep for
 
     long long iteration_counter = 0; // Iteration counter of the timed loop used for calculating current loop "time" and debugging
-    double dt = torque_calculation_interval / 1000 / 1000; // Loop update interval in seconds for calculation current loop "time" based on iteration counter
+    const double dt = torque_calculation_interval / 1000 / 1000; // Loop update interval in seconds for calculation current loop "time" based on iteration counter
 
     // Setting up UDP server socket...
     int sockfd;
