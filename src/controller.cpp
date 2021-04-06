@@ -95,7 +95,8 @@ std::mutex x_mutex, u_mutex,
             next_body_vel_mutex,
             time_mutex, first_iteration_flag_mutex;
 
-static double current_time = 0;
+static long double current_time = 0;
+static long double time_offset = 0; // Use as synchronization offset between sim time and time thread time
 
 // Setting up debugging and plotting csv file
 int largest_index = 0;
@@ -130,7 +131,7 @@ void update_time() {
 
         time_mutex.lock();
 
-        current_time = (duration_cast<milliseconds> (system_clock::now().time_since_epoch()).count() - start_time) / 1000.0;
+        current_time = (duration_cast<milliseconds> (system_clock::now().time_since_epoch()).count() - start_time) / 1000.0 + time_offset;
 
         time_mutex.unlock();
 
@@ -1117,6 +1118,16 @@ void run_mpc() {
                 for(int k = 0; k < n; ++k) {
                     X_t(k + n*i, 0) = P_param(k, 0);
                 }
+            }
+
+            // Sync time thread time with sim time
+            time_mutex.lock();
+            time_offset = simState->getSimTime() - current_time;
+            // std::cout << "Time after sync: simTime=" << simState->getSimTime() << ", time_thread_time=" << current_time << ", time_offset=" << time_offset << std::endl;
+            time_mutex.unlock();
+
+            while(get_time() > 0.1) {
+
             }
         }
         // if (pos_y - pos_y_desired )
