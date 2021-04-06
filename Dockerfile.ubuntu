@@ -42,7 +42,8 @@ RUN cmake DCMAKE_BUILD_TYPE="Release" \
     -DWITH_HSL=ON \
     ..
 
-RUN make -j$(nproc) && make install
+# One compile job for every 2GB of memory
+RUN make -j$(expr $(grep MemTotal /proc/meminfo | awk '{print $2}') / 2 / 1000000) && make install
 RUN ldconfig
 
 WORKDIR /
@@ -60,7 +61,8 @@ RUN rm -rf ./build && mkdir ./build
 WORKDIR /src/build
 
 RUN cmake .. -DCMAKE_BUILD_TYPE=Release
-RUN make -j$(nproc)
+# One compile job for every 2GB of memory
+RUN make -j$(expr $(grep MemTotal /proc/meminfo | awk '{print $2}') / 2 / 1000000)
 
 COPY ./nlp.so /
 
