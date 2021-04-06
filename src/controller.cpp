@@ -103,21 +103,30 @@ int largest_index = 0;
 std::string filename;
 std::string plotDataDirPath; 
  
-double get_time() {
+double get_time(bool simTime) {
+
+    if(simTime) {
+        double simTime = simState->getSimTime();
+        return simTime;
+    }
+    else {
+        time_mutex.lock();
+        double t = current_time; // Store in temporary variable because return would exit the function, but the mutex still has to be unlocked
+        time_mutex.unlock();
+
+        return t;
+    }
 
     // time_mutex.lock();
     // double t = current_time; // Store in temporary variable because return would exit the function, but the mutex still has to be unlocked
     // time_mutex.unlock();
 
-    double simTime = simState->getSimTime();
 
     // if (abs(t - simTime) > 0.01) {
     //     std::cout << "Time drift detected, get back to the future! Time diff=" << t - simTime << "\n";
     // }
 
     // return t;
-
-    return simTime;
 }
 
 void update_time() {
@@ -366,7 +375,7 @@ void calculate_left_leg_torques() {
             // std::cout << "q_dot: " << left_leg->q_dot << std::endl;
             
             left_leg->trajectory_start_time_mutex.lock();
-            double current_trajectory_time = get_time() - left_leg->trajectory_start_time;
+            double current_trajectory_time = get_time(false) - left_leg->trajectory_start_time;
 
             current_traj_time_temp = current_trajectory_time;
 
@@ -411,7 +420,7 @@ void calculate_left_leg_torques() {
             /*"t,iteration,theta1,theta2,theta3,theta4,theta5,f_x,f_y,f_z,phi,theta,psi"*/
             ofstream torque_function_file;
             torque_function_file.open(plotDataDirPath  + filename + "_torque_function_left.csv", ios::app);
-            torque_function_file << get_time() << "," << iteration_counter << "," << left_leg->theta1 << "," << left_leg->theta2 << "," << left_leg->theta3 << "," << left_leg->theta4 << "," << left_leg->theta5
+            torque_function_file << get_time(true) << "," << iteration_counter << "," << left_leg->theta1 << "," << left_leg->theta2 << "," << left_leg->theta3 << "," << left_leg->theta4 << "," << left_leg->theta5
                                     << "," << -u_t(3, 0) << "," << -u_t(4, 0) << "," << -u_t(5, 0) << "," << x(0, 0) << "," << x(1, 0) << "," << x(2, 0) << std::endl;
  
             left_leg->tau_setpoint = get_joint_torques(-u_t.block<3, 1>(0, 0), left_leg->theta1, left_leg->theta2, left_leg->theta3, left_leg->theta4, left_leg->theta5, x(0, 0), x(1, 0), x(2, 0), left_leg->config);
@@ -450,7 +459,7 @@ void calculate_left_leg_torques() {
             
             ofstream data_file;
             data_file.open(plotDataDirPath + filename + "_left.csv", ios::app); // Open csv file in append mode
-            data_file << get_time() // Write plot values to csv file
+            data_file << get_time(true) // Write plot values to csv file
                         << "," << theta1 << "," << theta2 << "," << theta3 << "," << theta4 << "," << theta5
                         << "," << theta1_dot << "," << theta2_dot << "," << theta3_dot << "," << theta4_dot << "," << theta5_dot
                         << "," << left_leg->tau_setpoint(0) << "," << left_leg->tau_setpoint(1) << "," << left_leg->tau_setpoint(2) << "," << left_leg->tau_setpoint(3) << "," << left_leg->tau_setpoint(4)
@@ -661,7 +670,7 @@ void calculate_right_leg_torques() {
             // std::cout << "q_dot: " << right_leg->q_dot << std::endl;
             
             right_leg->trajectory_start_time_mutex.lock();
-            double current_trajectory_time = get_time() - right_leg->trajectory_start_time;
+            double current_trajectory_time = get_time(false) - right_leg->trajectory_start_time;
 
             current_traj_time_temp = current_trajectory_time;
 
@@ -705,7 +714,7 @@ void calculate_right_leg_torques() {
 
             // ofstream torque_function_file;
             torque_function_file.open(plotDataDirPath  + filename + "_torque_function_right.csv", ios::app);
-            torque_function_file << get_time() << "," << iteration_counter << "," << right_leg->theta1 << "," << right_leg->theta2 << "," << right_leg->theta3 << "," << right_leg->theta4 << "," << right_leg->theta5
+            torque_function_file << get_time(true) << "," << iteration_counter << "," << right_leg->theta1 << "," << right_leg->theta2 << "," << right_leg->theta3 << "," << right_leg->theta4 << "," << right_leg->theta5
                                     << "," << -u_t(0, 0) << "," << -u_t(1, 0) << "," << -u_t(2, 0) << "," << x(0, 0) << "," << x(1, 0) << "," << x(2, 0) << std::endl;
             
             right_leg->tau_setpoint = get_joint_torques(-u_t.block<3, 1>(3, 0), right_leg->theta1, right_leg->theta2, right_leg->theta3, right_leg->theta4, right_leg->theta5, x(0, 0), x(1, 0), x(2, 0), right_leg->config);
@@ -744,7 +753,7 @@ void calculate_right_leg_torques() {
             
             ofstream data_file;
             data_file.open(plotDataDirPath + filename + "_right.csv", ios::app); // Open csv file in append mode
-            data_file << get_time() // Write plot values to csv file
+            data_file << get_time(true) // Write plot values to csv file
                         << "," << theta1 << "," << theta2 << "," << theta3 << "," << theta4 << "," << theta5
                         << "," << theta1_dot << "," << theta2_dot << "," << theta3_dot << "," << theta4_dot << "," << theta5_dot
                         << "," << right_leg->tau_setpoint(0, 0) << "," << right_leg->tau_setpoint(1, 0) << "," << right_leg->tau_setpoint(2, 0) << "," << right_leg->tau_setpoint(3, 0) << "," << right_leg->tau_setpoint(4, 0)
@@ -1156,7 +1165,7 @@ void run_mpc() {
             // std::cout << "Time after sync: simTime=" << simState->getSimTime() << ", time_thread_time=" << current_time << ", time_offset=" << time_offset << std::endl;
             time_mutex.unlock();
 
-            while(get_time() > 0.1) {
+            while(get_time(false) > 0.1) {
 
             }
         }
@@ -1179,7 +1188,7 @@ void run_mpc() {
 
             left_leg->trajectory_start_time_mutex.lock();
             right_leg->trajectory_start_time_mutex.lock();
-            left_leg->trajectory_start_time = right_leg->trajectory_start_time = get_time();
+            left_leg->trajectory_start_time = right_leg->trajectory_start_time = get_time(false);
             right_leg->trajectory_start_time_mutex.unlock();
             left_leg->trajectory_start_time_mutex.unlock();
 
@@ -1752,8 +1761,8 @@ void run_mpc() {
         Eigen::Matrix<double, n, 1> x_temp = x_t;
         x_mutex.unlock();
         next_body_vel_mutex.lock();
-        left_leg->update_foot_trajectory(x_temp, next_body_vel, t_stance, get_time());
-        right_leg->update_foot_trajectory(x_temp, next_body_vel, t_stance, get_time());
+        left_leg->update_foot_trajectory(x_temp, next_body_vel, t_stance, get_time(false));
+        right_leg->update_foot_trajectory(x_temp, next_body_vel, t_stance, get_time(false));
         next_body_vel_mutex.unlock();
 
         // Copy all values from Eigen Matrices to casadi DM because that's what casadi accepts for the solver
@@ -1893,7 +1902,7 @@ void run_mpc() {
         // Log data to csv file
         ofstream data_file;
         data_file.open(plotDataDirPath + "mpc_log.csv", ios::app); // Open csv file in append mode
-        data_file << get_time() << "," << x_t(0, 0) << "," << x_t(1, 0) << "," << x_t(2, 0) << "," << x_t(3, 0) << "," << x_t(4, 0) << "," << x_t(5, 0) << "," << x_t(6, 0) << "," << x_t(7, 0) << "," << x_t(8, 0) << "," << x_t(9, 0) << "," << x_t(10, 0) << "," << x_t(11, 0)
+        data_file << get_time(true) << "," << x_t(0, 0) << "," << x_t(1, 0) << "," << x_t(2, 0) << "," << x_t(3, 0) << "," << x_t(4, 0) << "," << x_t(5, 0) << "," << x_t(6, 0) << "," << x_t(7, 0) << "," << x_t(8, 0) << "," << x_t(9, 0) << "," << x_t(10, 0) << "," << x_t(11, 0)
                 << "," << phi_desired << "," << theta_desired << "," << psi_desired << "," << pos_x_desired << "," << pos_y_desired << "," << pos_z_desired << "," << omega_x_desired << "," << omega_y_desired << "," << omega_z_desired << "," << vel_x_desired << "," << vel_y_desired << "," << vel_z_desired
                 << "," << u_t(0) << "," << u_t(1) << "," << u_t(2) << "," << u_t(3) << "," << u_t(4) << "," << u_t(5) 
                 << "," << r_x_left << "," << r_y_left << "," << r_z_left
