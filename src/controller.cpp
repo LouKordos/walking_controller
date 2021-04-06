@@ -105,13 +105,19 @@ std::string plotDataDirPath;
  
 double get_time() {
 
-    return simState->getSimTime();
-
     // time_mutex.lock();
     // double t = current_time; // Store in temporary variable because return would exit the function, but the mutex still has to be unlocked
     // time_mutex.unlock();
 
+    double simTime = simState->getSimTime();
+
+    // if (abs(t - simTime) > 0.01) {
+    //     std::cout << "Time drift detected, get back to the future! Time diff=" << t - simTime << "\n";
+    // }
+
     // return t;
+
+    return simTime;
 }
 
 void update_time() {
