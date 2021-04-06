@@ -235,7 +235,8 @@ void calculate_left_leg_torques() {
                 << "foot_vel_x,foot_vel_y,foot_vel_z,"
                 << "foot_vel_x_desired,foot_vel_y_desired,foot_vel_z_desired,"
                 << "foot_phi,foot_theta,foot_psi," 
-                << "foot_phi_desired,foot_theta_desired,foot_psi_desired" << std::endl; // Add header to csv file
+                << "foot_phi_desired,foot_theta_desired,foot_psi_desired," 
+                << "current_trajectory_time" << std::endl; // Add header to csv file
     data_file.close();
 
     ofstream torque_function_file;
@@ -360,7 +361,17 @@ void calculate_left_leg_torques() {
             
             left_leg->trajectory_start_time_mutex.lock();
             double current_trajectory_time = get_time() - left_leg->trajectory_start_time;
+
+            current_traj_time_temp = current_trajectory_time;
+
+            if(current_trajectory_time > t_stance + (1.0 / 50.0)) {
+                std::cout << "WARNING!!!! Desired trajectory time exceeds gait phase duration by " << current_trajectory_time - t_stance << "s" << std::endl;
+            }
+
             left_leg->trajectory_start_time_mutex.unlock();
+
+            // Due to the impedance control running at a much higher frequency than the MPC, the time might exceed t_stance because the MPC only updates the start time after 1/50s (worst case), which would be 50 iterations for the impedance control
+            constrain(current_trajectory_time, 0, t_stance);
 
             left_leg->foot_trajectory_mutex.lock();
 
@@ -442,7 +453,8 @@ void calculate_left_leg_torques() {
                         << "," << left_leg->foot_vel(0) << "," << left_leg->foot_vel(1) << "," << left_leg->foot_vel(2)
                         << "," << left_leg->vel_desired(0, 0) << "," << left_leg->vel_desired(1, 0) << "," << left_leg->vel_desired(2, 0) 
                         << "," << left_leg->foot_pos(3, 0) << "," << left_leg->foot_pos(4, 0) << "," << 0 
-                        << "," << left_leg->pos_desired(3, 0) << "," << left_leg->pos_desired(4, 0) << "," << 0 << std::endl;
+                        << "," << left_leg->pos_desired(3, 0) << "," << left_leg->pos_desired(4, 0) << "," << 0
+                        << "," << current_traj_time_temp << std::endl;
                 
             data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
         }
@@ -524,7 +536,8 @@ void calculate_right_leg_torques() {
                 << "foot_vel_x,foot_vel_y,foot_vel_z,"
                 << "foot_vel_x_desired,foot_vel_y_desired,foot_vel_z_desired,"
                 << "foot_phi,foot_theta,foot_psi,"
-                << "foot_phi_desired,foot_theta_desired,foot_psi_desired" << std::endl; // Add header to csv file
+                << "foot_phi_desired,foot_theta_desired,foot_psi_desired," 
+                << "current_trajectory_time" << std::endl; // Add header to csv file
     data_file.close();
 
     bool time_switch = false; // used for running a two-phase trajectory, otherwise obsolete
@@ -643,7 +656,17 @@ void calculate_right_leg_torques() {
             
             right_leg->trajectory_start_time_mutex.lock();
             double current_trajectory_time = get_time() - right_leg->trajectory_start_time;
+
+            current_traj_time_temp = current_trajectory_time;
+
+            if(current_trajectory_time > t_stance + (1.0 / 50.0)) {
+                std::cout << "WARNING!!!! Desired trajectory time exceeds gait phase duration by " << current_trajectory_time - t_stance << "s" << std::endl;
+            }
+
             right_leg->trajectory_start_time_mutex.unlock();
+
+            // Due to the impedance control running at a much higher frequency than the MPC, the time might exceed t_stance because the MPC only updates the start time after 1/50s (worst case), which would be 50 iterations for the impedance control
+            constrain(current_trajectory_time, 0, t_stance);
 
             right_leg->foot_trajectory_mutex.lock();
 
@@ -724,7 +747,8 @@ void calculate_right_leg_torques() {
                         << "," << right_leg->foot_vel(0, 0) << "," << right_leg->foot_vel(1, 0) << "," << right_leg->foot_vel(2, 0)
                         << "," << right_leg->vel_desired(0, 0) << "," << right_leg->vel_desired(1, 0) << "," << right_leg->vel_desired(2, 0) 
                         << "," << right_leg->foot_pos(3, 0) << "," << right_leg->foot_pos(4, 0) << "," << 0
-                        << "," << right_leg->pos_desired(3, 0) << "," << right_leg->pos_desired(4, 0) << "," << 0 << std::endl;
+                        << "," << right_leg->pos_desired(3, 0) << "," << right_leg->pos_desired(4, 0) << "," << 0
+                        << "," << current_traj_time_temp << std::endl;
                 
             data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
         }
