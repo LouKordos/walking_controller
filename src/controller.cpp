@@ -93,7 +93,7 @@ static const double time_update_interval = 1000.0;
         
 std::mutex x_mutex, u_mutex,
             next_body_vel_mutex,
-            time_mutex;
+            time_mutex, first_iteration_flag_mutex;
 
 static double current_time = 0;
 
@@ -244,9 +244,19 @@ void calculate_left_leg_torques() {
 
     bool time_switch = false; // used for running a two-phase trajectory, otherwise obsolete
 
-    while(first_iteration_flag) { // Only start running Leg code after first MPC iteration to prevent problems with non-updated values
+    while(true) { // Only start running Leg code after first MPC iteration to prevent problems with non-updated values
+        first_iteration_flag_mutex.lock();
+        bool temp_flag = first_iteration_flag;
+        first_iteration_flag_mutex.unlock();
 
+        if(temp_flag) {
+            break;
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
+
+    double current_traj_time_temp = 0;
 
     while(true) {
         start = high_resolution_clock::now();
@@ -518,9 +528,19 @@ void calculate_right_leg_torques() {
 
     bool time_switch = false; // used for running a two-phase trajectory, otherwise obsolete
 
-    while(first_iteration_flag) { // Only start running Leg code after first MPC iteration to prevent problems with non-updated values
+    while(true) { // Only start running Leg code after first MPC iteration to prevent problems with non-updated values
+        first_iteration_flag_mutex.lock();
+        bool temp_flag = first_iteration_flag;
+        first_iteration_flag_mutex.unlock();
 
+        if(temp_flag) {
+            break;
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
+
+    double current_traj_time_temp = 0;
 
     while(true) {
         start = high_resolution_clock::now();
@@ -1788,7 +1808,9 @@ void run_mpc() {
         U_t.block<m, 1>(m*(N-1), 0) = solution_variables.block<m, 1>(n*(N+1)+m*(N-1), 0);
         
         if(total_iterations == 0) {
+            first_iteration_flag_mutex.lock();
             first_iteration_flag = true;
+            first_iteration_flag_mutex.unlock();
         }
 
         if(!simState->isPaused()) {
