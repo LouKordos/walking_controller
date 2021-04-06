@@ -78,7 +78,7 @@ void Leg::update_foot_trajectory(Eigen::Matrix<double, 13, 1> &com_state, Eigen:
     update_foot_pos_body_frame(com_state);
     
     double step_height_world = 0.15 /*+ 0.4*/;
-    double step_height_body = (H_world_body * (Eigen::Matrix<double, 4, 1>() << 0, 0, step_height_world, 1).finished())(2, 0);
+    double step_height_body = (H_world_body * (Eigen::Matrix<double, 4, 1>() << pos_x_com, pos_y_com, step_height_world, 1).finished())(2, 0);
     
     lift_off_pos_mutex.lock();
     lift_off_vel_mutex.lock();
