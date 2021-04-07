@@ -118,26 +118,27 @@ def plot_file_data(filename):
 	print("Finished plotting")
 
 	if('left' in filename):
-		x_pos_fig.savefig(home_dir + '/Pictures/matplotlib_pics/left/foot_pos_x.png', dpi=save_dpi, bbox_inches='tight')
-		y_pos_fig.savefig(home_dir + '/Pictures/matplotlib_pics/left/foot_pos_y.png', dpi=save_dpi, bbox_inches='tight')
-		z_pos_fig.savefig(home_dir + '/Pictures/matplotlib_pics/left/foot_pos_z.png', dpi=save_dpi, bbox_inches='tight')
+		x_pos_fig.savefig(home_dir + '/Pictures/matplotlib_pics/left/foot_pos_x.pdf', dpi=save_dpi, bbox_inches='tight')
+		y_pos_fig.savefig(home_dir + '/Pictures/matplotlib_pics/left/foot_pos_y.pdf', dpi=save_dpi, bbox_inches='tight')
+		z_pos_fig.savefig(home_dir + '/Pictures/matplotlib_pics/left/foot_pos_z.pdf', dpi=save_dpi, bbox_inches='tight')
 
-		x_vel_fig.savefig(home_dir + '/Pictures/matplotlib_pics/left/foot_vel_x.png', dpi=save_dpi, bbox_inches='tight')
-		y_vel_fig.savefig(home_dir + '/Pictures/matplotlib_pics/left/foot_vel_y.png', dpi=save_dpi, bbox_inches='tight')
-		z_vel_fig.savefig(home_dir + '/Pictures/matplotlib_pics/left/foot_vel_z.png', dpi=save_dpi, bbox_inches='tight')
+		x_vel_fig.savefig(home_dir + '/Pictures/matplotlib_pics/left/foot_vel_x.pdf', dpi=save_dpi, bbox_inches='tight')
+		y_vel_fig.savefig(home_dir + '/Pictures/matplotlib_pics/left/foot_vel_y.pdf', dpi=save_dpi, bbox_inches='tight')
+		z_vel_fig.savefig(home_dir + '/Pictures/matplotlib_pics/left/foot_vel_z.pdf', dpi=save_dpi, bbox_inches='tight')
 
-		torque_fig.savefig(home_dir + '/Pictures/matplotlib_pics/left/torques.png', dpi=save_dpi, bbox_inches='tight')
+		torque_fig.savefig(home_dir + '/Pictures/matplotlib_pics/left/torques.pdf', dpi=save_dpi, bbox_inches='tight')
 
 	else:
-		x_pos_fig.savefig(home_dir + '/Pictures/matplotlib_pics/right/foot_pos_x.png', dpi=save_dpi, bbox_inches='tight')
-		y_pos_fig.savefig(home_dir + '/Pictures/matplotlib_pics/right/foot_pos_y.png', dpi=save_dpi, bbox_inches='tight')
-		z_pos_fig.savefig(home_dir + '/Pictures/matplotlib_pics/right/foot_pos_z.png', dpi=save_dpi, bbox_inches='tight')
+		x_pos_fig.savefig(home_dir + '/Pictures/matplotlib_pics/right/foot_pos_x.pdf', dpi=save_dpi, bbox_inches='tight')
+		y_pos_fig.savefig(home_dir + '/Pictures/matplotlib_pics/right/foot_pos_y.pdf', dpi=save_dpi, bbox_inches='tight')
+		z_pos_fig.savefig(home_dir + '/Pictures/matplotlib_pics/right/foot_pos_z.pdf', dpi=save_dpi, bbox_inches='tight')
 
-		x_vel_fig.savefig(home_dir + '/Pictures/matplotlib_pics/right/foot_vel_x.png', dpi=save_dpi, bbox_inches='tight')
-		y_vel_fig.savefig(home_dir + '/Pictures/matplotlib_pics/right/foot_vel_y.png', dpi=save_dpi, bbox_inches='tight')
-		z_vel_fig.savefig(home_dir + '/Pictures/matplotlib_pics/right/foot_vel_z.png', dpi=save_dpi, bbox_inches='tight')
+		x_vel_fig.savefig(home_dir + '/Pictures/matplotlib_pics/right/foot_vel_x.pdf', dpi=save_dpi, bbox_inches='tight')
+		y_vel_fig.savefig(home_dir + '/Pictures/matplotlib_pics/right/foot_vel_y.pdf', dpi=save_dpi, bbox_inches='tight')
+		z_vel_fig.savefig(home_dir + '/Pictures/matplotlib_pics/right/foot_vel_z.pdf', dpi=save_dpi, bbox_inches='tight')
 
-		torque_fig.savefig(home_dir + '/Pictures/matplotlib_pics/right/torques.png', dpi=save_dpi, bbox_inches='tight')
+		torque_fig.savefig(home_dir + '/Pictures/matplotlib_pics/right/torques.pdf', dpi=save_dpi, bbox_inches='tight')
+
 	print("Finished saving")
 
 # t1 = threading.Thread(target=plot_file_data, args=(filename_left, )) 
