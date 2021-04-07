@@ -71,6 +71,10 @@ bool alternate_contacts;
 static Eigen::Matrix<double, n, 1> x_t = (Eigen::Matrix<double, n, 1>() << 0., 0., 0., 0, 0, 0.8, 0, 0, 0, 0, 0, 0, -9.81).finished();
 static Eigen::Matrix<double, m, 1> u_t = (Eigen::Matrix<double, m, 1>() << 0, 0, m_value*9.81 / 2, 0, 0, m_value*9.81/2).finished();
 
+static const int P_rows = n;
+static const int P_cols = 1 + N + n * N + m * N + N * m; // 1 for initial state, N for N reference states, N A matrices, N B matrices, N D matrices for contact
+static Eigen::Matrix<double, P_rows, P_cols> P_param = Eigen::ArrayXXd::Zero(P_rows, P_cols);
+
 static Eigen::Matrix<double, 3, 1> next_body_vel = Eigen::ArrayXd::Zero(3, 1);
 
 std::thread left_leg_state_thread; // Thread for updating left leg state based on gazebosim messages
@@ -78,6 +82,7 @@ std::thread left_leg_torque_thread; // Thread for updating matrices, calculating
 std::thread right_leg_torque_thread;
 std::thread mpc_thread;
 std::thread time_thread;
+std::thread lift_off_pos_thread;
 
 Leg *left_leg;
 Leg *right_leg;
@@ -90,6 +95,7 @@ bool first_iteration_flag = false;
 static const double state_update_interval = 960.0; // Interval for fetching and parsing the leg state from gazebosim in microseconds
 static const double torque_calculation_interval = 960.0; // Interval for calculating and sending the torque setpoint to gazebosim in microseconds
 static const double time_update_interval = 1000.0;
+static const double lift_off_pos_update_interval = dt * 1e+6; // Convert seconds to microseconds by multiplying by 1e+6
         
 std::mutex x_mutex, u_mutex,
             next_body_vel_mutex,
@@ -160,11 +166,96 @@ void update_time() {
         // then calculates the remaining time for the loop to run at the desired frequency and waits this duration.
         duration = duration_cast<microseconds>(end - start).count();
 
-        stringstream temp;
+        // stringstream temp;
         // temp << "Time thread loop duration: " << duration << "µS";
         // log(temp.str(), INFO);
 
         long long remainder = (time_update_interval - duration) * 1e+3;
+        deadline.tv_nsec = remainder;
+        deadline.tv_sec = 0;
+        clock_nanosleep(CLOCK_REALTIME, 0, &deadline, NULL);
+    }
+}
+
+void update_lift_off_pos() {
+    // High resolution clocks used for measuring execution time of loop iteration.
+    high_resolution_clock::time_point start = high_resolution_clock::now();
+    high_resolution_clock::time_point end = high_resolution_clock::now();
+
+    double duration = 0.0; // Duration double for storing execution duration
+
+    struct timespec deadline; // timespec struct for storing time that execution thread should sleep for
+
+    while(true) { // Only start running Leg code after first MPC iteration to prevent problems with non-updated values
+
+        if(get_time(true) != 0) {
+            break;
+        }
+        else {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+    }
+
+    long long iterations = 0;
+
+    double prev_update_time = 0;
+
+    while(true) {
+        start = high_resolution_clock::now();
+
+        if(iterations % contact_swap_interval == 0 && alternate_contacts) {
+            // TODO: If I'm not missing anything, it should still work if reduced to only one variable, i.e. only lift_off_pos and lift_off_vel
+            left_leg->lift_off_pos_mutex.lock();
+            right_leg->lift_off_pos_mutex.lock();
+            left_leg->lift_off_vel_mutex.lock();
+            right_leg->lift_off_vel_mutex.lock();
+
+            left_leg->trajectory_start_time_mutex.lock();
+            right_leg->trajectory_start_time_mutex.lock();
+            left_leg->trajectory_start_time = right_leg->trajectory_start_time = get_time(false);
+            right_leg->trajectory_start_time_mutex.unlock();
+            left_leg->trajectory_start_time_mutex.unlock();
+
+            Eigen::Matrix<double, n, 1> x_temp = P_param.block<n, 1>(0, 0);
+
+            if(!left_leg->swing_phase) { // Left foot will now be in swing phase so we need to save lift off position for swing trajectory planning
+
+                left_leg->update_foot_pos_body_frame(x_temp);
+                left_leg->foot_pos_body_frame_mutex.lock();
+                left_leg->lift_off_pos = left_leg->foot_pos_body_frame;
+                left_leg->foot_pos_body_frame_mutex.unlock();
+
+                left_leg->lift_off_vel = x_temp.block<3, 1>(9, 0);
+            }
+            if(!right_leg->swing_phase) { // Right foot will now be in swing phase so we need to save lift off position for swing trajectory planning
+
+                right_leg->update_foot_pos_body_frame(x_temp);
+                right_leg->foot_pos_body_frame_mutex.lock();
+                right_leg->lift_off_pos = right_leg->foot_pos_body_frame;
+                right_leg->foot_pos_body_frame_mutex.unlock();
+
+                right_leg->lift_off_vel = x_temp.block<3, 1>(9, 0);
+            }
+
+            left_leg->lift_off_pos_mutex.unlock();
+            right_leg->lift_off_pos_mutex.unlock();
+            left_leg->lift_off_vel_mutex.unlock();
+            right_leg->lift_off_vel_mutex.unlock();
+
+            std::cout << "Updated lift off position, last update was " << duration_cast<milliseconds> (system_clock::now().time_since_epoch()).count() - prev_update_time << "ms ago.\n";
+
+            prev_update_time = duration_cast<milliseconds> (system_clock::now().time_since_epoch()).count();
+        }
+
+        ++iterations;
+        
+        end = high_resolution_clock::now();
+
+        // This timed loop approach calculates the execution time of the current iteration,
+        // then calculates the remaining time for the loop to run at the desired frequency and waits this duration.
+        duration = duration_cast<microseconds>(end - start).count();
+
+        long long remainder = (lift_off_pos_update_interval - duration) * 1e+3;
         deadline.tv_nsec = remainder;
         deadline.tv_sec = 0;
         clock_nanosleep(CLOCK_REALTIME, 0, &deadline, NULL);
@@ -270,7 +361,7 @@ void calculate_left_leg_torques() {
             break;
         }
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 
     double current_traj_time_temp = 0;
@@ -566,7 +657,7 @@ void calculate_right_leg_torques() {
             break;
         }
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 
     double current_traj_time_temp = 0;
@@ -1003,10 +1094,6 @@ void run_mpc() {
 
     static Eigen::Matrix<double, n, N> x_ref = Eigen::ArrayXXd::Zero(n, N); // N states "stacked" horizontally, containing the reference state trajectory for the prediction horizon
 
-    static const int P_rows = n;
-    static const int P_cols = 1 + N + n * N + m * N + N * m; // 1 for initial state, N for N reference states, N A matrices, N B matrices, N D matrices for contact
-    static Eigen::Matrix<double, P_rows, P_cols> P_param = Eigen::ArrayXXd::Zero(P_rows, P_cols);
-
     Eigen::Matrix<double, 3, 3> I_world = Eigen::ArrayXXd::Zero(3, 3); // Body inertia in World frame
 
     static long long total_iterations = 0; // Total loop iterations
@@ -1179,46 +1266,6 @@ void run_mpc() {
 
         // Alternate contacts if contact_swap_interval iterations have passed
         if (total_iterations % contact_swap_interval == 0 && alternate_contacts && !simState->isPaused()) { // If it's paused, the gait should obviously not change either
-
-            // TODO: If I'm not missing anything, it should still work if reduced to only one variable, i.e. only lift_off_pos and lift_off_vel
-            left_leg->lift_off_pos_mutex.lock();
-            right_leg->lift_off_pos_mutex.lock();
-            left_leg->lift_off_vel_mutex.lock();
-            right_leg->lift_off_vel_mutex.lock();
-
-            left_leg->trajectory_start_time_mutex.lock();
-            right_leg->trajectory_start_time_mutex.lock();
-            left_leg->trajectory_start_time = right_leg->trajectory_start_time = get_time(false);
-            right_leg->trajectory_start_time_mutex.unlock();
-            left_leg->trajectory_start_time_mutex.unlock();
-
-            if(!left_leg->swing_phase) { // Left foot will now be in swing phase so we need to save lift off position for swing trajectory planning
-
-                Eigen::Matrix<double, n, 1> x_temp = P_param.block<n,1>(0, 0);
-
-                left_leg->update_foot_pos_body_frame(x_temp);
-                left_leg->foot_pos_body_frame_mutex.lock();
-                left_leg->lift_off_pos = left_leg->foot_pos_body_frame;
-                left_leg->foot_pos_body_frame_mutex.unlock();
-
-                left_leg->lift_off_vel = x_temp.block<3, 1>(9, 0);
-            }
-            if(!right_leg->swing_phase) { // Right foot will now be in swing phase so we need to save lift off position for swing trajectory planning
-
-                Eigen::Matrix<double, n, 1> x_temp = P_param.block<n,1>(0, 0);
-
-                right_leg->update_foot_pos_body_frame(x_temp);
-                right_leg->foot_pos_body_frame_mutex.lock();
-                right_leg->lift_off_pos = right_leg->foot_pos_body_frame;
-                right_leg->foot_pos_body_frame_mutex.unlock();
-
-                right_leg->lift_off_vel = x_temp.block<3, 1>(9, 0);
-            }
-
-            left_leg->lift_off_pos_mutex.unlock();
-            right_leg->lift_off_pos_mutex.unlock();
-            left_leg->lift_off_vel_mutex.unlock();
-            right_leg->lift_off_vel_mutex.unlock();
             
             left_leg->swing_phase = !left_leg->swing_phase;
             right_leg->swing_phase = !right_leg->swing_phase;
@@ -1879,7 +1926,7 @@ void run_mpc() {
         auto end_total = high_resolution_clock::now();
         double full_iteration_duration = duration_cast<microseconds> (end_total - start_total).count();
 
-        std::cout << "Full iteration took " << full_iteration_duration << " microseconds" << std::endl;
+        // std::cout << "Full iteration took " << full_iteration_duration << " microseconds" << std::endl;
         temp.str(std::string());
         temp << "Full MPC iteration loop duration: " << full_iteration_duration << "µS";
         log(temp.str(), INFO);
@@ -2060,6 +2107,7 @@ int main(int _argc, char **_argv)
     
     mpc_thread = std::thread(std::bind(run_mpc));
     time_thread = std::thread(std::bind(update_time));
+    lift_off_pos_thread = std::thread(std::bind(update_lift_off_pos));
 
     // Create a cpu_set_t object representing a set of CPUs. Clear it and mark only CPU i as set.
     // Source: https://eli.thegreenplace.net/2016/c11-threads-affinity-and-hyperthreading/
