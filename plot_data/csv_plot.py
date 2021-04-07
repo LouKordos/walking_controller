@@ -15,7 +15,7 @@ import threading
 
 home_dir = os.environ['HOME']
 
-filenames = os.listdir(home_dir + "/dev/biped_test_clean_pull/walking_controller/plot_data/")
+filenames = os.listdir(home_dir + "/dev/walking_controller/plot_data/")
 
 largest_index = 0
 
