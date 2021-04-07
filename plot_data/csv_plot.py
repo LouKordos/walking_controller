@@ -115,6 +115,28 @@ def plot_file_data(filename):
 	torque_ax.plot(data['t'], data['tau_5'], label='tau_5')
 	plt.legend()
 
+	power_fig = plt.figure(figsize=save_fig_size, dpi=save_dpi)
+	power_ax = power_fig.add_subplot(111)
+
+	# print(np.sum([data[f"tau_{i}"] * data[f'theta{i}_dot'] for i in range(1, 5)]))
+
+	combined_power = []
+	for i in range(len(data['tau_1'])):
+		combined_power_t = 0
+		for joint_index in range(1, 5):
+			combined_power_t += abs(data[f"tau_{joint_index}"][i] * data[f'theta{joint_index}_dot'][i])
+		combined_power.append(combined_power_t)
+		#print(combined_power_t)
+
+	# print(combined_power)
+
+	power_ax.plot(data['t'], combined_power, label="Combined leg power")
+	plt.legend()
+
+	print("Average leg power:", np.mean(combined_power), "[W]")
+
+	print("Total energy consumed by leg in", data['t'][-1], "seconds:", np.sum(combined_power) * (1/1000) / 3600, "[Wh]")
+
 	print("Finished plotting")
 
 	if('left' in filename):
@@ -127,6 +149,7 @@ def plot_file_data(filename):
 		z_vel_fig.savefig(home_dir + '/Pictures/matplotlib_pics/left/foot_vel_z.pdf', dpi=save_dpi, bbox_inches='tight')
 
 		torque_fig.savefig(home_dir + '/Pictures/matplotlib_pics/left/torques.pdf', dpi=save_dpi, bbox_inches='tight')
+		power_fig.savefig(home_dir + '/Pictures/matplotlib_pics/left/combined_power.pdf', dpi=save_dpi, bbox_inches='tight')
 
 	else:
 		x_pos_fig.savefig(home_dir + '/Pictures/matplotlib_pics/right/foot_pos_x.pdf', dpi=save_dpi, bbox_inches='tight')
@@ -138,6 +161,7 @@ def plot_file_data(filename):
 		z_vel_fig.savefig(home_dir + '/Pictures/matplotlib_pics/right/foot_vel_z.pdf', dpi=save_dpi, bbox_inches='tight')
 
 		torque_fig.savefig(home_dir + '/Pictures/matplotlib_pics/right/torques.pdf', dpi=save_dpi, bbox_inches='tight')
+		power_fig.savefig(home_dir + '/Pictures/matplotlib_pics/right/combined_power.pdf', dpi=save_dpi, bbox_inches='tight')
 
 	print("Finished saving")
 
