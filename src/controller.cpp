@@ -1277,6 +1277,8 @@ void run_mpc() {
 
             iterationsAtLastContact = total_iterations;
 
+            std::cout << "Contact swap event occured at iterations=" << total_iterations << std::endl;
+        }
 
             // }
         }
