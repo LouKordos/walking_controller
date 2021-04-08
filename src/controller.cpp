@@ -1150,6 +1150,9 @@ void run_mpc() {
     long long iterationsAtLastContact = 0;
     bool alternate_flag = false; // Temporary flag for waiting a bit before activating the gait
 
+    bool swing_left_debugging = left_leg->swing_phase;
+    bool swing_right_debugging = right_leg->swing_phase;
+
     while(true) {
         // Loop starts here
         auto start = high_resolution_clock::now();
@@ -1230,6 +1233,16 @@ void run_mpc() {
         log(temp.str(), INFO);
         // print_threadsafe(temp.str(), "mpc_thread", INFO, true);
 
+        if (total_iterations % contact_swap_interval == 0 && alternate_contacts && !simState->isPaused()) {
+            swing_left_debugging = !swing_left_debugging;
+            swing_right_debugging = !swing_right_debugging;
+        }
+
+        ofstream contact_old_file;
+        contact_old_file.open(plotDataDirPath  + filename + "_contact_old.csv", ios::app);
+        contact_old_file << get_time(false) << "," << !swing_left_debugging << "," << !swing_right_debugging << std::endl;
+        contact_old_file.close();
+
         double time = get_time(false) + dt;
         for(int k = 0; k < N; k++) {
             double phi_predicted_left = get_contact_phase(time + dt * k);
@@ -1246,12 +1259,12 @@ void run_mpc() {
 
             D_vector.block<m, m>(0, k*m) = D_k;
 
-            if(total_iterations == 0) {
-                ofstream contact_phi_file;
-                contact_phi_file.open(plotDataDirPath  + filename + "_contact_phi.csv", ios::app);
-                contact_phi_file << time + dt * k << "," << phi_predicted_left << "," << contact_left << "," << contact_right << std::endl;
-                contact_phi_file.close();
-            }
+            // if(total_iterations == 0) {
+            //     ofstream contact_phi_file;
+            //     contact_phi_file.open(plotDataDirPath  + filename + "_contact_phi.csv", ios::app);
+            //     contact_phi_file << time + dt * k << "," << phi_predicted_left << "," << contact_left << "," << contact_right << std::endl;
+            //     contact_phi_file.close();
+            // }
         }
 
         // Update P_param
@@ -2138,6 +2151,12 @@ int main(int _argc, char **_argv)
     // std::cout << get_joint_torques((Eigen::Matrix<double, 3, 1>() << -8.14568E-05, 0.000151078, 0.000223384).finished(), 0.102607, -0.178227, -0.65954, 1.71362, -1.19633, -1.3905, 0.131733, -0.0464198, right_leg->config) << std::endl << std::endl; // 7576 impedance, 379 MPC
     // std::cout << get_joint_torques((Eigen::Matrix<double, 3, 1>() << -8.14568E-05, 0.000151078, 0.000223384).finished(), 0.100745, -0.177594, -0.670744, 1.73645, -1.21707, -1.3905, 0.131733, -0.0464198, right_leg->config) << std::endl << std::endl; // 7577 impedance, 379 MPC
 
+    {
+        ofstream contact_old_file;
+        contact_old_file.open(plotDataDirPath  + filename + "_contact_old.csv");
+        contact_old_file << "t,contact_left_old,contact_right_old" << std::endl;
+        contact_old_file.close();
+    }
     
     std::this_thread::sleep_for(std::chrono::hours(69));
 
