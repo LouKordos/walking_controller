@@ -1943,6 +1943,7 @@ void run_mpc() {
 
         // auto before_logging = high_resolution_clock::now();
 
+        // Log X_t and U_t
         for(int timestep = 0; timestep < N+1; timestep++) {
             for(int state = 0; state < n; state++) {
                 data_file << solution_variables(n * timestep + state, 0);
@@ -1976,7 +1977,8 @@ void run_mpc() {
         // std::cout << "Logging future states took " << duration_cast<microseconds>(after_logging - before_logging).count() << "µS\n";
 
         data_file << ",";
-
+        
+        // Log full P_param
         for(int i = 0; i < n; i++) {
             data_file << P_param(i, 0);
             if (i < n - 1) {
