@@ -1268,9 +1268,9 @@ void run_mpc() {
             right_leg->trajectory_start_time_mutex.unlock();
             left_leg->trajectory_start_time_mutex.unlock();
 
-            x_mutex.lock();
-            Eigen::Matrix<double, n, 1> x_temp = x_t;
-            x_mutex.unlock();
+            // x_mutex.lock();
+            Eigen::Matrix<double, n, 1> x_temp = P_param.block<n, 1>(0, 0);
+            // x_mutex.unlock();
 
             if(!swing_left_temp) { // Left foot will now be in swing phase so we need to save lift off position for swing trajectory planning
                 left_leg->update_foot_pos_body_frame(x_temp);
