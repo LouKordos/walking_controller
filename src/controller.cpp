@@ -78,6 +78,7 @@ std::thread left_leg_torque_thread; // Thread for updating matrices, calculating
 std::thread right_leg_torque_thread;
 std::thread mpc_thread;
 std::thread time_thread;
+std::thread last_contact_swap_thread;
 
 Leg *left_leg;
 Leg *right_leg;
@@ -93,10 +94,13 @@ static const double time_update_interval = 1000.0;
         
 std::mutex x_mutex, u_mutex,
             next_body_vel_mutex,
-            time_mutex, first_iteration_flag_mutex;
+            time_mutex, first_iteration_flag_mutex, last_contact_swap_time_mutex, 
+            time_synced_mutex;
 
 static long double current_time = 0;
 static long double time_offset = 0; // Use as synchronization offset between sim time and time thread time
+static long double last_contact_swap_time; // t_0 in gait phase formula, updated every t_stance in last_contact_swap_time_thread.
+static bool time_synced = false;
 
 // Setting up debugging and plotting csv file
 int largest_index = 0;
@@ -169,6 +173,68 @@ void update_time() {
         deadline.tv_sec = 0;
         clock_nanosleep(CLOCK_REALTIME, 0, &deadline, NULL);
     }
+}
+
+bool isTimeSynced() {
+    time_synced_mutex.lock();
+    bool synced = time_synced;
+    time_synced_mutex.unlock();
+
+    return synced;
+}
+
+void update_last_contact_swap_time() {
+    // High resolution clocks used for measuring execution time of loop iteration.
+    high_resolution_clock::time_point start = high_resolution_clock::now();
+    high_resolution_clock::time_point end = high_resolution_clock::now();
+
+    double duration = 0.0; // Duration double for storing execution duration
+
+    struct timespec deadline; // timespec struct for storing time that execution thread should sleep for
+
+    while(!isTimeSynced()) { // Only start updating when simulation has connected to the controller
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+
+    while(true) {
+        
+        start = high_resolution_clock::now();
+
+        last_contact_swap_time_mutex.lock();
+
+        last_contact_swap_time = get_time(false);
+
+        last_contact_swap_time_mutex.unlock();
+        
+        end = high_resolution_clock::now();
+
+        // This timed loop approach calculates the execution time of the current iteration,
+        // then calculates the remaining time for the loop to run at the desired frequency and waits this duration.
+        duration = duration_cast<microseconds>(end - start).count();
+
+        long long remainder = (t_stance * 2.0 * 1e+6 - duration) * 1e+3;
+        deadline.tv_nsec = remainder;
+        deadline.tv_sec = 0;
+        clock_nanosleep(CLOCK_REALTIME, 0, &deadline, NULL);
+    }
+}
+
+double get_last_contact_swap_time() {
+    last_contact_swap_time_mutex.lock();
+    double temp = last_contact_swap_time;
+    last_contact_swap_time_mutex.unlock();
+
+    return temp;
+}
+
+bool get_contact(double phi) {
+    return fmod(phi, 1) < 0.5 ? true : false; // fmod to handle wrap around that happens due to phi_offset for right leg where values become larger than 1.
+}
+
+// Contact Model Fusion for Event-Based Locomotion in Unstructured Terrains (https://www.researchgate.net/profile/Gerardo-Bledt/publication/325466467_Contact_Model_Fusion_for_Event-Based_Locomotion_in_Unstructured_Terrains/links/5b0fbfc80f7e9b1ed703c776/Contact-Model-Fusion-for-Event-Based-Locomotion-in-Unstructured-Terrains.pdf)
+// Eq. 1
+double get_contact_phase(double time) {
+    return (time - get_last_contact_swap_time()) / (t_stance * 2.0); // Multiply t_stance by 2 because the function returning a discrete contact phase base on phi already splits it up into two parts.
 }
 
 void update_left_leg_state() {
@@ -1166,8 +1232,11 @@ void run_mpc() {
             time_mutex.unlock();
 
             while(get_time(false) > 0.1) {
-
+                std::cout << "For the love of tech jesus fix this!" << std::endl;
             }
+            time_synced_mutex.lock();
+            time_synced = true;
+            time_synced_mutex.unlock();
         }
         // if (pos_y - pos_y_desired )
         // pos_y_desired = P_param(4, 0) + 0.1;
@@ -2060,6 +2129,7 @@ int main(int _argc, char **_argv)
     
     mpc_thread = std::thread(std::bind(run_mpc));
     time_thread = std::thread(std::bind(update_time));
+    last_contact_swap_thread = std::thread(std::bind(update_last_contact_swap_time));
 
     // Create a cpu_set_t object representing a set of CPUs. Clear it and mark only CPU i as set.
     // Source: https://eli.thegreenplace.net/2016/c11-threads-affinity-and-hyperthreading/
