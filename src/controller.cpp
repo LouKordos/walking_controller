@@ -1248,8 +1248,61 @@ void run_mpc() {
         contact_old_file.open(plotDataDirPath  + filename + "_contact_old.csv", ios::app);
         contact_old_file << get_time(false) << "," << !swing_left_debugging * 0.1 << "," << !swing_right_debugging * 0.1 << std::endl;
         contact_old_file.close();
+        
+        double time = get_time(false) +dt;
 
-        double time = get_time(false) + dt;
+        bool swing_left_temp = left_leg->swing_phase;
+        bool swing_right_temp = right_leg->swing_phase;
+
+        // Update gait phase and lift-off position for the foot that transitioned to swing phase
+        if(swing_left_temp != !get_contact(get_contact_phase(time))) {
+            // TODO: If I'm not missing anything, it should still work if reduced to only one variable, i.e. only lift_off_pos and lift_off_vel
+            left_leg->lift_off_pos_mutex.lock();
+            right_leg->lift_off_pos_mutex.lock();
+            left_leg->lift_off_vel_mutex.lock();
+            right_leg->lift_off_vel_mutex.lock();
+
+            left_leg->trajectory_start_time_mutex.lock();
+            right_leg->trajectory_start_time_mutex.lock();
+            left_leg->trajectory_start_time = right_leg->trajectory_start_time = get_time(false);
+            right_leg->trajectory_start_time_mutex.unlock();
+            left_leg->trajectory_start_time_mutex.unlock();
+
+            x_mutex.lock();
+            Eigen::Matrix<double, n, 1> x_temp = x_t;
+            x_mutex.unlock();
+
+            if(!swing_left_temp) { // Left foot will now be in swing phase so we need to save lift off position for swing trajectory planning
+                left_leg->update_foot_pos_body_frame(x_temp);
+                left_leg->foot_pos_body_frame_mutex.lock();
+                left_leg->lift_off_pos = left_leg->foot_pos_body_frame;
+                left_leg->foot_pos_body_frame_mutex.unlock();
+
+                left_leg->lift_off_vel = x_temp.block<3, 1>(9, 0);
+            }
+            if(!swing_right_temp) { // Right foot will now be in swing phase so we need to save lift off position for swing trajectory planning
+                right_leg->update_foot_pos_body_frame(x_temp);
+                right_leg->foot_pos_body_frame_mutex.lock();
+                right_leg->lift_off_pos = right_leg->foot_pos_body_frame;
+                right_leg->foot_pos_body_frame_mutex.unlock();
+
+                right_leg->lift_off_vel = x_temp.block<3, 1>(9, 0);
+            }
+
+            left_leg->lift_off_pos_mutex.unlock();
+            right_leg->lift_off_pos_mutex.unlock();
+            left_leg->lift_off_vel_mutex.unlock();
+            right_leg->lift_off_vel_mutex.unlock();
+
+            iterationsAtLastContact = total_iterations;
+
+            std::cout << "Contact swap event occured at iterations=" << total_iterations << std::endl;
+        }
+
+        left_leg->swing_phase = !get_contact(get_contact_phase(time));
+        right_leg->swing_phase = !get_contact(get_contact_phase(time) + 0.5);
+
+        // time += dt;
         for(int k = 0; k < N; k++) {
             double phi_predicted_left = get_contact_phase(time + dt * k);
             double phi_predicted_right = phi_predicted_left + 0.5;
@@ -1805,59 +1858,7 @@ void run_mpc() {
         double r_z_actual_right = -P_param(5, 0);
 
         // time = get_time(false) + dt;
-        bool swing_left_temp = left_leg->swing_phase;
-        bool swing_right_temp = right_leg->swing_phase;
-
-        // Update gait phase and lift-off position for the foot that transitioned to swing phase
-        if(swing_left_temp != !get_contact(get_contact_phase(time))) {
-            // TODO: If I'm not missing anything, it should still work if reduced to only one variable, i.e. only lift_off_pos and lift_off_vel
-            left_leg->lift_off_pos_mutex.lock();
-            right_leg->lift_off_pos_mutex.lock();
-            left_leg->lift_off_vel_mutex.lock();
-            right_leg->lift_off_vel_mutex.lock();
-
-            left_leg->trajectory_start_time_mutex.lock();
-            right_leg->trajectory_start_time_mutex.lock();
-            left_leg->trajectory_start_time = right_leg->trajectory_start_time = get_time(false);
-            right_leg->trajectory_start_time_mutex.unlock();
-            left_leg->trajectory_start_time_mutex.unlock();
-
-            if(!swing_left_temp) { // Left foot will now be in swing phase so we need to save lift off position for swing trajectory planning
-
-                Eigen::Matrix<double, n, 1> x_temp = P_param.block<n,1>(0, 0);
-
-                left_leg->update_foot_pos_body_frame(x_temp);
-                left_leg->foot_pos_body_frame_mutex.lock();
-                left_leg->lift_off_pos = left_leg->foot_pos_body_frame;
-                left_leg->foot_pos_body_frame_mutex.unlock();
-
-                left_leg->lift_off_vel = x_temp.block<3, 1>(9, 0);
-            }
-            if(!swing_right_temp) { // Right foot will now be in swing phase so we need to save lift off position for swing trajectory planning
-
-                Eigen::Matrix<double, n, 1> x_temp = P_param.block<n,1>(0, 0);
-
-                right_leg->update_foot_pos_body_frame(x_temp);
-                right_leg->foot_pos_body_frame_mutex.lock();
-                right_leg->lift_off_pos = right_leg->foot_pos_body_frame;
-                right_leg->foot_pos_body_frame_mutex.unlock();
-
-                right_leg->lift_off_vel = x_temp.block<3, 1>(9, 0);
-            }
-
-            left_leg->lift_off_pos_mutex.unlock();
-            right_leg->lift_off_pos_mutex.unlock();
-            left_leg->lift_off_vel_mutex.unlock();
-            right_leg->lift_off_vel_mutex.unlock();
-
-            iterationsAtLastContact = total_iterations;
-
-            std::cout << "Contact swap event occured at iterations=" << total_iterations << std::endl;
-        }
-
-        left_leg->swing_phase = !get_contact(get_contact_phase(time));
-        right_leg->swing_phase = !get_contact(get_contact_phase(time) + 0.5);
-
+        
         // Send optimal control over UDP, along with logging info for the gazebo plugin
         stringstream s;
         s << u_t(0, 0) << "|" << u_t(1, 0) << "|" << u_t(2, 0) << "|" << u_t(3, 0) << "|" << u_t(4, 0) << "|" << u_t(5, 0) 
