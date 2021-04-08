@@ -1230,7 +1230,6 @@ void run_mpc() {
         log(temp.str(), INFO);
         // print_threadsafe(temp.str(), "mpc_thread", INFO, true);
 
-        if (total_iterations % contact_swap_interval == 0 && alternate_contacts && !simState->isPaused()) { // If it's paused, the gait should obviously not change either
         double time = get_time(false);
 
         if(left_leg->swing_phase != !get_contact(get_contact_phase(time))) {
