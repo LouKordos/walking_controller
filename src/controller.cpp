@@ -1246,7 +1246,7 @@ void run_mpc() {
 
         ofstream contact_old_file;
         contact_old_file.open(plotDataDirPath  + filename + "_contact_old.csv", ios::app);
-        contact_old_file << get_time(false) << "," << !swing_left_debugging << "," << !swing_right_debugging << std::endl;
+        contact_old_file << get_time(false) << "," << !swing_left_debugging * 0.1 << "," << !swing_right_debugging * 0.1 << std::endl;
         contact_old_file.close();
 
         double time = get_time(false) + dt;
@@ -1857,6 +1857,7 @@ void run_mpc() {
 
         left_leg->swing_phase = !get_contact(get_contact_phase(time));
         right_leg->swing_phase = !get_contact(get_contact_phase(time) + 0.5);
+
         // Send optimal control over UDP, along with logging info for the gazebo plugin
         stringstream s;
         s << u_t(0, 0) << "|" << u_t(1, 0) << "|" << u_t(2, 0) << "|" << u_t(3, 0) << "|" << u_t(4, 0) << "|" << u_t(5, 0) 
