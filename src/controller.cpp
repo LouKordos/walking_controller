@@ -1249,7 +1249,7 @@ void run_mpc() {
         contact_old_file << get_time(false) << "," << !swing_left_debugging * 0.1 << "," << !swing_right_debugging * 0.1 << std::endl;
         contact_old_file.close();
         
-        double time = get_time(false) +dt;
+        double time = get_time(false) + dt;
 
         bool swing_left_temp = left_leg->swing_phase;
         bool swing_right_temp = right_leg->swing_phase;
