@@ -1785,7 +1785,7 @@ void run_mpc() {
         double r_z_actual_right = -P_param(5, 0);
 
         // Update gait phase and lift-off position for the foot that transitioned to swing phase
-        time = get_time(false) + dt;
+        // time = get_time(false) + dt;
         bool swing_left_temp = left_leg->swing_phase;
         bool swing_right_temp = right_leg->swing_phase;
 
