@@ -1153,6 +1153,8 @@ void run_mpc() {
     bool swing_left_debugging = left_leg->swing_phase;
     bool swing_right_debugging = right_leg->swing_phase;
 
+    long predicted_contact_swap_iterations = 0;
+
     while(true) {
         // Loop starts here
         auto start = high_resolution_clock::now();
@@ -1645,6 +1647,8 @@ void run_mpc() {
                         left_leg->next_foot_pos_world_desired_mutex.unlock();
                         right_leg->next_foot_pos_world_desired_mutex.unlock();
                         next_body_vel_mutex.unlock();
+
+                        predicted_contact_swap_iterations = total_iterations + i;
                     }
                     swap_counter++;
                 }
@@ -1712,6 +1716,8 @@ void run_mpc() {
             P_param.block<n, n>(0, 1 + N + (i*n)) = A_d_t;
             P_param.block<n, m>(0, 1 + N + n * N + (i*m)) = B_d_t;
         }
+
+        std::cout << "predicted_contact_swap_iterations=" << predicted_contact_swap_iterations << std::endl;
 
         r_x_left = r_x_left_prev;
         r_x_right = r_x_right_prev;
