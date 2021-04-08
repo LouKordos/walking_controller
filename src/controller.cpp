@@ -1230,57 +1230,6 @@ void run_mpc() {
         log(temp.str(), INFO);
         // print_threadsafe(temp.str(), "mpc_thread", INFO, true);
 
-        double time = get_time(false);
-
-        if(left_leg->swing_phase != !get_contact(get_contact_phase(time))) {
-            // TODO: If I'm not missing anything, it should still work if reduced to only one variable, i.e. only lift_off_pos and lift_off_vel
-            left_leg->lift_off_pos_mutex.lock();
-            right_leg->lift_off_pos_mutex.lock();
-            left_leg->lift_off_vel_mutex.lock();
-            right_leg->lift_off_vel_mutex.lock();
-
-            left_leg->trajectory_start_time_mutex.lock();
-            right_leg->trajectory_start_time_mutex.lock();
-            left_leg->trajectory_start_time = right_leg->trajectory_start_time = get_time(false);
-            right_leg->trajectory_start_time_mutex.unlock();
-            left_leg->trajectory_start_time_mutex.unlock();
-
-            if(!left_leg->swing_phase) { // Left foot will now be in swing phase so we need to save lift off position for swing trajectory planning
-
-                Eigen::Matrix<double, n, 1> x_temp = P_param.block<n,1>(0, 0);
-
-                left_leg->update_foot_pos_body_frame(x_temp);
-                left_leg->foot_pos_body_frame_mutex.lock();
-                left_leg->lift_off_pos = left_leg->foot_pos_body_frame;
-                left_leg->foot_pos_body_frame_mutex.unlock();
-
-                left_leg->lift_off_vel = x_temp.block<3, 1>(9, 0);
-            }
-            if(!right_leg->swing_phase) { // Right foot will now be in swing phase so we need to save lift off position for swing trajectory planning
-
-                Eigen::Matrix<double, n, 1> x_temp = P_param.block<n,1>(0, 0);
-
-                right_leg->update_foot_pos_body_frame(x_temp);
-                right_leg->foot_pos_body_frame_mutex.lock();
-                right_leg->lift_off_pos = right_leg->foot_pos_body_frame;
-                right_leg->foot_pos_body_frame_mutex.unlock();
-
-                right_leg->lift_off_vel = x_temp.block<3, 1>(9, 0);
-            }
-
-            left_leg->lift_off_pos_mutex.unlock();
-            right_leg->lift_off_pos_mutex.unlock();
-            left_leg->lift_off_vel_mutex.unlock();
-            right_leg->lift_off_vel_mutex.unlock();
-
-            iterationsAtLastContact = total_iterations;
-
-            std::cout << "Contact swap event occured at iterations=" << total_iterations << std::endl;
-        }
-
-        left_leg->swing_phase = !get_contact(get_contact_phase(time));
-        right_leg->swing_phase = !get_contact(get_contact_phase(time) + 0.5);
-
         int horizon_index = 0;
         time = get_time(false) + dt;
         for(double t = time; t < time + N * dt; t += dt) {
@@ -1837,6 +1786,60 @@ void run_mpc() {
         double r_x_actual_right = foot_pos_world_right(0, 0) - P_param(3, 0);
         double r_y_actual_right = foot_pos_world_right(1, 0) - P_param(4, 0);
         double r_z_actual_right = -P_param(5, 0);
+
+        // Update gait phase and lift-off position for the foot that transitioned to swing phase
+        time = get_time(false) + dt;
+        bool swing_left_temp = left_leg->swing_phase;
+        bool swing_right_temp = right_leg->swing_phase;
+
+        left_leg->swing_phase = !get_contact(get_contact_phase(time));
+        right_leg->swing_phase = !get_contact(get_contact_phase(time) + 0.5);
+
+        if(swing_left_temp != !get_contact(get_contact_phase(time))) {
+            // TODO: If I'm not missing anything, it should still work if reduced to only one variable, i.e. only lift_off_pos and lift_off_vel
+            left_leg->lift_off_pos_mutex.lock();
+            right_leg->lift_off_pos_mutex.lock();
+            left_leg->lift_off_vel_mutex.lock();
+            right_leg->lift_off_vel_mutex.lock();
+
+            left_leg->trajectory_start_time_mutex.lock();
+            right_leg->trajectory_start_time_mutex.lock();
+            left_leg->trajectory_start_time = right_leg->trajectory_start_time = get_time(false);
+            right_leg->trajectory_start_time_mutex.unlock();
+            left_leg->trajectory_start_time_mutex.unlock();
+
+            if(!swing_left_temp) { // Left foot will now be in swing phase so we need to save lift off position for swing trajectory planning
+
+                Eigen::Matrix<double, n, 1> x_temp = P_param.block<n,1>(0, 0);
+
+                left_leg->update_foot_pos_body_frame(x_temp);
+                left_leg->foot_pos_body_frame_mutex.lock();
+                left_leg->lift_off_pos = left_leg->foot_pos_body_frame;
+                left_leg->foot_pos_body_frame_mutex.unlock();
+
+                left_leg->lift_off_vel = x_temp.block<3, 1>(9, 0);
+            }
+            if(!swing_right_temp) { // Right foot will now be in swing phase so we need to save lift off position for swing trajectory planning
+
+                Eigen::Matrix<double, n, 1> x_temp = P_param.block<n,1>(0, 0);
+
+                right_leg->update_foot_pos_body_frame(x_temp);
+                right_leg->foot_pos_body_frame_mutex.lock();
+                right_leg->lift_off_pos = right_leg->foot_pos_body_frame;
+                right_leg->foot_pos_body_frame_mutex.unlock();
+
+                right_leg->lift_off_vel = x_temp.block<3, 1>(9, 0);
+            }
+
+            left_leg->lift_off_pos_mutex.unlock();
+            right_leg->lift_off_pos_mutex.unlock();
+            left_leg->lift_off_vel_mutex.unlock();
+            right_leg->lift_off_vel_mutex.unlock();
+
+            iterationsAtLastContact = total_iterations;
+
+            std::cout << "Contact swap event occured at iterations=" << total_iterations << std::endl;
+        }
 
         // Send optimal control over UDP, along with logging info for the gazebo plugin
         stringstream s;
