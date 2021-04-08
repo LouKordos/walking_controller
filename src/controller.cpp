@@ -1943,8 +1943,6 @@ void run_mpc() {
 
         // auto before_logging = high_resolution_clock::now();
 
-        stringstream future_states;
-
         for(int timestep = 0; timestep < N+1; timestep++) {
             for(int state = 0; state < n; state++) {
                 data_file << solution_variables(n * timestep + state, 0);
