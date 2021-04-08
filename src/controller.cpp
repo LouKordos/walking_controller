@@ -1224,6 +1224,10 @@ void run_mpc() {
             time_synced_mutex.lock();
             time_synced = true;
             time_synced_mutex.unlock();
+
+            last_contact_swap_time_mutex.lock();
+            last_contact_swap_time = get_time(false);
+            last_contact_swap_time_mutex.unlock();
         }
         // if (pos_y - pos_y_desired )
         // pos_y_desired = P_param(4, 0) + 0.1;
@@ -2074,7 +2078,7 @@ int main(int _argc, char **_argv)
     
     mpc_thread = std::thread(std::bind(run_mpc));
     time_thread = std::thread(std::bind(update_time));
-    last_contact_swap_thread = std::thread(std::bind(update_last_contact_swap_time));
+    // last_contact_swap_thread = std::thread(std::bind(update_last_contact_swap_time));
 
     // Create a cpu_set_t object representing a set of CPUs. Clear it and mark only CPU i as set.
     // Source: https://eli.thegreenplace.net/2016/c11-threads-affinity-and-hyperthreading/
@@ -2118,16 +2122,16 @@ int main(int _argc, char **_argv)
             std::cerr << "Error calling pthread_setaffinity_np while trying to set time thread to CPU 8: " << rc << "\n";
         }
     }
-    // Extra scope to avoid redeclaration error
-    {
-        cpu_set_t cpuset;
-        CPU_ZERO(&cpuset);
-        CPU_SET(8, &cpuset);
-        int rc = pthread_setaffinity_np(last_contact_swap_thread.native_handle(), sizeof(cpu_set_t), &cpuset);
-        if (rc != 0) {
-            std::cerr << "Error calling pthread_setaffinity_np while trying to set last contact swap time thread to CPU 8: " << rc << "\n";
-        }
-    }
+    // // Extra scope to avoid redeclaration error
+    // {
+    //     cpu_set_t cpuset;
+    //     CPU_ZERO(&cpuset);
+    //     CPU_SET(8, &cpuset);
+    //     int rc = pthread_setaffinity_np(last_contact_swap_thread.native_handle(), sizeof(cpu_set_t), &cpuset);
+    //     if (rc != 0) {
+    //         std::cerr << "Error calling pthread_setaffinity_np while trying to set last contact swap time thread to CPU 8: " << rc << "\n";
+    //     }
+    // }
 
     // while(true) { }
     stringstream temp;
