@@ -1804,7 +1804,6 @@ void run_mpc() {
         double r_y_actual_right = foot_pos_world_right(1, 0) - P_param(4, 0);
         double r_z_actual_right = -P_param(5, 0);
 
-        // Update gait phase and lift-off position for the foot that transitioned to swing phase
         // time = get_time(false) + dt;
         bool swing_left_temp = left_leg->swing_phase;
         bool swing_right_temp = right_leg->swing_phase;
@@ -1812,6 +1811,7 @@ void run_mpc() {
         left_leg->swing_phase = !get_contact(get_contact_phase(time));
         right_leg->swing_phase = !get_contact(get_contact_phase(time) + 0.5);
 
+        // Update gait phase and lift-off position for the foot that transitioned to swing phase
         if(swing_left_temp != !get_contact(get_contact_phase(time))) {
             // TODO: If I'm not missing anything, it should still work if reduced to only one variable, i.e. only lift_off_pos and lift_off_vel
             left_leg->lift_off_pos_mutex.lock();
