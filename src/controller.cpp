@@ -1273,13 +1273,14 @@ void run_mpc() {
             right_leg->lift_off_pos_mutex.unlock();
             left_leg->lift_off_vel_mutex.unlock();
             right_leg->lift_off_vel_mutex.unlock();
-            
 
             iterationsAtLastContact = total_iterations;
 
             std::cout << "Contact swap event occured at iterations=" << total_iterations << std::endl;
         }
 
+        left_leg->swing_phase = !get_contact(get_contact_phase(time));
+        right_leg->swing_phase = !get_contact(get_contact_phase(time) + 0.5);
             // }
         }
 
