@@ -2163,13 +2163,62 @@ int main(int _argc, char **_argv)
     // std::cout << get_joint_torques((Eigen::Matrix<double, 3, 1>() << -8.14568E-05, 0.000151078, 0.000223384).finished(), 0.100745, -0.177594, -0.670744, 1.73645, -1.21707, -1.3905, 0.131733, -0.0464198, right_leg->config) << std::endl << std::endl; // 7577 impedance, 379 MPC
 
     {
+        ofstream contact_phi_file;
+        contact_phi_file.open(plotDataDirPath  + filename + "_contact_phi.csv");
+        contact_phi_file << "t,phi,contact_left,contact_right" << std::endl;
+        contact_phi_file.close();
+    }
+
+    {
         ofstream contact_old_file;
         contact_old_file.open(plotDataDirPath  + filename + "_contact_old.csv");
         contact_old_file << "t,contact_left_old,contact_right_old" << std::endl;
         contact_old_file.close();
     }
     
-    std::this_thread::sleep_for(std::chrono::hours(69));
+    // while(true) {
+    //     if(isTimeSynced()) {
+    //         break;
+    //     }
+    //     else {
+    //         std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    //     }
+    // }
+
+    // long iterations = 0;
+    // while(true) {
+    //     double time = get_time(false);
+    //     double contact_phi_left = get_contact_phase(time);
+    //     double contact_phi_right = contact_phi_left + 0.5;
+        
+    //     std::cout << "contact phi left=" << contact_phi_left << std::endl;
+        
+    //     // if(iterations == 200) {
+    //     //     for(double t = time; t < time + N * dt; t += dt) {
+    //     //         double phi_predicted_left = get_contact_phase(t);
+    //     //         double phi_predicted_right = phi_predicted_left + 0.5;
+    //     //         bool contact_left = get_contact(phi_predicted_left);
+    //     //         bool contact_right = get_contact(phi_predicted_right);
+    //     //         // std::cout << "phi_predicted_left=" << phi_predicted_left << " , contact_left_predicted=" << contact_left << ", contact_right_predicted=" << contact_right << std::endl;
+
+    //     //         ofstream contact_phi_file;
+    //     //         contact_phi_file.open(plotDataDirPath  + filename + "_contact_phi.csv", ios::app);
+    //     //         contact_phi_file << t << "," << phi_predicted_left << "," << contact_left << "," << contact_right << std::endl;
+    //     //         contact_phi_file.close();
+    //     //         std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    //     //     }
+    //     // }
+
+    //     ofstream contact_phi_file;
+    //     contact_phi_file.open(plotDataDirPath  + filename + "_contact_phi.csv", ios::app);
+    //     contact_phi_file << time << "," << contact_phi_left << "," << get_contact(contact_phi_left) << "," << get_contact(contact_phi_right) << std::endl;
+    //     contact_phi_file.close();
+    //     std::this_thread::sleep_for(std::chrono::milliseconds(1));
+
+    //     ++iterations;
+    // }
+
+    std::this_thread::sleep_for(std::chrono::hours(6969));
 
     // while(true) {
         
