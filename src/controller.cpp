@@ -1280,6 +1280,31 @@ void run_mpc() {
 
         left_leg->swing_phase = !get_contact(get_contact_phase(time));
         right_leg->swing_phase = !get_contact(get_contact_phase(time) + 0.5);
+
+        int horizon_index = 0;
+        time = get_time(false) + dt;
+        for(double t = time; t < time + N * dt; t += dt) {
+            double phi_predicted_left = get_contact_phase(t);
+            double phi_predicted_right = phi_predicted_left + 0.5;
+            bool contact_left = get_contact(phi_predicted_left);
+            bool contact_right = get_contact(phi_predicted_right);
+
+            D_k << !contact_left, 0, 0, 0, 0, 0,
+                    0, !contact_left, 0, 0, 0, 0,
+                    0, 0, !contact_left, 0, 0, 0,
+                    0, 0, 0, !contact_right, 0, 0,
+                    0, 0, 0, 0, !contact_right, 0,
+                    0, 0, 0, 0, 0, !contact_right;
+
+            D_vector.block<m, m>(0, horizon_index*m) = D_k;
+
+            horizon_index++;
+
+            // if(total_iterations == 0) {
+            //     ofstream contact_phi_file;
+            //     contact_phi_file.open(plotDataDirPath  + filename + "_contact_phi.csv", ios::app);
+            //     contact_phi_file << t << "," << phi_predicted_left << "," << contact_left << "," << contact_right << std::endl;
+            //     contact_phi_file.close();
             // }
         }
 
