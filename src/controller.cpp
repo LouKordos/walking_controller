@@ -1230,8 +1230,8 @@ void run_mpc() {
         log(temp.str(), INFO);
         // print_threadsafe(temp.str(), "mpc_thread", INFO, true);
 
-        // Alternate contacts if contact_swap_interval iterations have passed
         if (total_iterations % contact_swap_interval == 0 && alternate_contacts && !simState->isPaused()) { // If it's paused, the gait should obviously not change either
+        double time = get_time(false);
 
             // TODO: If I'm not missing anything, it should still work if reduced to only one variable, i.e. only lift_off_pos and lift_off_vel
             left_leg->lift_off_pos_mutex.lock();
@@ -1273,88 +1273,11 @@ void run_mpc() {
             left_leg->lift_off_vel_mutex.unlock();
             right_leg->lift_off_vel_mutex.unlock();
             
-            left_leg->swing_phase = !left_leg->swing_phase;
-            right_leg->swing_phase = !right_leg->swing_phase;
 
             iterationsAtLastContact = total_iterations;
-        }
 
-        // Temporary variable for "simulating" future contacts
-        bool swing_left_temp = left_leg->swing_phase;
-        bool swing_right_temp = right_leg->swing_phase;
-        // Loop through prediction horizon
-        bool contactLeft = left_leg->contactState.hasContact();
-        bool contactRight = right_leg->contactState.hasContact();
-        // If contactState = true and swing_phase = true, set all swing_phase_temp until next swap to false to account for unexpected contact
-        // If contactState = false and swing_phase = false, set all swing_phase_temp until next swap to true account for unexpected swing phase / contact loss
-        int contactSwapsTemp = 0;
-        for(int k = 0; k < N; ++k) {
-            // If contact_swap_interval iterations in future have passed, alternate again. The k != 0 check is there to prevent swapping twice if it swapped before simulating the future contacts already.
-            if((total_iterations + k) % contact_swap_interval == 0 && k != 0 && alternate_contacts) {
-                swing_right_temp = !swing_right_temp;
-                swing_left_temp = !swing_left_temp;
-                
-                ++contactSwapsTemp;
-            }
-            
-            // // Only override planned contact values if there recently was a contact switch or there will be.
-            // int iterationsSinceLastContact = total_iterations - iterationsAtLastContact;
-            // if(contactSwapsTemp < 1 && (iterationsSinceLastContact > 5 || iterationsSinceLastContact < 5)) { // Only override contact values up until next contact swap
-            //     if(contactLeft && left_leg->swing_phase) {
-            //         swing_left_temp = false;
-            //     }
-            //     else if(!contactLeft && !left_leg->swing_phase) {
-            //         swing_left_temp = true;
 
-            //         left_leg->lift_off_pos_mutex.lock();
-            //         left_leg->lift_off_vel_mutex.lock();
-
-            //         Eigen::Matrix<double, n, 1> x_temp = P_param.block<n,1>(0, 0);
-
-            //         left_leg->update_foot_pos_body_frame(x_temp);
-            //         left_leg->foot_pos_body_frame_mutex.lock();
-            //         left_leg->lift_off_pos = left_leg->foot_pos_body_frame;
-            //         left_leg->foot_pos_body_frame_mutex.unlock();
-
-            //         left_leg->lift_off_vel = x_temp.block<3, 1>(9, 0);
-
-            //         left_leg->lift_off_pos_mutex.unlock();
-            //         left_leg->lift_off_vel_mutex.unlock();
-            //     }
-                
-            //     if(contactRight && right_leg->swing_phase) {
-            //         swing_right_temp = false;
-            //     }
-            //     else if(!contactRight && !right_leg->swing_phase) {
-            //         swing_right_temp = true;
-
-            //         right_leg->lift_off_pos_mutex.lock();
-            //         right_leg->lift_off_vel_mutex.lock();
-
-            //         Eigen::Matrix<double, n, 1> x_temp = P_param.block<n,1>(0, 0);
-
-            //         right_leg->update_foot_pos_body_frame(x_temp);
-            //         right_leg->foot_pos_body_frame_mutex.lock();
-            //         right_leg->lift_off_pos = right_leg->foot_pos_body_frame;
-            //         right_leg->foot_pos_body_frame_mutex.unlock();
-
-            //         right_leg->lift_off_vel = x_temp.block<3, 1>(9, 0);
-
-            //         right_leg->lift_off_pos_mutex.unlock();
-            //         right_leg->lift_off_vel_mutex.unlock();
-            //     }
-
-            //     std::cout << "Early / Late contact compensation triggered." << std::endl;
             // }
-            
-            D_k << swing_left_temp, 0, 0, 0, 0, 0,
-                    0, swing_left_temp, 0, 0, 0, 0,
-                    0, 0, swing_left_temp, 0, 0, 0,
-                    0, 0, 0, swing_right_temp, 0, 0,
-                    0, 0, 0, 0, swing_right_temp, 0,
-                    0, 0, 0, 0, 0, swing_right_temp;
-            
-            D_vector.block<m, m>(0, k*m) = D_k;
         }
 
         // Update P_param
@@ -2167,7 +2090,6 @@ int main(int _argc, char **_argv)
             std::cerr << "Error calling pthread_setaffinity_np while trying to set last contact swap time thread to CPU 8: " << rc << "\n";
         }
     }
-
 
     // while(true) { }
     stringstream temp;
