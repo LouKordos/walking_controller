@@ -1411,7 +1411,7 @@ void run_mpc() {
         double theta_desired_temp = theta_desired;
         double psi_desired_temp = psi_desired;
         double omega_z_desired_temp = omega_z_desired;// - 0.02;
-
+        
         // Update reference trajectory
         for(int i = 0; i < N; ++i) {
             // if (vel_x_desired_temp < 0.3) {
@@ -1609,26 +1609,29 @@ void run_mpc() {
                 right_leg->foot_pos_world_discretization(2, 0) = 0; // This is needed because the formula above doesn't make sense for Z, and the foot naturally touches the ground at Z = 0 in the world frame
             }
             
-            // Get previous contact state to compared to current, if different contact swap occurs at the current iteration and swing trajectory target needs to be updated
-            bool swing_left_prev = P_param(0, 1 + N + n * N + m * N + (i - 1) * m);
+            if(i != 0) {
+                // Get previous contact state to compared to current, if different contact swap occurs at the current iteration and swing trajectory target needs to be updated
+                bool swing_left_prev = P_param(0, 1 + N + n * N + m * N + (i - 1) * m);
 
-            // Go to next contact swap in prediction horizon and get desired foot position for trajectory planner. The if + if statement is badly written and should be refactored
-            if(swing_left != swing_left_prev) { 
-                if(swap_counter < 1) {
-                    left_leg->next_foot_pos_world_desired_mutex.lock();
-                    right_leg->next_foot_pos_world_desired_mutex.lock();
-                    next_body_vel_mutex.lock();
+                // Go to next contact swap in prediction horizon and get desired foot position for trajectory planner. The if + if statement is badly written and should be refactored
+                if(swing_left != swing_left_prev) { 
+                    if(swap_counter < 1) {
+                        left_leg->next_foot_pos_world_desired_mutex.lock();
+                        right_leg->next_foot_pos_world_desired_mutex.lock();
+                        next_body_vel_mutex.lock();
 
-                    left_leg->next_foot_pos_world_desired = left_leg->foot_pos_world_discretization;
-                    right_leg->next_foot_pos_world_desired = right_leg->foot_pos_world_discretization;
+                        left_leg->next_foot_pos_world_desired = left_leg->foot_pos_world_discretization;
+                        right_leg->next_foot_pos_world_desired = right_leg->foot_pos_world_discretization;
 
-                    next_body_vel = (Eigen::Matrix<double, 3, 1>() << vel_x_t, vel_y_t, vel_z_t).finished();
-                    
-                    left_leg->next_foot_pos_world_desired_mutex.unlock();
-                    right_leg->next_foot_pos_world_desired_mutex.unlock();
-                    next_body_vel_mutex.unlock();
+                        next_body_vel = (Eigen::Matrix<double, 3, 1>() << vel_x_t, vel_y_t, vel_z_t).finished();
+                        
+                        left_leg->next_foot_pos_world_desired_mutex.unlock();
+                        right_leg->next_foot_pos_world_desired_mutex.unlock();
+                        next_body_vel_mutex.unlock();
+                    }
+                    swap_counter++;
                 }
-                swap_counter++;
+
             }
 
             r_x_left = left_leg->foot_pos_world_discretization(0, 0) - pos_x_t;
