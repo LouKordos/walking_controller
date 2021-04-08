@@ -1898,14 +1898,6 @@ void run_mpc() {
         temp.str(std::string());
         temp << "Solver preparation in MPC thread duration: " << duration_before + duration_after << "µS";
         log(temp.str(), INFO);
-        
-        auto end_total = high_resolution_clock::now();
-        double full_iteration_duration = duration_cast<microseconds> (end_total - start_total).count();
-
-        std::cout << "Full iteration took " << full_iteration_duration << " microseconds" << std::endl;
-        temp.str(std::string());
-        temp << "Full MPC iteration loop duration: " << full_iteration_duration << "µS";
-        log(temp.str(), INFO);
 
         u_mutex.lock();
         x_mutex.lock();
@@ -1921,6 +1913,14 @@ void run_mpc() {
         left_leg->next_foot_pos_world_desired_mutex.lock();
         right_leg->next_foot_pos_world_desired_mutex.lock();
         next_body_vel_mutex.lock();
+
+        auto end_total = high_resolution_clock::now();
+        double full_iteration_duration = duration_cast<microseconds> (end_total - start_total).count();
+
+        std::cout << "Full iteration took " << full_iteration_duration << " microseconds" << std::endl;
+        temp.str(std::string());
+        temp << "Full MPC iteration loop duration: " << full_iteration_duration << "µS";
+        log(temp.str(), INFO);
 
         // Log data to csv file
         ofstream data_file;
