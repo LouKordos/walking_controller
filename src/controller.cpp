@@ -1230,10 +1230,9 @@ void run_mpc() {
         log(temp.str(), INFO);
         // print_threadsafe(temp.str(), "mpc_thread", INFO, true);
 
-        int horizon_index = 0;
-        time = get_time(false) + dt;
-        for(double t = time; t < time + N * dt; t += dt) {
-            double phi_predicted_left = get_contact_phase(t);
+        double time = get_time(false) + dt;
+        for(int k = 0; k < N; k++) {
+            double phi_predicted_left = get_contact_phase(time + dt * k);
             double phi_predicted_right = phi_predicted_left + 0.5;
             bool contact_left = get_contact(phi_predicted_left);
             bool contact_right = get_contact(phi_predicted_right);
@@ -1245,9 +1244,7 @@ void run_mpc() {
                     0, 0, 0, 0, !contact_right, 0,
                     0, 0, 0, 0, 0, !contact_right;
 
-            D_vector.block<m, m>(0, horizon_index*m) = D_k;
-
-            horizon_index++;
+            D_vector.block<m, m>(0, k*m) = D_k;
 
             // if(total_iterations == 0) {
             //     ofstream contact_phi_file;
