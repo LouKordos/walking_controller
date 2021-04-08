@@ -1493,9 +1493,6 @@ void run_mpc() {
 
         int swap_counter = 0; // Keeping track of contact swaps that have happened during prediction horizon so that only the first contact swap sets next_foot_pos_world_desired
 
-        bool swing_left_horizon = left_leg->swing_phase;
-        bool swing_right_horizon = right_leg->swing_phase;
-
         // Discretization loop for Prediction Horizon
         for(int i = 0; i < N; ++i) {
             // TODO: Simplify this by just using a single discretization state vector instead of seperate variables
@@ -1539,11 +1536,9 @@ void run_mpc() {
                 pos_y_t = (double)P_param(4, 0);
                 pos_z_t = (double)P_param(5, 0);
             }
-            
-            if((total_iterations+i) % contact_swap_interval == 0 && i != 0) {
-                swing_left_horizon = !swing_left_horizon;
-                swing_right_horizon = !swing_right_horizon;
-            }
+
+            bool swing_left =  P_param(0, 1 + N + n * N + m * N + i * m);
+            bool swing_right = P_param(3, 1 + N + n * N + m * N + i * m + 3);
 
             // x_ref(4, i) = pos_y_t + 0.1;
 
@@ -1578,7 +1573,7 @@ void run_mpc() {
             }
 
             // Only change where forces are applied when in swing phase, foot cannot move while in contact
-            if(swing_left_horizon) {
+            if(swing_left) {
                 left_leg->foot_pos_world_discretization = /*pos_error_gain * (pos_vector - pos_desired_vector) +*/ hip_pos_world_left + (t_stance/2.0) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(pos_z_t) / 9.81) * vel_vector.cross(omega_desired_vector);
                 
                 //TODO: Instead of using inverse, either solve the inverse symbolically in python or just ues Transpose as shown in Modern Robotics Video
@@ -1597,7 +1592,7 @@ void run_mpc() {
             }
 
             // Only change where forces are applied when in swing phase, foot cannot move while in contact
-            if(swing_right_horizon) {
+            if(swing_right) {
                 right_leg->foot_pos_world_discretization = /*pos_error_gain * (pos_vector - pos_desired_vector) +*/ hip_pos_world_right + (t_stance/2.0) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(pos_z_t) / 9.81) * vel_vector.cross(omega_desired_vector);
 
                 // TODO: Instead of using inverse, either solve the inverse symbolically in Python or just use Transpose as shown in Modern Robotics Video
@@ -1613,8 +1608,12 @@ void run_mpc() {
                 }
                 right_leg->foot_pos_world_discretization(2, 0) = 0; // This is needed because the formula above doesn't make sense for Z, and the foot naturally touches the ground at Z = 0 in the world frame
             }
+            
+            // Get previous contact state to compared to current, if different contact swap occurs at the current iteration and swing trajectory target needs to be updated
+            bool swing_left_prev = P_param(0, 1 + N + n * N + m * N + (i - 1) * m);
 
-            if((total_iterations+i) % contact_swap_interval == 0 && i != 0) { // Go to next contact swap in prediction horizon and get desired foot position for trajectory planner. The if + if statement is badly written and should be refactored
+            // Go to next contact swap in prediction horizon and get desired foot position for trajectory planner. The if + if statement is badly written and should be refactored
+            if(swing_left != swing_left_prev) { 
                 if(swap_counter < 1) {
                     left_leg->next_foot_pos_world_desired_mutex.lock();
                     right_leg->next_foot_pos_world_desired_mutex.lock();
@@ -1622,11 +1621,6 @@ void run_mpc() {
 
                     left_leg->next_foot_pos_world_desired = left_leg->foot_pos_world_discretization;
                     right_leg->next_foot_pos_world_desired = right_leg->foot_pos_world_discretization;
-                    
-                    //TEMPORARY FOR TESTING WITH LEGS HANGING:
-                    // left_leg->next_foot_pos_world_desired(2, 0) = 0.4;
-                    // right_leg->next_foot_pos_world_desired(2, 0) = 0.4;
-                    /////////////////////////////////////////
 
                     next_body_vel = (Eigen::Matrix<double, 3, 1>() << vel_x_t, vel_y_t, vel_z_t).finished();
                     
