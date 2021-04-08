@@ -1808,9 +1808,6 @@ void run_mpc() {
         bool swing_left_temp = left_leg->swing_phase;
         bool swing_right_temp = right_leg->swing_phase;
 
-        left_leg->swing_phase = !get_contact(get_contact_phase(time));
-        right_leg->swing_phase = !get_contact(get_contact_phase(time) + 0.5);
-
         // Update gait phase and lift-off position for the foot that transitioned to swing phase
         if(swing_left_temp != !get_contact(get_contact_phase(time))) {
             // TODO: If I'm not missing anything, it should still work if reduced to only one variable, i.e. only lift_off_pos and lift_off_vel
@@ -1858,6 +1855,8 @@ void run_mpc() {
             std::cout << "Contact swap event occured at iterations=" << total_iterations << std::endl;
         }
 
+        left_leg->swing_phase = !get_contact(get_contact_phase(time));
+        right_leg->swing_phase = !get_contact(get_contact_phase(time) + 0.5);
         // Send optimal control over UDP, along with logging info for the gazebo plugin
         stringstream s;
         s << u_t(0, 0) << "|" << u_t(1, 0) << "|" << u_t(2, 0) << "|" << u_t(3, 0) << "|" << u_t(4, 0) << "|" << u_t(5, 0) 
