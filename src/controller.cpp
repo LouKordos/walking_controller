@@ -1246,12 +1246,12 @@ void run_mpc() {
 
             D_vector.block<m, m>(0, k*m) = D_k;
 
-            // if(total_iterations == 0) {
-            //     ofstream contact_phi_file;
-            //     contact_phi_file.open(plotDataDirPath  + filename + "_contact_phi.csv", ios::app);
-            //     contact_phi_file << t << "," << phi_predicted_left << "," << contact_left << "," << contact_right << std::endl;
-            //     contact_phi_file.close();
-            // }
+            if(total_iterations == 0) {
+                ofstream contact_phi_file;
+                contact_phi_file.open(plotDataDirPath  + filename + "_contact_phi.csv", ios::app);
+                contact_phi_file << time + dt * k << "," << phi_predicted_left << "," << contact_left << "," << contact_right << std::endl;
+                contact_phi_file.close();
+            }
         }
 
         // Update P_param
