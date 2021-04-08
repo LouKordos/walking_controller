@@ -2157,6 +2157,17 @@ int main(int _argc, char **_argv)
             std::cerr << "Error calling pthread_setaffinity_np while trying to set time thread to CPU 8: " << rc << "\n";
         }
     }
+    // Extra scope to avoid redeclaration error
+    {
+        cpu_set_t cpuset;
+        CPU_ZERO(&cpuset);
+        CPU_SET(8, &cpuset);
+        int rc = pthread_setaffinity_np(last_contact_swap_thread.native_handle(), sizeof(cpu_set_t), &cpuset);
+        if (rc != 0) {
+            std::cerr << "Error calling pthread_setaffinity_np while trying to set last contact swap time thread to CPU 8: " << rc << "\n";
+        }
+    }
+
 
     // while(true) { }
     stringstream temp;
