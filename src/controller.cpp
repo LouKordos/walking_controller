@@ -1233,6 +1233,7 @@ void run_mpc() {
         if (total_iterations % contact_swap_interval == 0 && alternate_contacts && !simState->isPaused()) { // If it's paused, the gait should obviously not change either
         double time = get_time(false);
 
+        if(left_leg->swing_phase != !get_contact(get_contact_phase(time))) {
             // TODO: If I'm not missing anything, it should still work if reduced to only one variable, i.e. only lift_off_pos and lift_off_vel
             left_leg->lift_off_pos_mutex.lock();
             right_leg->lift_off_pos_mutex.lock();
