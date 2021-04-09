@@ -76,7 +76,6 @@ std::thread left_leg_torque_thread; // Thread for updating matrices, calculating
 std::thread right_leg_torque_thread;
 std::thread mpc_thread;
 std::thread time_thread;
-std::thread last_contact_swap_thread;
 
 Leg *left_leg;
 Leg *right_leg;
@@ -181,41 +180,7 @@ bool isTimeSynced() {
     return synced;
 }
 
-void update_last_contact_swap_time() {
-    // High resolution clocks used for measuring execution time of loop iteration.
-    high_resolution_clock::time_point start = high_resolution_clock::now();
-    high_resolution_clock::time_point end = high_resolution_clock::now();
 
-    double duration = 0.0; // Duration double for storing execution duration
-
-    struct timespec deadline; // timespec struct for storing time that execution thread should sleep for
-
-    while(!isTimeSynced()) { // Only start updating when simulation has connected to the controller
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    }
-
-    while(true) {
-        
-        start = high_resolution_clock::now();
-
-        last_contact_swap_time_mutex.lock();
-
-        last_contact_swap_time = get_time(false);
-
-        last_contact_swap_time_mutex.unlock();
-        
-        end = high_resolution_clock::now();
-
-        // This timed loop approach calculates the execution time of the current iteration,
-        // then calculates the remaining time for the loop to run at the desired frequency and waits this duration.
-        duration = duration_cast<microseconds>(end - start).count();
-
-        long long remainder = (t_stance * 2.0 * 1e+6 - duration) * 1e+3;
-        deadline.tv_nsec = remainder;
-        deadline.tv_sec = 0;
-        clock_nanosleep(CLOCK_REALTIME, 0, &deadline, NULL);
-    }
-}
 
 double get_last_contact_swap_time() {
     last_contact_swap_time_mutex.lock();
@@ -2070,7 +2035,6 @@ int main(int _argc, char **_argv)
     
     mpc_thread = std::thread(std::bind(run_mpc));
     time_thread = std::thread(std::bind(update_time));
-    // last_contact_swap_thread = std::thread(std::bind(update_last_contact_swap_time));
 
     // Create a cpu_set_t object representing a set of CPUs. Clear it and mark only CPU i as set.
     // Source: https://eli.thegreenplace.net/2016/c11-threads-affinity-and-hyperthreading/
@@ -2114,18 +2078,7 @@ int main(int _argc, char **_argv)
             std::cerr << "Error calling pthread_setaffinity_np while trying to set time thread to CPU 8: " << rc << "\n";
         }
     }
-    // // Extra scope to avoid redeclaration error
-    // {
-    //     cpu_set_t cpuset;
-    //     CPU_ZERO(&cpuset);
-    //     CPU_SET(8, &cpuset);
-    //     int rc = pthread_setaffinity_np(last_contact_swap_thread.native_handle(), sizeof(cpu_set_t), &cpuset);
-    //     if (rc != 0) {
-    //         std::cerr << "Error calling pthread_setaffinity_np while trying to set last contact swap time thread to CPU 8: " << rc << "\n";
-    //     }
-    // }
-
-    // while(true) { }
+    
     stringstream temp;
     temp << "\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
             << "If you're running this in a docker container, make sure to use the --net=host option and set the env variable IS_DOCKER=Y when running it.\n"
