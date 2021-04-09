@@ -120,9 +120,11 @@ def plot_file_data(filepath):
 	power_ax = power_fig.add_subplot(111)
 
 	# print(np.sum([data[f"tau_{i}"] * data[f'theta{i}_dot'] for i in range(1, 5)]))
+	
+	data_length = int(len(data['tau_1']) * 0.95)
 
 	combined_power = []
-	for i in range(int(len(data['tau_1']) * 0.95)):
+	for i in range(data_length):
 		combined_power_t = 0
 		for joint_index in range(1, 5):
 			combined_power_t += abs(data[f"tau_{joint_index}"][i] * data[f'theta{joint_index}_dot'][i])
@@ -135,7 +137,7 @@ def plot_file_data(filepath):
 
 	print("Total energy consumed by leg in", data['t'][-1], "seconds:", np.sum(combined_power) * (1/1000) / 3600, "[Wh]")
 
-	power_ax.plot(data['t'], combined_power, label="Combined leg power")
+	power_ax.plot(data['t'][:data_length], combined_power, label="Combined leg power")
 	plt.legend()
 
 	print("Finished plotting")
