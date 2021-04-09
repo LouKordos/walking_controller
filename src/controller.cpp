@@ -2029,8 +2029,6 @@ void run_mpc() {
         data_file << std::endl;
         data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
 
-        // x_t = step_discrete_model(x_t, u_t, r_x_left, r_x_right, r_y_left, r_y_right, r_z_left, r_z_right);
-
         long long remainder = (dt * 1e+6 - full_iteration_duration) * 1e+3;
         //std::cout << "Remainder: " << remainder << " microseconds" << std::endl;
         deadline.tv_nsec = remainder;
