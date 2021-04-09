@@ -14,6 +14,5 @@ expression.txt
 expression_parsed.txt
 build/controller
 controller_log.txt
-controller_log.txt
 parsed_expr.txt
 raw_expr.txt
