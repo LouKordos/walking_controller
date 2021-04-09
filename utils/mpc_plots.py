@@ -22,7 +22,7 @@ for name in filenames:
 	except:
 		print("Invalid parse with filename:", name)
 
-filename = "./plot_data/" + str(largest_index) + "_mpc_log.csv"
+filename = "../plot_data/" + str(largest_index) + "_mpc_log.csv"
 # filename = "./plot_data/699_mpc_log.csv"
 print("filename:", filename)
 
