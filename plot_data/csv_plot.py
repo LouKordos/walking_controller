@@ -140,28 +140,28 @@ def plot_file_data(filename):
 	print("Finished plotting")
 
 	if('left' in filename):
-		x_pos_fig.savefig(home_dir + '/Pictures/matplotlib_pics/left/foot_pos_x.pdf', dpi=save_dpi, bbox_inches='tight')
-		y_pos_fig.savefig(home_dir + '/Pictures/matplotlib_pics/left/foot_pos_y.pdf', dpi=save_dpi, bbox_inches='tight')
-		z_pos_fig.savefig(home_dir + '/Pictures/matplotlib_pics/left/foot_pos_z.pdf', dpi=save_dpi, bbox_inches='tight')
+		x_pos_fig.savefig(home_dir + '/Pictures/matplotlib_plots/left/foot_pos_x.pdf', dpi=save_dpi, bbox_inches='tight')
+		y_pos_fig.savefig(home_dir + '/Pictures/matplotlib_plots/left/foot_pos_y.pdf', dpi=save_dpi, bbox_inches='tight')
+		z_pos_fig.savefig(home_dir + '/Pictures/matplotlib_plots/left/foot_pos_z.pdf', dpi=save_dpi, bbox_inches='tight')
 
-		x_vel_fig.savefig(home_dir + '/Pictures/matplotlib_pics/left/foot_vel_x.pdf', dpi=save_dpi, bbox_inches='tight')
-		y_vel_fig.savefig(home_dir + '/Pictures/matplotlib_pics/left/foot_vel_y.pdf', dpi=save_dpi, bbox_inches='tight')
-		z_vel_fig.savefig(home_dir + '/Pictures/matplotlib_pics/left/foot_vel_z.pdf', dpi=save_dpi, bbox_inches='tight')
+		x_vel_fig.savefig(home_dir + '/Pictures/matplotlib_plots/left/foot_vel_x.pdf', dpi=save_dpi, bbox_inches='tight')
+		y_vel_fig.savefig(home_dir + '/Pictures/matplotlib_plots/left/foot_vel_y.pdf', dpi=save_dpi, bbox_inches='tight')
+		z_vel_fig.savefig(home_dir + '/Pictures/matplotlib_plots/left/foot_vel_z.pdf', dpi=save_dpi, bbox_inches='tight')
 
-		torque_fig.savefig(home_dir + '/Pictures/matplotlib_pics/left/torques.pdf', dpi=save_dpi, bbox_inches='tight')
-		power_fig.savefig(home_dir + '/Pictures/matplotlib_pics/left/combined_power.pdf', dpi=save_dpi, bbox_inches='tight')
+		torque_fig.savefig(home_dir + '/Pictures/matplotlib_plots/left/torques.pdf', dpi=save_dpi, bbox_inches='tight')
+		power_fig.savefig(home_dir + '/Pictures/matplotlib_plots/left/combined_power.pdf', dpi=save_dpi, bbox_inches='tight')
 
 	else:
-		x_pos_fig.savefig(home_dir + '/Pictures/matplotlib_pics/right/foot_pos_x.pdf', dpi=save_dpi, bbox_inches='tight')
-		y_pos_fig.savefig(home_dir + '/Pictures/matplotlib_pics/right/foot_pos_y.pdf', dpi=save_dpi, bbox_inches='tight')
-		z_pos_fig.savefig(home_dir + '/Pictures/matplotlib_pics/right/foot_pos_z.pdf', dpi=save_dpi, bbox_inches='tight')
+		x_pos_fig.savefig(home_dir + '/Pictures/matplotlib_plots/right/foot_pos_x.pdf', dpi=save_dpi, bbox_inches='tight')
+		y_pos_fig.savefig(home_dir + '/Pictures/matplotlib_plots/right/foot_pos_y.pdf', dpi=save_dpi, bbox_inches='tight')
+		z_pos_fig.savefig(home_dir + '/Pictures/matplotlib_plots/right/foot_pos_z.pdf', dpi=save_dpi, bbox_inches='tight')
 
-		x_vel_fig.savefig(home_dir + '/Pictures/matplotlib_pics/right/foot_vel_x.pdf', dpi=save_dpi, bbox_inches='tight')
-		y_vel_fig.savefig(home_dir + '/Pictures/matplotlib_pics/right/foot_vel_y.pdf', dpi=save_dpi, bbox_inches='tight')
-		z_vel_fig.savefig(home_dir + '/Pictures/matplotlib_pics/right/foot_vel_z.pdf', dpi=save_dpi, bbox_inches='tight')
+		x_vel_fig.savefig(home_dir + '/Pictures/matplotlib_plots/right/foot_vel_x.pdf', dpi=save_dpi, bbox_inches='tight')
+		y_vel_fig.savefig(home_dir + '/Pictures/matplotlib_plots/right/foot_vel_y.pdf', dpi=save_dpi, bbox_inches='tight')
+		z_vel_fig.savefig(home_dir + '/Pictures/matplotlib_plots/right/foot_vel_z.pdf', dpi=save_dpi, bbox_inches='tight')
 
-		torque_fig.savefig(home_dir + '/Pictures/matplotlib_pics/right/torques.pdf', dpi=save_dpi, bbox_inches='tight')
-		power_fig.savefig(home_dir + '/Pictures/matplotlib_pics/right/combined_power.pdf', dpi=save_dpi, bbox_inches='tight')
+		torque_fig.savefig(home_dir + '/Pictures/matplotlib_plots/right/torques.pdf', dpi=save_dpi, bbox_inches='tight')
+		power_fig.savefig(home_dir + '/Pictures/matplotlib_plots/right/combined_power.pdf', dpi=save_dpi, bbox_inches='tight')
 
 	print("Finished saving")
 
