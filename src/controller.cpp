@@ -308,7 +308,7 @@ void calculate_left_leg_torques() {
 
     ofstream data_file;
     data_file.open(plotDataDirPath + filename + "_left.csv");
-    data_file << "t,"
+    data_file << "t_sim,t_controller,"
                 << "theta1,theta2,theta3,theta4,theta5,theta1_dot,theta2_dot,theta3_dot,theta4_dot,theta5_dot,"
                 << "tau_1,tau_2,tau_3,tau_4,tau_5,"
                 << "foot_pos_x,foot_pos_y,foot_pos_z,"
@@ -517,7 +517,8 @@ void calculate_left_leg_torques() {
             
             ofstream data_file;
             data_file.open(plotDataDirPath + filename + "_left.csv", ios::app); // Open csv file in append mode
-            data_file << get_time(true) // Write plot values to csv file
+            // Write plot values to csv file
+            data_file << get_time(true) << "," << get_time(false)
                         << "," << theta1 << "," << theta2 << "," << theta3 << "," << theta4 << "," << theta5
                         << "," << theta1_dot << "," << theta2_dot << "," << theta3_dot << "," << theta4_dot << "," << theta5_dot
                         << "," << left_leg->tau_setpoint(0) << "," << left_leg->tau_setpoint(1) << "," << left_leg->tau_setpoint(2) << "," << left_leg->tau_setpoint(3) << "," << left_leg->tau_setpoint(4)
@@ -601,7 +602,7 @@ void calculate_right_leg_torques() {
 
     ofstream data_file;
     data_file.open(plotDataDirPath + filename + "_right.csv");
-    data_file << "t,"
+    data_file << "t_sim,t_controller,"
                 << "theta1,theta2,theta3,theta4,theta5,theta1_dot,theta2_dot,theta3_dot,theta4_dot,theta5_dot,"
                 << "tau_1,tau_2,tau_3,tau_4,tau_5,"
                 << "foot_pos_x,foot_pos_y,foot_pos_z,"
@@ -803,7 +804,8 @@ void calculate_right_leg_torques() {
             
             ofstream data_file;
             data_file.open(plotDataDirPath + filename + "_right.csv", ios::app); // Open csv file in append mode
-            data_file << get_time(true) // Write plot values to csv file
+            // Write plot values to csv file
+            data_file << get_time(true) << "," << get_time(false)
                         << "," << theta1 << "," << theta2 << "," << theta3 << "," << theta4 << "," << theta5
                         << "," << theta1_dot << "," << theta2_dot << "," << theta3_dot << "," << theta4_dot << "," << theta5_dot
                         << "," << right_leg->tau_setpoint(0, 0) << "," << right_leg->tau_setpoint(1, 0) << "," << right_leg->tau_setpoint(2, 0) << "," << right_leg->tau_setpoint(3, 0) << "," << right_leg->tau_setpoint(4, 0)

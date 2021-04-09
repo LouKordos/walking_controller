@@ -38,7 +38,7 @@ print("filepath_right:", filepath_right)
 def plot_file_data(filepath):
 
 	data = np.genfromtxt(filepath, delimiter=',', skip_header=50,
-	     	skip_footer=0, names=['t', 'theta1', 'theta2', 'theta3', 'theta4', 'theta5', 'theta1_dot', 'theta2_dot', 'theta3_dot', 'theta4_dot', 'theta5_dot', 'tau_1', 'tau_2', 'tau_3', 'tau_4', 'tau_5', 'foot_pos_x', 'foot_pos_y', 'foot_pos_z', 'foot_pos_x_desired', 'foot_pos_y_desired', 'foot_pos_z_desired', 'foot_vel_x', 'foot_vel_y', 'foot_vel_z', 'foot_vel_x_desired', 'foot_vel_y_desired', 'foot_vel_z_desired', 'foot_phi', 'foot_theta', 'foot_psi', 'foot_phi_desired', 'foot_theta_desired', 'foot_psi_desired', 'current_trajectory_time'])
+	     	skip_footer=0, names=['t_sim', 't_controller', 'theta1', 'theta2', 'theta3', 'theta4', 'theta5', 'theta1_dot', 'theta2_dot', 'theta3_dot', 'theta4_dot', 'theta5_dot', 'tau_1', 'tau_2', 'tau_3', 'tau_4', 'tau_5', 'foot_pos_x', 'foot_pos_y', 'foot_pos_z', 'foot_pos_x_desired', 'foot_pos_y_desired', 'foot_pos_z_desired', 'foot_vel_x', 'foot_vel_y', 'foot_vel_z', 'foot_vel_x_desired', 'foot_vel_y_desired', 'foot_vel_z_desired', 'foot_phi', 'foot_theta', 'foot_psi', 'foot_phi_desired', 'foot_theta_desired', 'foot_psi_desired', 'current_trajectory_time'])
 
 	#print(data)
 	scaling_factor = 0.75
@@ -52,8 +52,8 @@ def plot_file_data(filepath):
 	x_pos_ax.set_xlabel('time [s]')
 	x_pos_ax.set_title('X Position')
 
-	x_pos_ax.plot(data['t'], data['foot_pos_x'], label='foot_position_x')
-	x_pos_ax.plot(data['t'], data['foot_pos_x_desired'], label='foot_position_x_desired')
+	x_pos_ax.plot(data['t_sim'], data['foot_pos_x'], label='foot_position_x')
+	x_pos_ax.plot(data['t_sim'], data['foot_pos_x_desired'], label='foot_position_x_desired')
 	plt.legend()
 
 	y_pos_fig = plt.figure(figsize=save_fig_size, dpi=save_dpi)
@@ -62,8 +62,8 @@ def plot_file_data(filepath):
 	y_pos_ax.set_xlabel('time [s]')
 	y_pos_ax.set_title('Y Position')
 
-	y_pos_ax.plot(data['t'], data['foot_pos_y'], label='foot_position_y')
-	y_pos_ax.plot(data['t'], data['foot_pos_y_desired'], label='foot_position_y_desired')
+	y_pos_ax.plot(data['t_sim'], data['foot_pos_y'], label='foot_position_y')
+	y_pos_ax.plot(data['t_sim'], data['foot_pos_y_desired'], label='foot_position_y_desired')
 	plt.legend()
 
 	z_pos_fig = plt.figure(figsize=save_fig_size, dpi=save_dpi)
@@ -72,8 +72,8 @@ def plot_file_data(filepath):
 	z_pos_ax.set_xlabel('time [s]')
 	z_pos_ax.set_title('Z Position')
 
-	z_pos_ax.plot(data['t'], data['foot_pos_z'], label='foot_position_z')
-	z_pos_ax.plot(data['t'], data['foot_pos_z_desired'], label='foot_position_z_desired')
+	z_pos_ax.plot(data['t_sim'], data['foot_pos_z'], label='foot_position_z')
+	z_pos_ax.plot(data['t_sim'], data['foot_pos_z_desired'], label='foot_position_z_desired')
 	plt.legend()
 
 	x_vel_fig = plt.figure(figsize=save_fig_size, dpi=save_dpi)
@@ -82,8 +82,8 @@ def plot_file_data(filepath):
 	x_vel_ax.set_xlabel('time [s]')
 	x_vel_ax.set_title('X Velocity')
 
-	x_vel_ax.plot(data['t'], data['foot_vel_x'], label='foot_velocity_x')
-	x_vel_ax.plot(data['t'], data['foot_vel_x_desired'], label='foot_velocity_x_desired')
+	x_vel_ax.plot(data['t_sim'], data['foot_vel_x'], label='foot_velocity_x')
+	x_vel_ax.plot(data['t_sim'], data['foot_vel_x_desired'], label='foot_velocity_x_desired')
 	plt.legend()
 
 	y_vel_fig = plt.figure(figsize=save_fig_size, dpi=save_dpi)
@@ -92,8 +92,8 @@ def plot_file_data(filepath):
 	y_vel_ax.set_xlabel('time [s]')
 	y_vel_ax.set_title('Y Velocity')
 
-	y_vel_ax.plot(data['t'], data['foot_vel_y'], label='foot_velocity_y')
-	y_vel_ax.plot(data['t'], data['foot_vel_y_desired'], label='foot_velocity_y_desired')
+	y_vel_ax.plot(data['t_sim'], data['foot_vel_y'], label='foot_velocity_y')
+	y_vel_ax.plot(data['t_sim'], data['foot_vel_y_desired'], label='foot_velocity_y_desired')
 	plt.legend()
 
 	z_vel_fig = plt.figure(figsize=save_fig_size, dpi=save_dpi)
@@ -102,8 +102,8 @@ def plot_file_data(filepath):
 	z_vel_ax.set_xlabel('time [s]')
 	z_vel_ax.set_title('Z Velocity')
 
-	z_vel_ax.plot(data['t'], data['foot_vel_z'], label='foot_velocity_z')
-	z_vel_ax.plot(data['t'], data['foot_vel_z_desired'], label='foot_velocity_z_desired')
+	z_vel_ax.plot(data['t_sim'], data['foot_vel_z'], label='foot_velocity_z')
+	z_vel_ax.plot(data['t_sim'], data['foot_vel_z_desired'], label='foot_velocity_z_desired')
 	plt.legend()
 
 	torque_fig = plt.figure(figsize=save_fig_size, dpi=save_dpi)
@@ -112,11 +112,11 @@ def plot_file_data(filepath):
 	torque_ax.set_xlabel('time [s]')
 	torque_ax.set_title('Joint torques')
 
-	torque_ax.plot(data['t'], data['tau_1'], label='tau_1')
-	torque_ax.plot(data['t'], data['tau_2'], label='tau_2')
-	torque_ax.plot(data['t'], data['tau_3'], label='tau_3')
-	torque_ax.plot(data['t'], data['tau_4'], label='tau_4')
-	torque_ax.plot(data['t'], data['tau_5'], label='tau_5')
+	torque_ax.plot(data['t_sim'], data['tau_1'], label='tau_1')
+	torque_ax.plot(data['t_sim'], data['tau_2'], label='tau_2')
+	torque_ax.plot(data['t_sim'], data['tau_3'], label='tau_3')
+	torque_ax.plot(data['t_sim'], data['tau_4'], label='tau_4')
+	torque_ax.plot(data['t_sim'], data['tau_5'], label='tau_5')
 	plt.legend()
 
 	power_fig = plt.figure(figsize=save_fig_size, dpi=save_dpi)
@@ -138,9 +138,9 @@ def plot_file_data(filepath):
 
 	print("Average leg power:", np.mean(combined_power), "[W]")
 
-	print("Total energy consumed by leg in", data['t'][-1], "seconds:", np.sum(combined_power) * (1.0/1000.0) / 3600.0, "[Wh]")
+	print("Total energy consumed by leg in", data['t_sim'][-1], "seconds:", np.sum(combined_power) * (1.0/1000.0) / 3600.0, "[Wh]")
 
-	power_ax.plot(data['t'][:data_length], combined_power, label="Combined leg power")
+	power_ax.plot(data['t_sim'][:data_length], combined_power, label="Combined leg power")
 	plt.legend()
 
 	print("Finished plotting")
