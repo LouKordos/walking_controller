@@ -60,7 +60,7 @@ plot_every_predicted = 1  # Only plot in steps of plot_every_predicted, so that 
 delay_flag = True # Determine whether or not delay compensation is applied
 ylim_flag = False # Determines whether or not y limits are added to the plots
 show_plots = False # Determines whether or not plots should be shown interactively after having saved them
-generate_prediction_plots = False
+generate_prediction_plots = True
 
 # Determine params based on logs (logs should eventually include those values)
 N = len(dataframe['X_t'][0].split(";")) - 1
