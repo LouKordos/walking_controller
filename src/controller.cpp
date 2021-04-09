@@ -1734,8 +1734,6 @@ void run_mpc() {
             P_param.block<n, m>(0, 1 + N + n * N + (i*m)) = B_d_t;
         }
 
-        std::cout << "predicted_contact_swap_iterations=" << predicted_contact_swap_iterations << std::endl;
-
         r_x_left = r_x_left_prev;
         r_x_right = r_x_right_prev;
 
