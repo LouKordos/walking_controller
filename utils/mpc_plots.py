@@ -401,8 +401,8 @@ if delay_flag:
 
 rms_error_vector = np.zeros((n-1, 1))
 
-actual_states = dataframe.iloc[:, range(1, 1+12)].values # Rows are iterations, columns are states
-reference_states = dataframe.iloc[:, range(13, 13+12)].values
+actual_states = dataframe.iloc[:, range(2, 2+12)].values # Rows are iterations, columns are states
+reference_states = dataframe.iloc[:, range(14, 14+12)].values
 
 data_length = int(len(dataframe["t_sim"]) * 0.95)
 
