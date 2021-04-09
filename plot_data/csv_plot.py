@@ -121,7 +121,7 @@ def plot_file_data(filename):
 	# print(np.sum([data[f"tau_{i}"] * data[f'theta{i}_dot'] for i in range(1, 5)]))
 
 	combined_power = []
-	for i in range(len(data['tau_1'])):
+	for i in range(int(len(data['tau_1']) * 0.95)):
 		combined_power_t = 0
 		for joint_index in range(1, 5):
 			combined_power_t += abs(data[f"tau_{joint_index}"][i] * data[f'theta{joint_index}_dot'][i])
