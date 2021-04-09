@@ -1147,7 +1147,6 @@ void run_mpc() {
 
     struct timespec deadline; // timespec struct for storing time that execution thread should sleep for
 
-    long long iterationsAtLastContact = 0;
     long predicted_contact_swap_iterations = 0;
     bool alternate_flag = false; // Temporary flag for waiting a bit before activating the gait
 
@@ -1296,8 +1295,6 @@ void run_mpc() {
             right_leg->lift_off_pos_mutex.unlock();
             left_leg->lift_off_vel_mutex.unlock();
             right_leg->lift_off_vel_mutex.unlock();
-
-            iterationsAtLastContact = total_iterations;
 
             std::cout << "Contact swap event occured at iterations=" << total_iterations << std::endl;
         }
