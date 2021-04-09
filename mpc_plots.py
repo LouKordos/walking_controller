@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import os
 import numpy as np
 import pandas as pd
+import math
 from more_itertools import numeric_range # Prediction plots
 
 print("Starting plot generation...")
@@ -22,6 +23,7 @@ for name in filenames:
 		print("Invalid parse with filename:", name)
 
 filename = "./plot_data/" + str(largest_index) + "_mpc_log.csv"
+# filename = "./plot_data/699_mpc_log.csv"
 print("filename:", filename)
 
 plot_image_dir = home_dir + "/Pictures/matplotlib_plots/mpc_log/"
@@ -397,6 +399,26 @@ if delay_flag:
 
 # print("Raw data:\n", dataframe)
 
+rms_error_vector = np.zeros((n-1, 1))
+
+actual_states = dataframe.iloc[:, range(1, 1+12)].values # Rows are iterations, columns are states
+reference_states = dataframe.iloc[:, range(13, 13+12)].values
+
+data_length = int(len(dataframe['t']) * 0.95)
+
+for t_index in range(data_length):
+    for state_index in range(n-1):
+        rms_error_vector[state_index] += (reference_states[t_index, state_index] - actual_states[t_index, state_index])**2
+
+rms_error_vector /= data_length
+
+rms_error_vector = [math.sqrt(x) for x in rms_error_vector]
+
+rms_dataframe = pd.DataFrame([tuple(rms_error_vector)], columns=["phi", "theta", "psi", "pos_x", "pos_y", "pos_z", "omega_x", "omega_y", "omega_z", "vel_x", "vel_y", "vel_z"])
+
+print(rms_dataframe)
+
+print("RMS Error Vector:", rms_error_vector)
 
 if show_plots:
     print("Showing plots.")
