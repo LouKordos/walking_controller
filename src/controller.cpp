@@ -1705,7 +1705,6 @@ void run_mpc() {
                     }
                     swap_counter++;
                 }
-
             }
 
             r_x_left = left_leg->foot_pos_world_discretization(0, 0) - pos_x_t;
