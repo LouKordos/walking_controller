@@ -85,7 +85,7 @@ Leg *right_leg;
 
 SimState *simState;
 
-bool first_iteration_flag = false;
+bool first_iteration_flag = false; // Determines whether first MPC iteration is done
 
 // Should be running at 1kHz but communication overhead is adding ~80µS, that's why it's reduced a bit
 static const double state_update_interval = 960.0; // Interval for fetching and parsing the leg state from gazebosim in microseconds
@@ -1884,7 +1884,7 @@ void run_mpc() {
         
         if(total_iterations == 0) {
             first_iteration_flag_mutex.lock();
-            first_iteration_flag = true;
+            first_iteration_flag = true; // First iteration is done
             first_iteration_flag_mutex.unlock();
         }
 
