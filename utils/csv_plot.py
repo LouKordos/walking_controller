@@ -29,6 +29,9 @@ for name in filenames:
 
 filepath_left = "../plot_data/" + str(largest_index) + "_left.csv"
 filepath_right = "../plot_data/" + str(largest_index) + "_right.csv"
+
+# filepath_left =  "../plot_data/701_left.csv"
+# filepath_right =  "../plot_data/701_right.csv"
 print("filepath_left:", filepath_left)
 print("filepath_right:", filepath_right)
 
