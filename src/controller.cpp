@@ -1565,7 +1565,7 @@ void run_mpc() {
         double pos_y_t = 0.0;
         double pos_z_t = 0.0;
 
-        int swap_counter = 0; // Keeping track of contact swaps that have happened during prediction horizon so that only the first contact swap sets next_foot_pos_world_desired
+        bool contact_swap_updated = false; // Is set to true once first contact swap has been found in future contact states.
 
         // Discretization loop for Prediction Horizon
         for(int i = 0; i < N; ++i) {
@@ -1688,24 +1688,23 @@ void run_mpc() {
                 bool swing_left_prev = P_param(0, 1 + N + n * N + m * N + (i - 1) * m);
 
                 // Go to next contact swap in prediction horizon and get desired foot position for trajectory planner. The if + if statement is badly written and should be refactored
-                if(swing_left != swing_left_prev) { 
-                    if(swap_counter < 1) {
-                        left_leg->next_foot_pos_world_desired_mutex.lock();
-                        right_leg->next_foot_pos_world_desired_mutex.lock();
-                        next_body_vel_mutex.lock();
+                if(swing_left != swing_left_prev && !contact_swap_updated) { 
+                    left_leg->next_foot_pos_world_desired_mutex.lock();
+                    right_leg->next_foot_pos_world_desired_mutex.lock();
+                    next_body_vel_mutex.lock();
 
-                        left_leg->next_foot_pos_world_desired = left_leg->foot_pos_world_discretization;
-                        right_leg->next_foot_pos_world_desired = right_leg->foot_pos_world_discretization;
+                    left_leg->next_foot_pos_world_desired = left_leg->foot_pos_world_discretization;
+                    right_leg->next_foot_pos_world_desired = right_leg->foot_pos_world_discretization;
 
-                        next_body_vel = (Eigen::Matrix<double, 3, 1>() << vel_x_t, vel_y_t, vel_z_t).finished();
-                        
-                        left_leg->next_foot_pos_world_desired_mutex.unlock();
-                        right_leg->next_foot_pos_world_desired_mutex.unlock();
-                        next_body_vel_mutex.unlock();
+                    next_body_vel = (Eigen::Matrix<double, 3, 1>() << vel_x_t, vel_y_t, vel_z_t).finished();
+                    
+                    left_leg->next_foot_pos_world_desired_mutex.unlock();
+                    right_leg->next_foot_pos_world_desired_mutex.unlock();
+                    next_body_vel_mutex.unlock();
 
-                        predicted_contact_swap_iterations = total_iterations + i;
-                    }
-                    swap_counter++;
+                    predicted_contact_swap_iterations = total_iterations + i;
+                    
+                    contact_swap_updated = true;
                 }
             }
 
