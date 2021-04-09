@@ -15,7 +15,7 @@ import threading
 
 home_dir = os.environ['HOME']
 
-filenames = os.listdir(home_dir + "/dev/walking_controller/plot_data/")
+filenames = os.listdir("../plot_data/")
 
 largest_index = 0
 
@@ -27,13 +27,14 @@ for name in filenames:
 	except:
 		print("Invalid parse with filename:", name)
 
-filename_left = str(largest_index) + "_left.csv"
-filename_right = str(largest_index) + "_right.csv"
-print("filename_left:", filename_left)
+filepath_left = "../plot_data/" + str(largest_index) + "_left.csv"
+filepath_right = "../plot_data/" + str(largest_index) + "_right.csv"
+print("filepath_left:", filepath_left)
+print("filepath_right:", filepath_right)
 
-def plot_file_data(filename):
+def plot_file_data(filepath):
 
-	data = np.genfromtxt(filename, delimiter=',', skip_header=50,
+	data = np.genfromtxt(filepath, delimiter=',', skip_header=50,
 	     	skip_footer=0, names=['t', 'theta1', 'theta2', 'theta3', 'theta4', 'theta5', 'theta1_dot', 'theta2_dot', 'theta3_dot', 'theta4_dot', 'theta5_dot', 'tau_1', 'tau_2', 'tau_3', 'tau_4', 'tau_5', 'foot_pos_x', 'foot_pos_y', 'foot_pos_z', 'foot_pos_x_desired', 'foot_pos_y_desired', 'foot_pos_z_desired', 'foot_vel_x', 'foot_vel_y', 'foot_vel_z', 'foot_vel_x_desired', 'foot_vel_y_desired', 'foot_vel_z_desired', 'foot_phi', 'foot_theta', 'foot_psi', 'foot_phi_desired', 'foot_theta_desired', 'foot_psi_desired', 'current_trajectory_time'])
 
 	#print(data)
@@ -139,7 +140,7 @@ def plot_file_data(filename):
 
 	print("Finished plotting")
 
-	if('left' in filename):
+	if('left' in filepath):
 		x_pos_fig.savefig(home_dir + '/Pictures/matplotlib_plots/left/foot_pos_x.pdf', dpi=save_dpi, bbox_inches='tight')
 		y_pos_fig.savefig(home_dir + '/Pictures/matplotlib_plots/left/foot_pos_y.pdf', dpi=save_dpi, bbox_inches='tight')
 		z_pos_fig.savefig(home_dir + '/Pictures/matplotlib_plots/left/foot_pos_z.pdf', dpi=save_dpi, bbox_inches='tight')
@@ -165,15 +166,15 @@ def plot_file_data(filename):
 
 	print("Finished saving")
 
-# t1 = threading.Thread(target=plot_file_data, args=(filename_left, )) 
-# t2 = threading.Thread(target=plot_file_data, args=(filename_right,)) 
+# t1 = threading.Thread(target=plot_file_data, args=(filepath_left, )) 
+# t2 = threading.Thread(target=plot_file_data, args=(filepath_right,)) 
 
 # t1.start()
 # t2.start() 
 
 # t1.join()
 # t2.join()
-plot_file_data(filename_left)
-plot_file_data(filename_right)
+plot_file_data(filepath_left)
+plot_file_data(filepath_right)
 
 print("Done.")
