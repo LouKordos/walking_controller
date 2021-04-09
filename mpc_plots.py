@@ -62,7 +62,7 @@ show_plots = False # Determines whether or not plots should be shown interactive
 # Determine params based on logs (logs should eventually include those values)
 N = len(dataframe['X_t'][0].split(";")) - 1
 n = len(dataframe['X_t'][0].split(";")[0].split("|"))
-dt = dataframe['t'][1] - dataframe['t'][0] # Simply subtract two time points
+dt = 1.0/50.0
 print("N:", N)
 print("dt:", dt)
 
