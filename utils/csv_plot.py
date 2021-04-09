@@ -135,7 +135,7 @@ def plot_file_data(filepath):
 
 	print("Average leg power:", np.mean(combined_power), "[W]")
 
-	print("Total energy consumed by leg in", data['t'][-1], "seconds:", np.sum(combined_power) * (1/1000) / 3600, "[Wh]")
+	print("Total energy consumed by leg in", data['t'][-1], "seconds:", np.sum(combined_power) * (1.0/1000.0) / 3600.0, "[Wh]")
 
 	power_ax.plot(data['t'][:data_length], combined_power, label="Combined leg power")
 	plt.legend()
