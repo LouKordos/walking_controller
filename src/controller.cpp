@@ -1125,7 +1125,7 @@ void run_mpc() {
     // Log file
     ofstream data_file;
     data_file.open(plotDataDirPath + filename + "_mpc_log.csv");
-    data_file << "t,phi,theta,psi,pos_x,pos_y,pos_z,omega_x,omega_y,omega_z,vel_x,vel_y,vel_z,"
+    data_file << "t_sim,t_controller,phi,theta,psi,pos_x,pos_y,pos_z,omega_x,omega_y,omega_z,vel_x,vel_y,vel_z,"
                 << "phi_desired,theta_desired,psi_desired,pos_x_desired,pos_y_desired,pos_z_desired,omega_x_desired,omega_y_desired,omega_z_desired,vel_x_desired,vel_y_desired,vel_z_desired,"
                 << "f_x_left,f_y_left,f_z_left,f_x_right,f_y_right,f_z_right,"
                 << "r_x_left,r_y_left,r_z_left,r_x_right,r_y_right,r_z_right,"
@@ -1142,18 +1142,21 @@ void run_mpc() {
                 << "foot_pos_body_frame_desired_x_right,foot_pos_body_frame_desired_y_right,foot_pos_body_frame_desired_z_right,"
                 << "next_foot_pos_world_desired_x_left,next_foot_pos_world_desired_y_left,next_foot_pos_world_desired_z_left,"
                 << "next_foot_pos_world_desired_x_right,next_foot_pos_world_desired_y_right, next_foot_pos_world_desired_z_right,"
-                << "theta_delay_compensation,full_iteration_time,phi_delay_compensation,X_t,U_t,P_param_full" << std::endl; // Add header to csv file
+                << "theta_delay_compensation,full_iteration_time,phi_delay_compensation,predicted_contact_swap_iterations,X_t,U_t,P_param_full,x_lift_off_update,x_trajectory_update" << std::endl; // Add header to csv file
     data_file.close();
 
     struct timespec deadline; // timespec struct for storing time that execution thread should sleep for
 
     long long iterationsAtLastContact = 0;
+    long predicted_contact_swap_iterations = 0;
     bool alternate_flag = false; // Temporary flag for waiting a bit before activating the gait
 
     bool swing_left_debugging = left_leg->swing_phase;
     bool swing_right_debugging = right_leg->swing_phase;
 
-    long predicted_contact_swap_iterations = 0;
+    // Temporary variables for debugging contact planner
+    Eigen::Matrix<double, n, 1> x_lift_off_update = Eigen::ArrayXXd::Zero(n, 1);
+    Eigen::Matrix<double, n, 1> x_trajectory_update = Eigen::ArrayXXd::Zero(n, 1);
 
     while(true) {
         // Loop starts here
@@ -1926,7 +1929,7 @@ void run_mpc() {
         // Log data to csv file
         ofstream data_file;
         data_file.open(plotDataDirPath + filename + "_mpc_log.csv", ios::app); // Open csv file in append mode
-        data_file << get_time(true) << "," << x_t(0, 0) << "," << x_t(1, 0) << "," << x_t(2, 0) << "," << x_t(3, 0) << "," << x_t(4, 0) << "," << x_t(5, 0) << "," << x_t(6, 0) << "," << x_t(7, 0) << "," << x_t(8, 0) << "," << x_t(9, 0) << "," << x_t(10, 0) << "," << x_t(11, 0)
+        data_file << get_time(true) << "," << get_time(false) << "," << x_t(0, 0) << "," << x_t(1, 0) << "," << x_t(2, 0) << "," << x_t(3, 0) << "," << x_t(4, 0) << "," << x_t(5, 0) << "," << x_t(6, 0) << "," << x_t(7, 0) << "," << x_t(8, 0) << "," << x_t(9, 0) << "," << x_t(10, 0) << "," << x_t(11, 0)
                 << "," << phi_desired << "," << theta_desired << "," << psi_desired << "," << pos_x_desired << "," << pos_y_desired << "," << pos_z_desired << "," << omega_x_desired << "," << omega_y_desired << "," << omega_z_desired << "," << vel_x_desired << "," << vel_y_desired << "," << vel_z_desired
                 << "," << u_t(0) << "," << u_t(1) << "," << u_t(2) << "," << u_t(3) << "," << u_t(4) << "," << u_t(5) 
                 << "," << r_x_left << "," << r_y_left << "," << r_z_left
@@ -1944,7 +1947,7 @@ void run_mpc() {
                 << "," << right_leg->foot_trajectory.get_trajectory_pos(1.0 / 3.0)(0, 0) << "," << right_leg->foot_trajectory.get_trajectory_pos(1.0 / 3.0)(1, 0) << "," << right_leg->foot_trajectory.get_trajectory_pos(1.0 / 3.0)(2, 0)
                 << "," << left_leg->next_foot_pos_world_desired(0, 0) << "," << left_leg->next_foot_pos_world_desired(1, 0) << "," << left_leg->next_foot_pos_world_desired(2, 0)
                 << "," << right_leg->next_foot_pos_world_desired(0, 0) << "," << right_leg->next_foot_pos_world_desired(1, 0) << "," << right_leg->next_foot_pos_world_desired(2, 0)
-                << "," << P_param(1, 0) << "," << full_iteration_duration / 1000.0 << "," << solution_variables(n, 0) << ",";
+                << "," << P_param(1, 0) << "," << full_iteration_duration / 1000.0 << "," << solution_variables(n, 0) << "," << predicted_contact_swap_iterations << ",";
 
         next_body_vel_mutex.unlock();
         left_leg->foot_pos_world_desired_mutex.unlock();
@@ -2001,6 +2004,26 @@ void run_mpc() {
         // Log full P_param
         for(int i = 0; i < n; i++) {
             data_file << P_param(i, 0);
+            if (i < n - 1) {
+                data_file << "|";
+            }
+        }
+
+        data_file << ",";
+
+        // Log state used for lift-off position update
+        for(int i = 0; i < n; i++) {
+            data_file << x_lift_off_update(i, 0);
+            if (i < n - 1) {
+                data_file << "|";
+            }
+        }
+
+        data_file << ",";
+
+        // Log state used for trajectory update
+        for(int i = 0; i < n; i++) {
+            data_file << x_trajectory_update(i, 0);
             if (i < n - 1) {
                 data_file << "|";
             }
