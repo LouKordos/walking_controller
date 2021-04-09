@@ -63,9 +63,7 @@ double f_min_z = 0; // Min contact Force in Z direction for MPC constraint, limi
 double f_max_z = 1000; // Max contact Force in Z direction for MPC constraint, limits X and Y forces through friction constraint
 
 static const double m_value = 30.0; // Combined robot mass in kg
-
-const int contact_swap_interval = (int)(1.0/3.0 / dt); // Interval at which the contact swaps from one foot to the other in Samples
-const double t_stance = contact_swap_interval * dt; // Duration that the foot will be in stance phase
+const double t_stance = 1.0/3.0; // Duration that the foot will be in stance phase
 bool alternate_contacts;
 
 static Eigen::Matrix<double, n, 1> x_t = (Eigen::Matrix<double, n, 1>() << 0., 0., 0., 0, 0, 0.8, 0, 0, 0, 0, 0, 0, -9.81).finished();
@@ -1152,9 +1150,6 @@ void run_mpc() {
     long predicted_contact_swap_iterations = 0;
     bool alternate_flag = false; // Temporary flag for waiting a bit before activating the gait
 
-    bool swing_left_debugging = left_leg->swing_phase;
-    bool swing_right_debugging = right_leg->swing_phase;
-
     // Temporary variables for debugging contact planner
     Eigen::Matrix<double, n, 1> x_lift_off_update = Eigen::ArrayXXd::Zero(n, 1);
     Eigen::Matrix<double, n, 1> x_trajectory_update = Eigen::ArrayXXd::Zero(n, 1);
@@ -1163,13 +1158,6 @@ void run_mpc() {
         // Loop starts here
         auto start = high_resolution_clock::now();
         auto start_total = high_resolution_clock::now();
-
-        if(total_iterations == contact_swap_interval - 1) {
-            // alternate_contacts = true;
-            // left_leg->swing_phase = true;
-            // alternate_flag = true;
-            // vel_y_desired = 0.3;
-        }
 
         // while(simState->isPaused() && total_iterations > 3) {
         //     sendto(sockfd, (const char *)"0|0|0|0|0|0|0|0|0|0|0|0", strlen("0|0|0|0|0|0|0|0|0|0|0|0"), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
@@ -1242,16 +1230,6 @@ void run_mpc() {
         temp << "x_t:" << x_t(0, 0) << "," << x_t(1, 0) << "," << x_t(2, 0) << "," << x_t(3, 0) << "," << x_t(4, 0) << "," << x_t(5, 0) << "," << x_t(6, 0) << "," << x_t(7, 0) << "," << x_t(8, 0) << "," << x_t(9, 0) << "," << x_t(10, 0) << "," << x_t(11, 0) << "," << x_t(12, 0);
         log(temp.str(), INFO);
         // print_threadsafe(temp.str(), "mpc_thread", INFO, true);
-
-        if (total_iterations % contact_swap_interval == 0 && alternate_contacts && !simState->isPaused()) {
-            swing_left_debugging = !swing_left_debugging;
-            swing_right_debugging = !swing_right_debugging;
-        }
-
-        ofstream contact_old_file;
-        contact_old_file.open(plotDataDirPath  + filename + "_contact_old.csv", ios::app);
-        contact_old_file << get_time(false) << "," << !swing_left_debugging * 0.1 << "," << !swing_right_debugging * 0.1 << std::endl;
-        contact_old_file.close();
         
         double time = get_time(false) + dt;
 
@@ -1319,13 +1297,6 @@ void run_mpc() {
                     0, 0, 0, 0, 0, !contact_right;
 
             D_vector.block<m, m>(0, k*m) = D_k;
-
-            // if(total_iterations == 0) {
-            //     ofstream contact_phi_file;
-            //     contact_phi_file.open(plotDataDirPath  + filename + "_contact_phi.csv", ios::app);
-            //     contact_phi_file << time + dt * k << "," << phi_predicted_left << "," << contact_left << "," << contact_right << std::endl;
-            //     contact_phi_file.close();
-            // }
         }
 
         // Update P_param
@@ -1490,13 +1461,6 @@ void run_mpc() {
         for(int i = 0; i < N; ++i) {
             // if (vel_x_desired_temp < 0.3) {
             //     vel_x_desired_temp += 0.01;
-            // }
-
-            // if(total_iterations <= contact_swap_interval - 1 && total_iterations + i >= contact_swap_interval - 1) {
-            //     vel_y_desired_temp = 0.3;
-            // }
-            // else {
-            //     vel_y_desired_temp = vel_y_desired;
             // }
             
             // if (vel_y_desired_temp < 0.3) {
@@ -2173,79 +2137,7 @@ int main(int _argc, char **_argv)
     std::cout << "left_leg omega_desired is currently: " << left_leg->omega_desired(0) << ", " << left_leg->omega_desired(1) << ", " << left_leg->omega_desired(2) << std::endl; // Print out current natural frequency
     std::cout << std::endl;
 
-    // std::cout << get_joint_torques((Eigen::Matrix<double, 3, 1>() << 9.27674E-08, 5.15002E-07, 7.39966E-07).finished(), 0.10758, -0.181937, -0.618552, 1.63269, -1.14421, -1.10713, 0.0841922, -0.128379, right_leg->config) << std::endl << std::endl; // 7572 impedance, 378 MPC
-    // std::cout << get_joint_torques((Eigen::Matrix<double, 3, 1>() << 9.27674E-08, 5.15002E-07, 7.39966E-07).finished(), 0.106407, -0.181005, -0.62839, 1.65222, -1.15599, -1.10713, 0.0841922, -0.128379, right_leg->config) << std::endl << std::endl; // 7573 impedance, 378 MPC
-    // std::cout << get_joint_torques((Eigen::Matrix<double, 3, 1>() << 9.27674E-08, 5.15002E-07, 7.39966E-07).finished(), 0.104137, -0.179022, -0.648729, 1.69224, -1.17908, -1.10713, 0.0841922, -0.128379, right_leg->config) << std::endl << std::endl; // 7575 impedance, 378 MPC
-    // std::cout << get_joint_torques((Eigen::Matrix<double, 3, 1>() << 9.27674E-08, 5.15002E-07, 7.39966E-07).finished(), 0.102607, -0.178227, -0.65954, 1.71362, -1.19633, -1.10713, 0.0841922, -0.128379, right_leg->config) << std::endl << std::endl; // 7576 impedance, 378 MPC
-    // std::cout << get_joint_torques((Eigen::Matrix<double, 3, 1>() << 9.27674E-08, 5.15002E-07, 7.39966E-07).finished(), 0.100745, -0.177594, -0.670744, 1.73645, -1.21707, -1.10713, 0.0841922, -0.128379, right_leg->config) << std::endl << std::endl; // 7577 impedance, 378 MPC
-
-    // std::cout << get_joint_torques((Eigen::Matrix<double, 3, 1>() << -8.14568E-05, 0.000151078, 0.000223384).finished(), 0.10758, -0.181937, -0.618552, 1.63269, -1.14421, -1.3905, 0.131733, -0.0464198, right_leg->config) << std::endl << std::endl; // 7572 impedance, 379 MPC
-    // std::cout << get_joint_torques((Eigen::Matrix<double, 3, 1>() << -8.14568E-05, 0.000151078, 0.000223384).finished(), 0.106407, -0.181005, -0.62839, 1.65222, -1.15599, -1.3905, 0.131733, -0.0464198, right_leg->config) << std::endl << std::endl; // 7573 impedance, 379 MPC
-    // std::cout << get_joint_torques((Eigen::Matrix<double, 3, 1>() << -8.14568E-05, 0.000151078, 0.000223384).finished(), 0.104137, -0.179022, -0.648729, 1.69224, -1.17908, -1.3905, 0.131733, -0.0464198, right_leg->config) << std::endl << std::endl; // 7575 impedance, 379 MPC
-    // std::cout << get_joint_torques((Eigen::Matrix<double, 3, 1>() << -8.14568E-05, 0.000151078, 0.000223384).finished(), 0.102607, -0.178227, -0.65954, 1.71362, -1.19633, -1.3905, 0.131733, -0.0464198, right_leg->config) << std::endl << std::endl; // 7576 impedance, 379 MPC
-    // std::cout << get_joint_torques((Eigen::Matrix<double, 3, 1>() << -8.14568E-05, 0.000151078, 0.000223384).finished(), 0.100745, -0.177594, -0.670744, 1.73645, -1.21707, -1.3905, 0.131733, -0.0464198, right_leg->config) << std::endl << std::endl; // 7577 impedance, 379 MPC
-
-    {
-        ofstream contact_phi_file;
-        contact_phi_file.open(plotDataDirPath  + filename + "_contact_phi.csv");
-        contact_phi_file << "t,phi,contact_left,contact_right" << std::endl;
-        contact_phi_file.close();
-    }
-
-    {
-        ofstream contact_old_file;
-        contact_old_file.open(plotDataDirPath  + filename + "_contact_old.csv");
-        contact_old_file << "t,contact_left_old,contact_right_old" << std::endl;
-        contact_old_file.close();
-    }
-    
-    // while(true) {
-    //     if(isTimeSynced()) {
-    //         break;
-    //     }
-    //     else {
-    //         std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    //     }
-    // }
-
-    // long iterations = 0;
-    // while(true) {
-    //     double time = get_time(false);
-    //     double contact_phi_left = get_contact_phase(time);
-    //     double contact_phi_right = contact_phi_left + 0.5;
-        
-    //     std::cout << "contact phi left=" << contact_phi_left << std::endl;
-        
-    //     // if(iterations == 200) {
-    //     //     for(double t = time; t < time + N * dt; t += dt) {
-    //     //         double phi_predicted_left = get_contact_phase(t);
-    //     //         double phi_predicted_right = phi_predicted_left + 0.5;
-    //     //         bool contact_left = get_contact(phi_predicted_left);
-    //     //         bool contact_right = get_contact(phi_predicted_right);
-    //     //         // std::cout << "phi_predicted_left=" << phi_predicted_left << " , contact_left_predicted=" << contact_left << ", contact_right_predicted=" << contact_right << std::endl;
-
-    //     //         ofstream contact_phi_file;
-    //     //         contact_phi_file.open(plotDataDirPath  + filename + "_contact_phi.csv", ios::app);
-    //     //         contact_phi_file << t << "," << phi_predicted_left << "," << contact_left << "," << contact_right << std::endl;
-    //     //         contact_phi_file.close();
-    //     //         std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    //     //     }
-    //     // }
-
-    //     ofstream contact_phi_file;
-    //     contact_phi_file.open(plotDataDirPath  + filename + "_contact_phi.csv", ios::app);
-    //     contact_phi_file << time << "," << contact_phi_left << "," << get_contact(contact_phi_left) << "," << get_contact(contact_phi_right) << std::endl;
-    //     contact_phi_file.close();
-    //     std::this_thread::sleep_for(std::chrono::milliseconds(1));
-
-    //     ++iterations;
-    // }
-
     std::this_thread::sleep_for(std::chrono::hours(6969));
-
-    // while(true) {
-        
-    // }
 
     return 0;
 }
