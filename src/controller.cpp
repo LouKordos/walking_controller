@@ -1915,6 +1915,7 @@ void run_mpc() {
         right_leg->next_foot_pos_world_desired_mutex.lock();
         next_body_vel_mutex.lock();
 
+        // Get rough value without logging duration to have value for logfile.
         auto end_total = high_resolution_clock::now();
         double full_iteration_duration = duration_cast<microseconds> (end_total - start_total).count();
 
@@ -2028,6 +2029,10 @@ void run_mpc() {
 
         data_file << std::endl;
         data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
+        
+        // Update full iteration time after logging
+        end_total = high_resolution_clock::now();
+        full_iteration_duration = duration_cast<microseconds> (end_total - start_total).count();
 
         long long remainder = (dt * 1e+6 - full_iteration_duration) * 1e+3;
         //std::cout << "Remainder: " << remainder << " microseconds" << std::endl;
