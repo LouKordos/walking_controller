@@ -77,13 +77,13 @@ if delay_flag:
     # Euler angles
     delay_angle_fig, delay_angle_axes = plt.subplots(3, figsize=delay_fig_size, dpi=save_dpi)
     
-    delay_angle_axes[0].plot(dataframe["t"], dataframe["phi"], label=r"$\phi$", color=[1.0, 0.0, 1.0], linewidth=linewidth)
-    delay_angle_axes[1].plot(dataframe["t"], dataframe["theta"], label=r"$\theta$", color=[0.5, 0.0, 1.0], linewidth=linewidth)
-    delay_angle_axes[2].plot(dataframe["t"], dataframe["psi"], label=r"$\psi$", color=[0.0, 0.0, 1.0], linewidth=linewidth)
+    delay_angle_axes[0].plot(dataframe["t_sim"], dataframe["phi"], label=r"$\phi$", color=[1.0, 0.0, 1.0], linewidth=linewidth)
+    delay_angle_axes[1].plot(dataframe["t_sim"], dataframe["theta"], label=r"$\theta$", color=[0.5, 0.0, 1.0], linewidth=linewidth)
+    delay_angle_axes[2].plot(dataframe["t_sim"], dataframe["psi"], label=r"$\psi$", color=[0.0, 0.0, 1.0], linewidth=linewidth)
 
-    delay_angle_axes[0].plot(dataframe["t"][1:], [float(x[0]) for x in [state.split("|") for state in dataframe["P_param_full"][:-1]]], label=r"$\phi$-compensated (shifted)", linewidth=linewidth)
-    delay_angle_axes[1].plot(dataframe["t"][1:], [float(x[1]) for x in [state.split("|") for state in dataframe["P_param_full"][:-1]]], label=r"$\theta$-compensated (shifted)", linewidth=linewidth)
-    delay_angle_axes[2].plot(dataframe["t"][1:], [float(x[2]) for x in [state.split("|") for state in dataframe["P_param_full"][:-1]]], label=r"$\psi$-compensated (shifted)", linewidth=linewidth)
+    delay_angle_axes[0].plot(dataframe["t_sim"][1:], [float(x[0]) for x in [state.split("|") for state in dataframe["P_param_full"][:-1]]], label=r"$\phi$-compensated (shifted)", linewidth=linewidth)
+    delay_angle_axes[1].plot(dataframe["t_sim"][1:], [float(x[1]) for x in [state.split("|") for state in dataframe["P_param_full"][:-1]]], label=r"$\theta$-compensated (shifted)", linewidth=linewidth)
+    delay_angle_axes[2].plot(dataframe["t_sim"][1:], [float(x[2]) for x in [state.split("|") for state in dataframe["P_param_full"][:-1]]], label=r"$\psi$-compensated (shifted)", linewidth=linewidth)
 
     delay_angle_axes[0].set_title("Actual Roll vs Delay compensation Roll")
     delay_angle_axes[0].set_ylabel("Phi / Roll [rad]", fontsize=14)
@@ -105,13 +105,13 @@ if delay_flag:
     # Cartesian position 
     delay_pos_fig, delay_pos_axes = plt.subplots(3, figsize=delay_fig_size, dpi=save_dpi)
     
-    delay_pos_axes[0].plot(dataframe["t"], dataframe["pos_x"], label=r"$p_x$", color=[1.0, 0.0, 1.0], linewidth=linewidth)
-    delay_pos_axes[1].plot(dataframe["t"], dataframe["pos_y"], label=r"$p_y$", color=[0.5, 0.0, 1.0], linewidth=linewidth)
-    delay_pos_axes[2].plot(dataframe["t"], dataframe["pos_z"], label=r"$p_z$", color=[0.0, 0.0, 1.0], linewidth=linewidth)
+    delay_pos_axes[0].plot(dataframe["t_sim"], dataframe["pos_x"], label=r"$p_x$", color=[1.0, 0.0, 1.0], linewidth=linewidth)
+    delay_pos_axes[1].plot(dataframe["t_sim"], dataframe["pos_y"], label=r"$p_y$", color=[0.5, 0.0, 1.0], linewidth=linewidth)
+    delay_pos_axes[2].plot(dataframe["t_sim"], dataframe["pos_z"], label=r"$p_z$", color=[0.0, 0.0, 1.0], linewidth=linewidth)
 
-    delay_pos_axes[0].plot(dataframe["t"][1:], [float(x[3]) for x in [state.split("|") for state in dataframe["P_param_full"][:-1]]], label=r"$p_x$-compensated (shifted)", linewidth=linewidth)
-    delay_pos_axes[1].plot(dataframe["t"][1:], [float(x[4]) for x in [state.split("|") for state in dataframe["P_param_full"][:-1]]], label=r"$p_y$-compensated (shifted)", linewidth=linewidth)
-    delay_pos_axes[2].plot(dataframe["t"][1:], [float(x[5]) for x in [state.split("|") for state in dataframe["P_param_full"][:-1]]], label=r"$p_z$-compensated (shifted)", linewidth=linewidth)
+    delay_pos_axes[0].plot(dataframe["t_sim"][1:], [float(x[3]) for x in [state.split("|") for state in dataframe["P_param_full"][:-1]]], label=r"$p_x$-compensated (shifted)", linewidth=linewidth)
+    delay_pos_axes[1].plot(dataframe["t_sim"][1:], [float(x[4]) for x in [state.split("|") for state in dataframe["P_param_full"][:-1]]], label=r"$p_y$-compensated (shifted)", linewidth=linewidth)
+    delay_pos_axes[2].plot(dataframe["t_sim"][1:], [float(x[5]) for x in [state.split("|") for state in dataframe["P_param_full"][:-1]]], label=r"$p_z$-compensated (shifted)", linewidth=linewidth)
 
     delay_pos_axes[0].set_title("Actual X Position vs Delay compensation X Position")
     delay_pos_axes[0].set_ylabel("Pos X [m]", fontsize=14)
@@ -133,13 +133,13 @@ if delay_flag:
     # Angular velocities
     delay_angular_vel_fig, delay_angular_vel_axes = plt.subplots(3, figsize=delay_fig_size, dpi=save_dpi)
     
-    delay_angular_vel_axes[0].plot(dataframe["t"], dataframe["omega_x"], label=r"$\omega_x$", color=[1.0, 0.0, 1.0], linewidth=linewidth)
-    delay_angular_vel_axes[1].plot(dataframe["t"], dataframe["omega_y"], label=r"$\omega_y$", color=[0.5, 0.0, 1.0], linewidth=linewidth)
-    delay_angular_vel_axes[2].plot(dataframe["t"], dataframe["omega_z"], label=r"$\omega_z$", color=[0.0, 0.0, 1.0], linewidth=linewidth)
+    delay_angular_vel_axes[0].plot(dataframe["t_sim"], dataframe["omega_x"], label=r"$\omega_x$", color=[1.0, 0.0, 1.0], linewidth=linewidth)
+    delay_angular_vel_axes[1].plot(dataframe["t_sim"], dataframe["omega_y"], label=r"$\omega_y$", color=[0.5, 0.0, 1.0], linewidth=linewidth)
+    delay_angular_vel_axes[2].plot(dataframe["t_sim"], dataframe["omega_z"], label=r"$\omega_z$", color=[0.0, 0.0, 1.0], linewidth=linewidth)
 
-    delay_angular_vel_axes[0].plot(dataframe["t"][1:], [float(x[6]) for x in [state.split("|") for state in dataframe["P_param_full"][:-1]]], label=r"$\omega_x$-compensated (shifted)", linewidth=linewidth)
-    delay_angular_vel_axes[1].plot(dataframe["t"][1:], [float(x[7]) for x in [state.split("|") for state in dataframe["P_param_full"][:-1]]], label=r"$\omega_y$-compensated (shifted)", linewidth=linewidth)
-    delay_angular_vel_axes[2].plot(dataframe["t"][1:], [float(x[8]) for x in [state.split("|") for state in dataframe["P_param_full"][:-1]]], label=r"$\omega_z$-compensated (shifted)", linewidth=linewidth)
+    delay_angular_vel_axes[0].plot(dataframe["t_sim"][1:], [float(x[6]) for x in [state.split("|") for state in dataframe["P_param_full"][:-1]]], label=r"$\omega_x$-compensated (shifted)", linewidth=linewidth)
+    delay_angular_vel_axes[1].plot(dataframe["t_sim"][1:], [float(x[7]) for x in [state.split("|") for state in dataframe["P_param_full"][:-1]]], label=r"$\omega_y$-compensated (shifted)", linewidth=linewidth)
+    delay_angular_vel_axes[2].plot(dataframe["t_sim"][1:], [float(x[8]) for x in [state.split("|") for state in dataframe["P_param_full"][:-1]]], label=r"$\omega_z$-compensated (shifted)", linewidth=linewidth)
 
     delay_angular_vel_axes[0].set_title("Actual X Angular Velocity vs Delay compensation X Angular Velocity")
     delay_angular_vel_axes[0].set_ylabel("Omega X [rad/s]", fontsize=14)
@@ -162,13 +162,13 @@ if delay_flag:
     # Cartesian velocities
     delay_cartesian_vel_fig, delay_cartesian_vel_axes = plt.subplots(3, figsize=delay_fig_size, dpi=save_dpi)
     
-    delay_cartesian_vel_axes[0].plot(dataframe["t"], dataframe["vel_x"], label=r"$vel_x$", color=[1.0, 0.0, 1.0], linewidth=linewidth)
-    delay_cartesian_vel_axes[1].plot(dataframe["t"], dataframe["vel_y"], label=r"$vel_y$", color=[0.5, 0.0, 1.0], linewidth=linewidth)
-    delay_cartesian_vel_axes[2].plot(dataframe["t"], dataframe["vel_z"], label=r"$vel_z$", color=[0.0, 0.0, 1.0], linewidth=linewidth)
+    delay_cartesian_vel_axes[0].plot(dataframe["t_sim"], dataframe["vel_x"], label=r"$vel_x$", color=[1.0, 0.0, 1.0], linewidth=linewidth)
+    delay_cartesian_vel_axes[1].plot(dataframe["t_sim"], dataframe["vel_y"], label=r"$vel_y$", color=[0.5, 0.0, 1.0], linewidth=linewidth)
+    delay_cartesian_vel_axes[2].plot(dataframe["t_sim"], dataframe["vel_z"], label=r"$vel_z$", color=[0.0, 0.0, 1.0], linewidth=linewidth)
 
-    delay_cartesian_vel_axes[0].plot(dataframe["t"][1:], [float(x[9]) for x in [state.split("|") for state in dataframe["P_param_full"][:-1]]], label=r"$vel_x$-compensated (shifted)", linewidth=linewidth)
-    delay_cartesian_vel_axes[1].plot(dataframe["t"][1:], [float(x[10]) for x in [state.split("|") for state in dataframe["P_param_full"][:-1]]], label=r"$vel_y$-compensated (shifted)", linewidth=linewidth)
-    delay_cartesian_vel_axes[2].plot(dataframe["t"][1:], [float(x[11]) for x in [state.split("|") for state in dataframe["P_param_full"][:-1]]], label=r"$vel_z$-compensated (shifted)", linewidth=linewidth)
+    delay_cartesian_vel_axes[0].plot(dataframe["t_sim"][1:], [float(x[9]) for x in [state.split("|") for state in dataframe["P_param_full"][:-1]]], label=r"$vel_x$-compensated (shifted)", linewidth=linewidth)
+    delay_cartesian_vel_axes[1].plot(dataframe["t_sim"][1:], [float(x[10]) for x in [state.split("|") for state in dataframe["P_param_full"][:-1]]], label=r"$vel_y$-compensated (shifted)", linewidth=linewidth)
+    delay_cartesian_vel_axes[2].plot(dataframe["t_sim"][1:], [float(x[11]) for x in [state.split("|") for state in dataframe["P_param_full"][:-1]]], label=r"$vel_z$-compensated (shifted)", linewidth=linewidth)
 
     delay_cartesian_vel_axes[0].set_title("Actual X Cartesian Velocity vs Delay compensation X Cartesian Velocity")
     delay_cartesian_vel_axes[0].set_ylabel("Vel X [m/s]", fontsize=14)
@@ -192,11 +192,11 @@ else:
 
 print("Generating angle plots...")
 
-angle_ax.plot(dataframe['t'], dataframe["psi_desired"], label=r"$\phi$-,$\theta$-,$\psi$-desired", color="black", linewidth=linewidth)
+angle_ax.plot(dataframe["t_sim"], dataframe["psi_desired"], label=r"$\phi$-,$\theta$-,$\psi$-desired", color="black", linewidth=linewidth)
 
-angle_ax.plot(dataframe['t'], dataframe["phi"], label=r"$\phi$", color=[1.0, 0.0, 1.0], linewidth=linewidth)
-angle_ax.plot(dataframe['t'], dataframe["theta"], label=r"$\theta$", color=[0.5, 0.0, 1.0], linewidth=linewidth)
-angle_ax.plot(dataframe['t'], dataframe["psi"], label=r"$\psi$", color=[0.0, 0.0, 1.0], linewidth=linewidth)
+angle_ax.plot(dataframe["t_sim"], dataframe["phi"], label=r"$\phi$", color=[1.0, 0.0, 1.0], linewidth=linewidth)
+angle_ax.plot(dataframe["t_sim"], dataframe["theta"], label=r"$\theta$", color=[0.5, 0.0, 1.0], linewidth=linewidth)
+angle_ax.plot(dataframe["t_sim"], dataframe["psi"], label=r"$\psi$", color=[0.0, 0.0, 1.0], linewidth=linewidth)
 
 angle_ax.set_title("Euler Angles in World Frame")
 angle_ax.set_ylabel("Euler Angles [rad]", fontsize=14)
@@ -213,10 +213,10 @@ if generate_prediction_plots:
     phi_fig = plt.figure(figsize=angle_fig_size, dpi=save_dpi)
     phi_ax = phi_fig.add_subplot(111)
 
-    phi_ax.plot(dataframe['t'], dataframe["phi_desired"], label=r"$\phi$-desired", color="black", linewidth=linewidth)
-    phi_ax.plot(dataframe['t'], dataframe["phi"], label=r"$\phi$", color=[1.0, 0.0, 1.0], linewidth=linewidth)
+    phi_ax.plot(dataframe["t_sim"], dataframe["phi_desired"], label=r"$\phi$-desired", color="black", linewidth=linewidth)
+    phi_ax.plot(dataframe["t_sim"], dataframe["phi"], label=r"$\phi$", color=[1.0, 0.0, 1.0], linewidth=linewidth)
 
-    for i in range(0, len(dataframe['t'])):
+    for i in range(0, len(dataframe["t_sim"])):
         if i % plot_every_predicted == 0:
             X_t_raw = dataframe['X_t'][i].split(";")
             X_t = []
@@ -226,9 +226,9 @@ if generate_prediction_plots:
 
             X_t = [item for sublist in X_t for item in sublist] # Flatten
             if delay_flag:
-                phi_ax.plot(tuple(numeric_range(dataframe['t'][i] - dt, dataframe['t'][i] - dt + (N + 1) * dt, dt)), X_t[0::n], linewidth=linewidth * 0.75, linestyle='--')
+                phi_ax.plot(tuple(numeric_range(dataframe["t_sim"][i] - dt, dataframe["t_sim"][i] - dt + (N + 1) * dt, dt)), X_t[0::n], linewidth=linewidth * 0.75, linestyle='--')
             else:
-                phi_ax.plot(tuple(numeric_range(dataframe['t'][i], dataframe['t'][i] + (N + 1) * dt, dt)), X_t[0::n], linewidth=linewidth * 0.75, linestyle='--')
+                phi_ax.plot(tuple(numeric_range(dataframe["t_sim"][i], dataframe["t_sim"][i] + (N + 1) * dt, dt)), X_t[0::n], linewidth=linewidth * 0.75, linestyle='--')
 
 
     phi_ax.set_title("Phi (Roll) vs predicted Phi (Roll) in World Frame")
@@ -245,10 +245,10 @@ if generate_prediction_plots:
     theta_fig = plt.figure(figsize=angle_fig_size, dpi=save_dpi)
     theta_ax = theta_fig.add_subplot(111)
 
-    theta_ax.plot(dataframe['t'], dataframe["theta_desired"], label=r"$\theta$-desired", color="black", linewidth=linewidth)
-    theta_ax.plot(dataframe['t'], dataframe["theta"], label=r"$\theta$", color=[1.0, 0.0, 1.0], linewidth=linewidth)
+    theta_ax.plot(dataframe["t_sim"], dataframe["theta_desired"], label=r"$\theta$-desired", color="black", linewidth=linewidth)
+    theta_ax.plot(dataframe["t_sim"], dataframe["theta"], label=r"$\theta$", color=[1.0, 0.0, 1.0], linewidth=linewidth)
 
-    for i in range(0, len(dataframe['t'])):
+    for i in range(0, len(dataframe["t_sim"])):
         if i % plot_every_predicted == 0:
             X_t_raw = dataframe['X_t'][i].split(";")
             X_t = []
@@ -258,9 +258,9 @@ if generate_prediction_plots:
 
             X_t = [item for sublist in X_t for item in sublist] # Flatten
             if delay_flag:
-                theta_ax.plot(tuple(numeric_range(dataframe['t'][i] - dt, dataframe['t'][i] - dt + (N + 1) * dt, dt)), X_t[1::n], linewidth=linewidth * 0.75, linestyle='--')
+                theta_ax.plot(tuple(numeric_range(dataframe["t_sim"][i] - dt, dataframe["t_sim"][i] - dt + (N + 1) * dt, dt)), X_t[1::n], linewidth=linewidth * 0.75, linestyle='--')
             else:
-                theta_ax.plot(tuple(numeric_range(dataframe['t'][i], dataframe['t'][i]+ (N + 1) * dt, dt)), X_t[1::n], linewidth=linewidth * 0.75, linestyle='--')
+                theta_ax.plot(tuple(numeric_range(dataframe["t_sim"][i], dataframe["t_sim"][i]+ (N + 1) * dt, dt)), X_t[1::n], linewidth=linewidth * 0.75, linestyle='--')
 
     theta_ax.set_title("Theta (Pitch) vs predicted Theta (Pitch) in World Frame")
     theta_ax.set_ylabel("Theta (Pitch) [rad]", fontsize=14)
@@ -276,10 +276,10 @@ if generate_prediction_plots:
     psi_fig = plt.figure(figsize=angle_fig_size, dpi=save_dpi)
     psi_ax = psi_fig.add_subplot(111)
 
-    psi_ax.plot(dataframe['t'], dataframe["psi_desired"], label=r"$\psi$-desired", color="black", linewidth=linewidth)
-    psi_ax.plot(dataframe['t'], dataframe["psi"], label=r"$\psi$", color=[1.0, 0.0, 1.0], linewidth=linewidth)
+    psi_ax.plot(dataframe["t_sim"], dataframe["psi_desired"], label=r"$\psi$-desired", color="black", linewidth=linewidth)
+    psi_ax.plot(dataframe["t_sim"], dataframe["psi"], label=r"$\psi$", color=[1.0, 0.0, 1.0], linewidth=linewidth)
 
-    for i in range(0, len(dataframe['t'])):
+    for i in range(0, len(dataframe["t_sim"])):
         if i % plot_every_predicted == 0:
             X_t_raw = dataframe['X_t'][i].split(";")
             X_t = []
@@ -289,9 +289,9 @@ if generate_prediction_plots:
 
             X_t = [item for sublist in X_t for item in sublist] # Flatten
             if delay_flag:
-                psi_ax.plot(tuple(numeric_range(dataframe['t'][i] - dt, dataframe['t'][i] - dt + (N + 1) * dt, dt)), X_t[2::n], linewidth=linewidth * 0.75, linestyle='--')
+                psi_ax.plot(tuple(numeric_range(dataframe["t_sim"][i] - dt, dataframe["t_sim"][i] - dt + (N + 1) * dt, dt)), X_t[2::n], linewidth=linewidth * 0.75, linestyle='--')
             else:
-                psi_ax.plot(tuple(numeric_range(dataframe['t'][i], dataframe['t'][i] + (N + 1) * dt, dt)), X_t[2::n], linewidth=linewidth * 0.75, linestyle='--')
+                psi_ax.plot(tuple(numeric_range(dataframe["t_sim"][i], dataframe["t_sim"][i] + (N + 1) * dt, dt)), X_t[2::n], linewidth=linewidth * 0.75, linestyle='--')
 
     psi_ax.set_title("Psi (Yaw) vs predicted Psi (Yaw) in World Frame")
     psi_ax.set_ylabel("Psi (Yaw) [rad]", fontsize=14)
@@ -311,19 +311,19 @@ print("Generating position plot...")
 
 pos_fig, (pos_ax1, pos_ax2) = plt.subplots(2, 1, sharex=True, figsize=pos_fig_size, dpi=save_dpi)
 
-pos_ax1.plot(dataframe['t'], dataframe["pos_x_desired"], color=[0.0, 0.5, 1.0], linewidth=linewidth)
-pos_ax1.plot(dataframe['t'], dataframe["pos_z_desired"], label=r"$p_{{z}_{desired}}$", color=[0.3, 0.3, 0.3], linewidth=linewidth)
+pos_ax1.plot(dataframe["t_sim"], dataframe["pos_x_desired"], color=[0.0, 0.5, 1.0], linewidth=linewidth)
+pos_ax1.plot(dataframe["t_sim"], dataframe["pos_z_desired"], label=r"$p_{{z}_{desired}}$", color=[0.3, 0.3, 0.3], linewidth=linewidth)
 
-pos_ax2.plot(dataframe['t'], dataframe["pos_x_desired"], label=r"$p_{{x,y}_{desired}}$", color="black", linewidth=linewidth)
-pos_ax2.plot(dataframe['t'], dataframe["pos_z_desired"], color=[0.3, 0.3, 0.3], linewidth=linewidth)
+pos_ax2.plot(dataframe["t_sim"], dataframe["pos_x_desired"], label=r"$p_{{x,y}_{desired}}$", color="black", linewidth=linewidth)
+pos_ax2.plot(dataframe["t_sim"], dataframe["pos_z_desired"], color=[0.3, 0.3, 0.3], linewidth=linewidth)
 
-pos_ax1.plot(dataframe['t'], dataframe["pos_x"], color=[1.0, 0.0, 1.0], linewidth=linewidth)
-pos_ax1.plot(dataframe['t'], dataframe["pos_y"], color=[0.5, 0.0, 1.0], linewidth=linewidth)
-pos_ax1.plot(dataframe['t'], dataframe["pos_z"], label=r"$p_z$", color=[0.0, 0.0, 1.0], linewidth=linewidth)
+pos_ax1.plot(dataframe["t_sim"], dataframe["pos_x"], color=[1.0, 0.0, 1.0], linewidth=linewidth)
+pos_ax1.plot(dataframe["t_sim"], dataframe["pos_y"], color=[0.5, 0.0, 1.0], linewidth=linewidth)
+pos_ax1.plot(dataframe["t_sim"], dataframe["pos_z"], label=r"$p_z$", color=[0.0, 0.0, 1.0], linewidth=linewidth)
 
-pos_ax2.plot(dataframe['t'], dataframe["pos_x"], color=[1.0, 0.0, 1.0], label=r"$p_x$", linewidth=linewidth)
-pos_ax2.plot(dataframe['t'], dataframe["pos_y"], color=[0.5, 0.0, 1.0], label=r"$p_y$", linewidth=linewidth)
-pos_ax2.plot(dataframe['t'], dataframe["pos_z"], color=[0.0, 0.0, 1.0], linewidth=linewidth)
+pos_ax2.plot(dataframe["t_sim"], dataframe["pos_x"], color=[1.0, 0.0, 1.0], label=r"$p_x$", linewidth=linewidth)
+pos_ax2.plot(dataframe["t_sim"], dataframe["pos_y"], color=[0.5, 0.0, 1.0], label=r"$p_y$", linewidth=linewidth)
+pos_ax2.plot(dataframe["t_sim"], dataframe["pos_z"], color=[0.0, 0.0, 1.0], linewidth=linewidth)
 
 pos_ax1.set_title("Cartesian Position in World Frame")
 pos_ax2.set_ylabel("Position [m]", fontsize=14)
@@ -360,13 +360,13 @@ print("Generating reaction force plot...")
 force_fig = plt.figure(figsize=force_fig_size, dpi=save_dpi)
 force_ax = force_fig.add_subplot(111)
 
-force_ax.plot(dataframe['t'], dataframe["f_x_left"], label=r"$f_{{left}_x}$", color=[1.0, 0.0, 1.0], linewidth=linewidth)
-force_ax.plot(dataframe['t'], dataframe["f_y_left"], label=r"$f_{{left}_y}$", color=[0.5, 0.0, 1.0], linewidth=linewidth)
-force_ax.plot(dataframe['t'], dataframe["f_z_left"], label=r"$f_{{left}_z}$", color=[0.0, 0.0, 1.0], linewidth=linewidth)
+force_ax.plot(dataframe["t_sim"], dataframe["f_x_left"], label=r"$f_{{left}_x}$", color=[1.0, 0.0, 1.0], linewidth=linewidth)
+force_ax.plot(dataframe["t_sim"], dataframe["f_y_left"], label=r"$f_{{left}_y}$", color=[0.5, 0.0, 1.0], linewidth=linewidth)
+force_ax.plot(dataframe["t_sim"], dataframe["f_z_left"], label=r"$f_{{left}_z}$", color=[0.0, 0.0, 1.0], linewidth=linewidth)
 
-force_ax.plot(dataframe['t'], dataframe["f_x_right"], label=r"$f_{{right}_x}$", color=[0.0, 0.5, 1.0], linewidth=linewidth)
-force_ax.plot(dataframe['t'], dataframe["f_y_right"], label=r"$f_{{right}_y}$", color=[0.0, 1.0, 1.0], linewidth=linewidth)
-force_ax.plot(dataframe['t'], dataframe["f_z_right"], label=r"$f_{{right}_z}$", color=[0.3, 0.3, 0.3], linewidth=linewidth)
+force_ax.plot(dataframe["t_sim"], dataframe["f_x_right"], label=r"$f_{{right}_x}$", color=[0.0, 0.5, 1.0], linewidth=linewidth)
+force_ax.plot(dataframe["t_sim"], dataframe["f_y_right"], label=r"$f_{{right}_y}$", color=[0.0, 1.0, 1.0], linewidth=linewidth)
+force_ax.plot(dataframe["t_sim"], dataframe["f_z_right"], label=r"$f_{{right}_z}$", color=[0.3, 0.3, 0.3], linewidth=linewidth)
 
 force_ax.set_title("Contact Forces in World Frame")
 force_ax.set_ylabel("Forces [N]", fontsize=14)
@@ -404,7 +404,7 @@ rms_error_vector = np.zeros((n-1, 1))
 actual_states = dataframe.iloc[:, range(1, 1+12)].values # Rows are iterations, columns are states
 reference_states = dataframe.iloc[:, range(13, 13+12)].values
 
-data_length = int(len(dataframe['t']) * 0.95)
+data_length = int(len(dataframe["t_sim"]) * 0.95)
 
 for t_index in range(data_length):
     for state_index in range(n-1):
