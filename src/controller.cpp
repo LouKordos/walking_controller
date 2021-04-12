@@ -941,7 +941,7 @@ void run_mpc() {
     ipopt_opts["acceptable_tol"] = 1e-7;
     ipopt_opts["acceptable_obj_change_tol"] = 1e-5;
     ipopt_opts["linear_solver"] = "ma27";
-
+    
     opts["print_time"] = 0;
     opts["ipopt"] = ipopt_opts;
     opts["expand"] = false;
