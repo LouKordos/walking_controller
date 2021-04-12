@@ -322,7 +322,7 @@ void calculate_left_leg_torques() {
 
         std::vector<std::string> state = split_string(raw_state, '|'); // Split raw state message by message delimiter to parse individual elements
 
-        if(static_cast<int>(state.size()) >= 9) { // Check if message is complete. TODO: Add unique character to end of message for extra check
+        if(static_cast<int>(state.size()) >= 9 + n) { // Check if message is complete. TODO: Add unique character to end of message for extra check
 
             // Convert individual string elements to float
             theta1 = atof(state[0].c_str());
@@ -572,7 +572,7 @@ void calculate_right_leg_torques() {
 
         std::vector<std::string> state = split_string(raw_state, '|'); // Split raw state message by message delimiter to parse individual elements
 
-        if(static_cast<int>(state.size()) >= 9) { // Check if message is complete. TODO: Add unique character to end of message for extra check
+        if(static_cast<int>(state.size()) >= 9 + n) { // Check if message is complete. TODO: Add unique character to end of message for extra check
 
             // Convert individual string elements to float
             theta1 = atof(state[0].c_str());
