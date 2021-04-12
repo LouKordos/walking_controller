@@ -321,18 +321,6 @@ void calculate_left_leg_torques() {
         Eigen::Matrix<double, n, 1> x = x_t;
         x_mutex.unlock();
 
-        double phi_com = x(0, 0);
-        double theta_com = x(1, 0);
-        double psi_com = x(2, 0);
-
-        double pos_x_com = x(3, 0);
-        double pos_y_com = x(4, 0);
-        double pos_z_com = x(5, 0);
-
-        double vel_x_com = x(9, 0);
-        double vel_y_com = x(10, 0);
-        double vel_z_com = x(11, 0);
-
         msg_length = recvfrom(sockfd, (char *)buffer, udp_buffer_size, 0, ( struct sockaddr *) &cliaddr, &len); // Receive message over UDP containing full leg state
         buffer[msg_length] = '\0'; // Add string ending delimiter to end of string (n is length of message)
 
@@ -381,20 +369,6 @@ void calculate_left_leg_torques() {
 
         // If swing, leg trajectory should be followed, if not, foot is in contact with the ground and MPC forces should be converted into torques and applied
         if(left_leg->swing_phase /*&& !left_leg->contactState.hasContact()*/) {
-            
-            // left_leg->pos_desired << 0, 0, 0.1*sin(16*get_time()) - 0.95, 0, 0;
-            // left_leg->vel_desired << 0, 0, 1.6*cos(16*get_time()), 0, 0;
-            // left_leg->accel_desired << 0, 0, -25.6*sin(16*get_time());
-
-            // left_leg->pos_desired << 0, 0, -1, 0, 0;
-            // left_leg->vel_desired << 0, 0, 0, 0, 0;
-            // left_leg->accel_desired << 0, 0, 0;
-            
-            //TODO: Maybe rework to only use q and q_dot
-
-            // std::cout << "q: " << left_leg->q << std::endl;
-            // std::cout << "q_dot: " << left_leg->q_dot << std::endl;
-            
             left_leg->trajectory_start_time_mutex.lock();
             double current_trajectory_time = get_time(false) - left_leg->trajectory_start_time;
 
@@ -414,25 +388,10 @@ void calculate_left_leg_torques() {
             left_leg->pos_desired << (left_leg->H_hip_body.inverse() * (Eigen::Matrix<double, 4, 1>() << left_leg->foot_trajectory.get_trajectory_pos(current_trajectory_time), 1).finished()).block<3, 1>(0, 0), 0, 0;
             left_leg->vel_desired << left_leg->foot_trajectory.get_trajectory_vel(current_trajectory_time), 0, 0;
             left_leg->accel_desired << left_leg->foot_trajectory.get_trajectory_accel(current_trajectory_time);
-            
-            // stringstream temp;
-            // temp << "current_traj_time: " << current_trajectory_time
-            //      << "\nfoot_pos_desired: " << left_leg->pos_desired(0, 0) << "," << left_leg->pos_desired(1, 0) << "," << left_leg->pos_desired(2, 0)
-            //      << "\nfoot_pos_actual: " << left_leg->foot_pos(0, 0) << "," << left_leg->foot_pos(1, 0) << "," << left_leg->foot_pos(2, 0);
-
-            // print_threadsafe(temp.str(), "left_leg_torque_thread", INFO);
 
             left_leg->foot_trajectory_mutex.unlock();
 
             left_leg->update_torque_setpoint();
-
-            // for(int i = 0; i < 5; ++i) {
-            //     left_leg->tau_setpoint(i, 0) = 0;
-            // }
-
-            // temp.str(std::string());
-            // temp << left_leg->tau_setpoint;
-            // print_threadsafe(temp.str(), "tau_setpoint_left_leg in stance phase", INFO);
         }
         else {
             // IMPORTANT AND DANGEROUS MISTAKE: WHEN COPYING LEFT_LEG CODE AND REPLACING ALL LEFT WITH RIGHT, INDEX IS NOT CHANGED AND LEFT LEG TORQUES WILL BE USED FOR BOTH LEGS
@@ -610,18 +569,6 @@ void calculate_right_leg_torques() {
         Eigen::Matrix<double, n, 1> x = x_t;
         x_mutex.unlock();
 
-        double phi_com = x(0, 0);
-        double theta_com = x(1, 0);
-        double psi_com = x(2, 0);
-
-        double pos_x_com = x(3, 0);
-        double pos_y_com = x(4, 0);
-        double pos_z_com = x(5, 0);
-
-        double vel_x_com = x(9, 0);
-        double vel_y_com = x(10, 0);
-        double vel_z_com = x(11, 0);
-
         msg_length = recvfrom(sockfd, (char *)buffer, udp_buffer_size, 0, ( struct sockaddr *) &cliaddr, &len); // Receive message over UDP containing full leg state
         buffer[msg_length] = '\0'; // Add string ending delimiter to end of string (n is length of message)
 
@@ -671,18 +618,6 @@ void calculate_right_leg_torques() {
 
         // If swing, leg trajectory should be followed, if not, foot is in contact with the ground and MPC forces should be converted into torques and applied
         if(right_leg->swing_phase /*&& !right_leg->contactState.hasContact()*/) {
-            
-            // right_leg->pos_desired << 0, 0, 0.1*sin(16*get_time()) - 0.95, 0, 0;
-            // right_leg->vel_desired << 0, 0, 1.6*cos(16*get_time()), 0, 0;
-            // right_leg->accel_desired << 0, 0, -25.6*sin(16*get_time());
-
-            // right_leg->pos_desired << 0, 0, -1, 0, 0;
-            // right_leg->vel_desired << 0, 0, 0, 0, 0;
-            // right_leg->accel_desired << 0, 0, 0;
-
-            // std::cout << "q: " << right_leg->q << std::endl;
-            // std::cout << "q_dot: " << right_leg->q_dot << std::endl;
-            
             right_leg->trajectory_start_time_mutex.lock();
             double current_trajectory_time = get_time(false) - right_leg->trajectory_start_time;
 
@@ -702,25 +637,10 @@ void calculate_right_leg_torques() {
             right_leg->pos_desired << (right_leg->H_hip_body.inverse() * (Eigen::Matrix<double, 4, 1>() << right_leg->foot_trajectory.get_trajectory_pos(current_trajectory_time), 1).finished()).block<3, 1>(0, 0), 0, 0;
             right_leg->vel_desired << right_leg->foot_trajectory.get_trajectory_vel(current_trajectory_time), 0, 0;
             right_leg->accel_desired << right_leg->foot_trajectory.get_trajectory_accel(current_trajectory_time);
-            
-            // stringstream temp;
-            // temp << "current_traj_time: " << current_trajectory_time
-            //      << "\nfoot_pos_desired: " << right_leg->pos_desired(0, 0) << "," << right_leg->pos_desired(1, 0) << "," << right_leg->pos_desired(2, 0)
-            //      << "\nfoot_pos_actual: " << right_leg->foot_pos(0, 0) << "," << right_leg->foot_pos(1, 0) << "," << right_leg->foot_pos(2, 0);
-
-            // print_threadsafe(temp.str(), "right_leg_torque_thread", INFO);
 
             right_leg->foot_trajectory_mutex.unlock();
 
             right_leg->update_torque_setpoint();
-
-            // for(int i = 0; i < 5; ++i) {
-            //     right_leg->tau_setpoint(i, 0) = 0;
-            // }
-
-            // temp.str(std::string());
-            // temp << right_leg->tau_setpoint;
-            // print_threadsafe(temp.str(), "tau_setpoint_right_leg in stance phase", INFO);
         }
         else {
             // IMPORTANT AND DANGEROUS MISTAKE: WHEN COPYING LEFT_LEG CODE AND REPLACING ALL LEFT WITH RIGHT, INDEX IS NOT CHANGED AND LEFT LEG TORQUES WILL BE USED FOR BOTH LEGS
