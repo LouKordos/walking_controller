@@ -313,13 +313,7 @@ void calculate_left_leg_torques() {
         double theta4_dot = 0;
         double theta5_dot = 0;
 
-        u_mutex.lock();
-        Eigen::Matrix<double, m, 1> u = u_t;
-        u_mutex.unlock();
-
-        x_mutex.lock();
-        Eigen::Matrix<double, n, 1> x = x_t;
-        x_mutex.unlock();
+        Eigen::Matrix<double, n, 1> x = Eigen::ArrayXXd::Zero(n, 1);
 
         msg_length = recvfrom(sockfd, (char *)buffer, udp_buffer_size, 0, ( struct sockaddr *) &cliaddr, &len); // Receive message over UDP containing full leg state
         buffer[msg_length] = '\0'; // Add string ending delimiter to end of string (n is length of message)
@@ -363,6 +357,10 @@ void calculate_left_leg_torques() {
             left_leg->theta3dot = theta3_dot;
             left_leg->theta4dot = theta4_dot;
             left_leg->theta5dot = theta5_dot;
+            
+            for(int i = 0; i < n; ++i) {
+                x(i, 0) = atof(state[i + 10].c_str());
+            }
         }
         // Update no matter the gait phase to keep foot state updated
         left_leg->update();
@@ -396,14 +394,18 @@ void calculate_left_leg_torques() {
         else {
             // IMPORTANT AND DANGEROUS MISTAKE: WHEN COPYING LEFT_LEG CODE AND REPLACING ALL LEFT WITH RIGHT, INDEX IS NOT CHANGED AND LEFT LEG TORQUES WILL BE USED FOR BOTH LEGS
             // left_leg->tau_setpoint = Eigen::ArrayXd::Zero(5, 1);
+
+            u_mutex.lock();
+            Eigen::Matrix<double, m, 1> u = u_t;
+            u_mutex.unlock();
             
             /*"t,iteration,theta1,theta2,theta3,theta4,theta5,f_x,f_y,f_z,phi,theta,psi"*/
             ofstream torque_function_file;
             torque_function_file.open(plotDataDirPath  + filename + "_torque_function_left.csv", ios::app);
             torque_function_file << get_time(true) << "," << iteration_counter << "," << left_leg->theta1 << "," << left_leg->theta2 << "," << left_leg->theta3 << "," << left_leg->theta4 << "," << left_leg->theta5
-                                    << "," << -u_t(3, 0) << "," << -u_t(4, 0) << "," << -u_t(5, 0) << "," << x(0, 0) << "," << x(1, 0) << "," << x(2, 0) << std::endl;
+                                    << "," << -u(3, 0) << "," << -u(4, 0) << "," << -u(5, 0) << "," << x(0, 0) << "," << x(1, 0) << "," << x(2, 0) << std::endl;
  
-            left_leg->tau_setpoint = get_joint_torques(-u_t.block<3, 1>(0, 0), left_leg->theta1, left_leg->theta2, left_leg->theta3, left_leg->theta4, left_leg->theta5, x(0, 0), x(1, 0), x(2, 0), left_leg->config);
+            left_leg->tau_setpoint = get_joint_torques(-u.block<3, 1>(0, 0), left_leg->theta1, left_leg->theta2, left_leg->theta3, left_leg->theta4, left_leg->theta5, x(0, 0), x(1, 0), x(2, 0), left_leg->config);
             for(int i = 0; i < 5; ++i) {
                 constrain(left_leg->tau_setpoint(i), -200, 200);
             }
@@ -561,13 +563,7 @@ void calculate_right_leg_torques() {
         double theta4_dot = 0;
         double theta5_dot = 0;
 
-        u_mutex.lock();
-        Eigen::Matrix<double, m, 1> u = u_t;
-        u_mutex.unlock();
-
-        x_mutex.lock();
-        Eigen::Matrix<double, n, 1> x = x_t;
-        x_mutex.unlock();
+        Eigen::Matrix<double, n, 1> x = Eigen::ArrayXXd::Zero(n, 1);
 
         msg_length = recvfrom(sockfd, (char *)buffer, udp_buffer_size, 0, ( struct sockaddr *) &cliaddr, &len); // Receive message over UDP containing full leg state
         buffer[msg_length] = '\0'; // Add string ending delimiter to end of string (n is length of message)
@@ -611,6 +607,10 @@ void calculate_right_leg_torques() {
             right_leg->theta3dot = theta3_dot;
             right_leg->theta4dot = theta4_dot;
             right_leg->theta5dot = theta5_dot;
+
+            for(int i = 0; i < n; ++i) {
+                x(i, 0) = atof(state[i + 10].c_str());
+            }
         }
 
         //TODO: Maybe rework to only use q and q_dot
@@ -646,12 +646,16 @@ void calculate_right_leg_torques() {
             // IMPORTANT AND DANGEROUS MISTAKE: WHEN COPYING LEFT_LEG CODE AND REPLACING ALL LEFT WITH RIGHT, INDEX IS NOT CHANGED AND LEFT LEG TORQUES WILL BE USED FOR BOTH LEGS
             // right_leg->tau_setpoint = Eigen::ArrayXd::Zero(5, 1);
 
+            u_mutex.lock();
+            Eigen::Matrix<double, m, 1> u = u_t;
+            u_mutex.unlock();
+
             // ofstream torque_function_file;
             torque_function_file.open(plotDataDirPath  + filename + "_torque_function_right.csv", ios::app);
             torque_function_file << get_time(true) << "," << iteration_counter << "," << right_leg->theta1 << "," << right_leg->theta2 << "," << right_leg->theta3 << "," << right_leg->theta4 << "," << right_leg->theta5
-                                    << "," << -u_t(0, 0) << "," << -u_t(1, 0) << "," << -u_t(2, 0) << "," << x(0, 0) << "," << x(1, 0) << "," << x(2, 0) << std::endl;
-            
-            right_leg->tau_setpoint = get_joint_torques(-u_t.block<3, 1>(3, 0), right_leg->theta1, right_leg->theta2, right_leg->theta3, right_leg->theta4, right_leg->theta5, x(0, 0), x(1, 0), x(2, 0), right_leg->config);
+                                    << "," << -u(0, 0) << "," << -u(1, 0) << "," << -u(2, 0) << "," << x(0, 0) << "," << x(1, 0) << "," << x(2, 0) << std::endl;
+
+            right_leg->tau_setpoint = get_joint_torques(-u.block<3, 1>(3, 0), right_leg->theta1, right_leg->theta2, right_leg->theta3, right_leg->theta4, right_leg->theta5, x(0, 0), x(1, 0), x(2, 0), right_leg->config);
             for(int i = 0; i < 5; ++i) {
                 constrain(right_leg->tau_setpoint(i), -200, 200);
             }
