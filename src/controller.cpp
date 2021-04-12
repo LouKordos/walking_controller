@@ -372,7 +372,7 @@ void calculate_left_leg_torques() {
 
             current_traj_time_temp = current_trajectory_time;
 
-            if(current_trajectory_time > t_stance + (1.0 / 50.0)) {
+            if(current_trajectory_time > t_stance + dt) {
                 std::cout << "WARNING!!!! Desired trajectory time exceeds gait phase duration by " << current_trajectory_time - t_stance << "s" << std::endl;
             }
 
@@ -623,7 +623,7 @@ void calculate_right_leg_torques() {
 
             current_traj_time_temp = current_trajectory_time;
 
-            if(current_trajectory_time > t_stance + (1.0 / 50.0)) {
+            if(current_trajectory_time > t_stance + dt) {
                 std::cout << "WARNING!!!! Desired trajectory time exceeds gait phase duration by " << current_trajectory_time - t_stance << "s" << std::endl;
             }
 
