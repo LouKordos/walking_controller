@@ -22,15 +22,15 @@ int main() {
                                         (Eigen::Matrix<double,3,1>() << 0, 0, -1).finished(), 
                                         (Eigen::Matrix<double,3,1>() << 0.0, 0.0, 0).finished(), (Eigen::Matrix<double,3,1>() << 0.0, 0.0, -0).finished(), 10);
 
-        std::cout << traj->get_trajectory_pos(i * 0.0001) << std::endl;
-        std::cout << traj->get_trajectory_vel(i * 0.0001) << std::endl;
-        std::cout << traj->get_trajectory_accel(i * 0.0001) << std::endl;
+        std::cout << traj->get_position(i * 0.0001) << std::endl;
+        std::cout << traj->get_velocity(i * 0.0001) << std::endl;
+        std::cout << traj->get_acceleration(i * 0.0001) << std::endl;
 
         ofstream traj_log_file;
         traj_log_file.open("./plot_data.csv", ios::app);
-        traj_log_file << traj->get_trajectory_pos(i * 0.0001)(0, 0) << "," << traj->get_trajectory_pos(i * 0.0001)(1, 0) << "," << traj->get_trajectory_pos(i * 0.0001)(2, 0)
-        << "," << traj->get_trajectory_vel(i * 0.0001)(0, 0) << "," << traj->get_trajectory_vel(i * 0.0001)(1, 0) << "," << traj->get_trajectory_vel(i * 0.0001)(2, 0) 
-        << "," << traj->get_trajectory_accel(i * 0.0001)(0, 0) << "," << traj->get_trajectory_accel(i * 0.0001)(1, 0) << "," << traj->get_trajectory_accel(i * 0.0001)(2, 0)
+        traj_log_file << traj->get_position(i * 0.0001)(0, 0) << "," << traj->get_position(i * 0.0001)(1, 0) << "," << traj->get_position(i * 0.0001)(2, 0)
+        << "," << traj->get_velocity(i * 0.0001)(0, 0) << "," << traj->get_velocity(i * 0.0001)(1, 0) << "," << traj->get_velocity(i * 0.0001)(2, 0) 
+        << "," << traj->get_acceleration(i * 0.0001)(0, 0) << "," << traj->get_acceleration(i * 0.0001)(1, 0) << "," << traj->get_acceleration(i * 0.0001)(2, 0)
         << std::endl;
         traj_log_file.close();
     }

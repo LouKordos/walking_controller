@@ -17,9 +17,9 @@ class CartesianTrajectory {
     
     public: void update(const Eigen::Matrix<double, 3, 1> initial_pos, const Eigen::Matrix<double, 3, 1> middle_pos, const Eigen::Matrix<double, 3, 1> target_pos, const Eigen::Matrix<double, 3, 1> initial_vel, const Eigen::Matrix<double, 3, 1> target_vel, const double duration);
 
-    public: Eigen::Matrix<double, 3, 1> get_trajectory_pos(double t);
+    public: Eigen::Matrix<double, 3, 1> get_position(double t);
 
-    public: Eigen::Matrix<double, 3, 1> get_trajectory_vel(double t);
+    public: Eigen::Matrix<double, 3, 1> get_velocity(double t);
 
-    public: Eigen::Matrix<double, 3, 1> get_trajectory_accel(double t);
+    public: Eigen::Matrix<double, 3, 1> get_acceleration(double t);
 };

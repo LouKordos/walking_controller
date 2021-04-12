@@ -383,9 +383,9 @@ void calculate_left_leg_torques() {
 
             left_leg->foot_trajectory_mutex.lock();
 
-            left_leg->pos_desired << (left_leg->H_hip_body.inverse() * (Eigen::Matrix<double, 4, 1>() << left_leg->foot_trajectory.get_trajectory_pos(current_trajectory_time), 1).finished()).block<3, 1>(0, 0), 0, 0;
-            left_leg->vel_desired << left_leg->foot_trajectory.get_trajectory_vel(current_trajectory_time), 0, 0;
-            left_leg->accel_desired << left_leg->foot_trajectory.get_trajectory_accel(current_trajectory_time);
+            left_leg->pos_desired << (left_leg->H_hip_body.inverse() * (Eigen::Matrix<double, 4, 1>() << left_leg->foot_trajectory.get_position(current_trajectory_time), 1).finished()).block<3, 1>(0, 0), 0, 0;
+            left_leg->vel_desired << left_leg->foot_trajectory.get_velocity(current_trajectory_time), 0, 0;
+            left_leg->accel_desired << left_leg->foot_trajectory.get_acceleration(current_trajectory_time);
 
             left_leg->foot_trajectory_mutex.unlock();
 
@@ -634,9 +634,9 @@ void calculate_right_leg_torques() {
 
             right_leg->foot_trajectory_mutex.lock();
 
-            right_leg->pos_desired << (right_leg->H_hip_body.inverse() * (Eigen::Matrix<double, 4, 1>() << right_leg->foot_trajectory.get_trajectory_pos(current_trajectory_time), 1).finished()).block<3, 1>(0, 0), 0, 0;
-            right_leg->vel_desired << right_leg->foot_trajectory.get_trajectory_vel(current_trajectory_time), 0, 0;
-            right_leg->accel_desired << right_leg->foot_trajectory.get_trajectory_accel(current_trajectory_time);
+            right_leg->pos_desired << (right_leg->H_hip_body.inverse() * (Eigen::Matrix<double, 4, 1>() << right_leg->foot_trajectory.get_position(current_trajectory_time), 1).finished()).block<3, 1>(0, 0), 0, 0;
+            right_leg->vel_desired << right_leg->foot_trajectory.get_velocity(current_trajectory_time), 0, 0;
+            right_leg->accel_desired << right_leg->foot_trajectory.get_acceleration(current_trajectory_time);
 
             right_leg->foot_trajectory_mutex.unlock();
 
@@ -1793,8 +1793,8 @@ void run_mpc() {
                 << "," << right_leg->foot_pos_body_frame(0, 0) << "," << right_leg->foot_pos_body_frame(1, 0) << "," << right_leg->foot_pos_body_frame(2, 0)
                 << "," << left_leg->foot_pos_world_desired(0, 0) << "," << left_leg->foot_pos_world_desired(1, 0) << "," << left_leg->foot_pos_world_desired(2, 0)
                 << "," << right_leg->foot_pos_world_desired(0, 0) << "," << right_leg->foot_pos_world_desired(1, 0) << "," << right_leg->foot_pos_world_desired(2, 0)
-                << "," << left_leg->foot_trajectory.get_trajectory_pos(1.0 / 3.0)(0, 0) << "," << left_leg->foot_trajectory.get_trajectory_pos(1.0 / 3.0)(1, 0) << "," << left_leg->foot_trajectory.get_trajectory_pos(1.0 / 3.0)(2, 0)
-                << "," << right_leg->foot_trajectory.get_trajectory_pos(1.0 / 3.0)(0, 0) << "," << right_leg->foot_trajectory.get_trajectory_pos(1.0 / 3.0)(1, 0) << "," << right_leg->foot_trajectory.get_trajectory_pos(1.0 / 3.0)(2, 0)
+                << "," << left_leg->foot_trajectory.get_position(1.0 / 3.0)(0, 0) << "," << left_leg->foot_trajectory.get_position(1.0 / 3.0)(1, 0) << "," << left_leg->foot_trajectory.get_position(1.0 / 3.0)(2, 0)
+                << "," << right_leg->foot_trajectory.get_position(1.0 / 3.0)(0, 0) << "," << right_leg->foot_trajectory.get_position(1.0 / 3.0)(1, 0) << "," << right_leg->foot_trajectory.get_position(1.0 / 3.0)(2, 0)
                 << "," << left_leg->next_foot_pos_world_desired(0, 0) << "," << left_leg->next_foot_pos_world_desired(1, 0) << "," << left_leg->next_foot_pos_world_desired(2, 0)
                 << "," << right_leg->next_foot_pos_world_desired(0, 0) << "," << right_leg->next_foot_pos_world_desired(1, 0) << "," << right_leg->next_foot_pos_world_desired(2, 0)
                 << "," << P_param(1, 0) << "," << full_iteration_duration / 1000.0 << "," << solution_variables(n, 0) << "," << predicted_contact_swap_iterations << ",";

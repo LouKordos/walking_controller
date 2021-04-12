@@ -4,7 +4,7 @@ CartesianTrajectory::CartesianTrajectory() {
     
 }
 
-Eigen::Matrix<double, 3, 1> CartesianTrajectory::get_trajectory_pos(double t) {
+Eigen::Matrix<double, 3, 1> CartesianTrajectory::get_position(double t) {
     Eigen::Matrix<double, 3, 1> temp_pos;
 
     for(int i = 0; i < 3; ++i) {
@@ -20,7 +20,7 @@ Eigen::Matrix<double, 3, 1> CartesianTrajectory::get_trajectory_pos(double t) {
     return temp_pos;
 }
 
-Eigen::Matrix<double, 3, 1> CartesianTrajectory::get_trajectory_vel(double t) {
+Eigen::Matrix<double, 3, 1> CartesianTrajectory::get_velocity(double t) {
     Eigen::Matrix<double, 3, 1> temp_vel;
 
     for(int i = 0; i < 3; ++i) {
@@ -35,7 +35,7 @@ Eigen::Matrix<double, 3, 1> CartesianTrajectory::get_trajectory_vel(double t) {
     return temp_vel;    
 }
 
-Eigen::Matrix<double, 3, 1> CartesianTrajectory::get_trajectory_accel(double t) {
+Eigen::Matrix<double, 3, 1> CartesianTrajectory::get_acceleration(double t) {
     Eigen::Matrix<double, 3, 1> temp_accel;
 
     for(int i = 0; i < 3; ++i) {
