@@ -313,25 +313,7 @@ void calculate_left_leg_torques() {
         double theta4_dot = 0;
         double theta5_dot = 0;
 
-        u_mutex.lock();
-        Eigen::Matrix<double, m, 1> u = u_t;
-        u_mutex.unlock();
-
-        x_mutex.lock();
-        Eigen::Matrix<double, n, 1> x = x_t;
-        x_mutex.unlock();
-
-        double phi_com = x(0, 0);
-        double theta_com = x(1, 0);
-        double psi_com = x(2, 0);
-
-        double pos_x_com = x(3, 0);
-        double pos_y_com = x(4, 0);
-        double pos_z_com = x(5, 0);
-
-        double vel_x_com = x(9, 0);
-        double vel_y_com = x(10, 0);
-        double vel_z_com = x(11, 0);
+        Eigen::Matrix<double, n, 1> x = Eigen::ArrayXXd::Zero(n, 1);
 
         msg_length = recvfrom(sockfd, (char *)buffer, udp_buffer_size, 0, ( struct sockaddr *) &cliaddr, &len); // Receive message over UDP containing full leg state
         buffer[msg_length] = '\0'; // Add string ending delimiter to end of string (n is length of message)
@@ -340,7 +322,7 @@ void calculate_left_leg_torques() {
 
         std::vector<std::string> state = split_string(raw_state, '|'); // Split raw state message by message delimiter to parse individual elements
 
-        if(static_cast<int>(state.size()) >= 9) { // Check if message is complete. TODO: Add unique character to end of message for extra check
+        if(static_cast<int>(state.size()) >= 9 + n) { // Check if message is complete. TODO: Add unique character to end of message for extra check
 
             // Convert individual string elements to float
             theta1 = atof(state[0].c_str());
@@ -375,26 +357,16 @@ void calculate_left_leg_torques() {
             left_leg->theta3dot = theta3_dot;
             left_leg->theta4dot = theta4_dot;
             left_leg->theta5dot = theta5_dot;
+            
+            for(int i = 0; i < n; ++i) {
+                x(i, 0) = atof(state[i + 10].c_str());
+            }
         }
         // Update no matter the gait phase to keep foot state updated
         left_leg->update();
 
         // If swing, leg trajectory should be followed, if not, foot is in contact with the ground and MPC forces should be converted into torques and applied
         if(left_leg->swing_phase /*&& !left_leg->contactState.hasContact()*/) {
-            
-            // left_leg->pos_desired << 0, 0, 0.1*sin(16*get_time()) - 0.95, 0, 0;
-            // left_leg->vel_desired << 0, 0, 1.6*cos(16*get_time()), 0, 0;
-            // left_leg->accel_desired << 0, 0, -25.6*sin(16*get_time());
-
-            // left_leg->pos_desired << 0, 0, -1, 0, 0;
-            // left_leg->vel_desired << 0, 0, 0, 0, 0;
-            // left_leg->accel_desired << 0, 0, 0;
-            
-            //TODO: Maybe rework to only use q and q_dot
-
-            // std::cout << "q: " << left_leg->q << std::endl;
-            // std::cout << "q_dot: " << left_leg->q_dot << std::endl;
-            
             left_leg->trajectory_start_time_mutex.lock();
             double current_trajectory_time = get_time(false) - left_leg->trajectory_start_time;
 
@@ -414,37 +386,26 @@ void calculate_left_leg_torques() {
             left_leg->pos_desired << (left_leg->H_hip_body.inverse() * (Eigen::Matrix<double, 4, 1>() << left_leg->foot_trajectory.get_trajectory_pos(current_trajectory_time), 1).finished()).block<3, 1>(0, 0), 0, 0;
             left_leg->vel_desired << left_leg->foot_trajectory.get_trajectory_vel(current_trajectory_time), 0, 0;
             left_leg->accel_desired << left_leg->foot_trajectory.get_trajectory_accel(current_trajectory_time);
-            
-            // stringstream temp;
-            // temp << "current_traj_time: " << current_trajectory_time
-            //      << "\nfoot_pos_desired: " << left_leg->pos_desired(0, 0) << "," << left_leg->pos_desired(1, 0) << "," << left_leg->pos_desired(2, 0)
-            //      << "\nfoot_pos_actual: " << left_leg->foot_pos(0, 0) << "," << left_leg->foot_pos(1, 0) << "," << left_leg->foot_pos(2, 0);
-
-            // print_threadsafe(temp.str(), "left_leg_torque_thread", INFO);
 
             left_leg->foot_trajectory_mutex.unlock();
 
             left_leg->update_torque_setpoint();
-
-            // for(int i = 0; i < 5; ++i) {
-            //     left_leg->tau_setpoint(i, 0) = 0;
-            // }
-
-            // temp.str(std::string());
-            // temp << left_leg->tau_setpoint;
-            // print_threadsafe(temp.str(), "tau_setpoint_left_leg in stance phase", INFO);
         }
         else {
             // IMPORTANT AND DANGEROUS MISTAKE: WHEN COPYING LEFT_LEG CODE AND REPLACING ALL LEFT WITH RIGHT, INDEX IS NOT CHANGED AND LEFT LEG TORQUES WILL BE USED FOR BOTH LEGS
             // left_leg->tau_setpoint = Eigen::ArrayXd::Zero(5, 1);
+
+            u_mutex.lock();
+            Eigen::Matrix<double, m, 1> u = u_t;
+            u_mutex.unlock();
             
             /*"t,iteration,theta1,theta2,theta3,theta4,theta5,f_x,f_y,f_z,phi,theta,psi"*/
             ofstream torque_function_file;
             torque_function_file.open(plotDataDirPath  + filename + "_torque_function_left.csv", ios::app);
             torque_function_file << get_time(true) << "," << iteration_counter << "," << left_leg->theta1 << "," << left_leg->theta2 << "," << left_leg->theta3 << "," << left_leg->theta4 << "," << left_leg->theta5
-                                    << "," << -u_t(3, 0) << "," << -u_t(4, 0) << "," << -u_t(5, 0) << "," << x(0, 0) << "," << x(1, 0) << "," << x(2, 0) << std::endl;
+                                    << "," << -u(3, 0) << "," << -u(4, 0) << "," << -u(5, 0) << "," << x(0, 0) << "," << x(1, 0) << "," << x(2, 0) << std::endl;
  
-            left_leg->tau_setpoint = get_joint_torques(-u_t.block<3, 1>(0, 0), left_leg->theta1, left_leg->theta2, left_leg->theta3, left_leg->theta4, left_leg->theta5, x(0, 0), x(1, 0), x(2, 0), left_leg->config);
+            left_leg->tau_setpoint = get_joint_torques(-u.block<3, 1>(0, 0), left_leg->theta1, left_leg->theta2, left_leg->theta3, left_leg->theta4, left_leg->theta5, x(0, 0), x(1, 0), x(2, 0), left_leg->config);
             for(int i = 0; i < 5; ++i) {
                 constrain(left_leg->tau_setpoint(i), -200, 200);
             }
@@ -602,25 +563,7 @@ void calculate_right_leg_torques() {
         double theta4_dot = 0;
         double theta5_dot = 0;
 
-        u_mutex.lock();
-        Eigen::Matrix<double, m, 1> u = u_t;
-        u_mutex.unlock();
-
-        x_mutex.lock();
-        Eigen::Matrix<double, n, 1> x = x_t;
-        x_mutex.unlock();
-
-        double phi_com = x(0, 0);
-        double theta_com = x(1, 0);
-        double psi_com = x(2, 0);
-
-        double pos_x_com = x(3, 0);
-        double pos_y_com = x(4, 0);
-        double pos_z_com = x(5, 0);
-
-        double vel_x_com = x(9, 0);
-        double vel_y_com = x(10, 0);
-        double vel_z_com = x(11, 0);
+        Eigen::Matrix<double, n, 1> x = Eigen::ArrayXXd::Zero(n, 1);
 
         msg_length = recvfrom(sockfd, (char *)buffer, udp_buffer_size, 0, ( struct sockaddr *) &cliaddr, &len); // Receive message over UDP containing full leg state
         buffer[msg_length] = '\0'; // Add string ending delimiter to end of string (n is length of message)
@@ -629,7 +572,7 @@ void calculate_right_leg_torques() {
 
         std::vector<std::string> state = split_string(raw_state, '|'); // Split raw state message by message delimiter to parse individual elements
 
-        if(static_cast<int>(state.size()) >= 9) { // Check if message is complete. TODO: Add unique character to end of message for extra check
+        if(static_cast<int>(state.size()) >= 9 + n) { // Check if message is complete. TODO: Add unique character to end of message for extra check
 
             // Convert individual string elements to float
             theta1 = atof(state[0].c_str());
@@ -664,6 +607,10 @@ void calculate_right_leg_torques() {
             right_leg->theta3dot = theta3_dot;
             right_leg->theta4dot = theta4_dot;
             right_leg->theta5dot = theta5_dot;
+
+            for(int i = 0; i < n; ++i) {
+                x(i, 0) = atof(state[i + 10].c_str());
+            }
         }
 
         //TODO: Maybe rework to only use q and q_dot
@@ -671,18 +618,6 @@ void calculate_right_leg_torques() {
 
         // If swing, leg trajectory should be followed, if not, foot is in contact with the ground and MPC forces should be converted into torques and applied
         if(right_leg->swing_phase /*&& !right_leg->contactState.hasContact()*/) {
-            
-            // right_leg->pos_desired << 0, 0, 0.1*sin(16*get_time()) - 0.95, 0, 0;
-            // right_leg->vel_desired << 0, 0, 1.6*cos(16*get_time()), 0, 0;
-            // right_leg->accel_desired << 0, 0, -25.6*sin(16*get_time());
-
-            // right_leg->pos_desired << 0, 0, -1, 0, 0;
-            // right_leg->vel_desired << 0, 0, 0, 0, 0;
-            // right_leg->accel_desired << 0, 0, 0;
-
-            // std::cout << "q: " << right_leg->q << std::endl;
-            // std::cout << "q_dot: " << right_leg->q_dot << std::endl;
-            
             right_leg->trajectory_start_time_mutex.lock();
             double current_trajectory_time = get_time(false) - right_leg->trajectory_start_time;
 
@@ -702,36 +637,25 @@ void calculate_right_leg_torques() {
             right_leg->pos_desired << (right_leg->H_hip_body.inverse() * (Eigen::Matrix<double, 4, 1>() << right_leg->foot_trajectory.get_trajectory_pos(current_trajectory_time), 1).finished()).block<3, 1>(0, 0), 0, 0;
             right_leg->vel_desired << right_leg->foot_trajectory.get_trajectory_vel(current_trajectory_time), 0, 0;
             right_leg->accel_desired << right_leg->foot_trajectory.get_trajectory_accel(current_trajectory_time);
-            
-            // stringstream temp;
-            // temp << "current_traj_time: " << current_trajectory_time
-            //      << "\nfoot_pos_desired: " << right_leg->pos_desired(0, 0) << "," << right_leg->pos_desired(1, 0) << "," << right_leg->pos_desired(2, 0)
-            //      << "\nfoot_pos_actual: " << right_leg->foot_pos(0, 0) << "," << right_leg->foot_pos(1, 0) << "," << right_leg->foot_pos(2, 0);
-
-            // print_threadsafe(temp.str(), "right_leg_torque_thread", INFO);
 
             right_leg->foot_trajectory_mutex.unlock();
 
             right_leg->update_torque_setpoint();
-
-            // for(int i = 0; i < 5; ++i) {
-            //     right_leg->tau_setpoint(i, 0) = 0;
-            // }
-
-            // temp.str(std::string());
-            // temp << right_leg->tau_setpoint;
-            // print_threadsafe(temp.str(), "tau_setpoint_right_leg in stance phase", INFO);
         }
         else {
             // IMPORTANT AND DANGEROUS MISTAKE: WHEN COPYING LEFT_LEG CODE AND REPLACING ALL LEFT WITH RIGHT, INDEX IS NOT CHANGED AND LEFT LEG TORQUES WILL BE USED FOR BOTH LEGS
             // right_leg->tau_setpoint = Eigen::ArrayXd::Zero(5, 1);
 
+            u_mutex.lock();
+            Eigen::Matrix<double, m, 1> u = u_t;
+            u_mutex.unlock();
+
             // ofstream torque_function_file;
             torque_function_file.open(plotDataDirPath  + filename + "_torque_function_right.csv", ios::app);
             torque_function_file << get_time(true) << "," << iteration_counter << "," << right_leg->theta1 << "," << right_leg->theta2 << "," << right_leg->theta3 << "," << right_leg->theta4 << "," << right_leg->theta5
-                                    << "," << -u_t(0, 0) << "," << -u_t(1, 0) << "," << -u_t(2, 0) << "," << x(0, 0) << "," << x(1, 0) << "," << x(2, 0) << std::endl;
-            
-            right_leg->tau_setpoint = get_joint_torques(-u_t.block<3, 1>(3, 0), right_leg->theta1, right_leg->theta2, right_leg->theta3, right_leg->theta4, right_leg->theta5, x(0, 0), x(1, 0), x(2, 0), right_leg->config);
+                                    << "," << -u(0, 0) << "," << -u(1, 0) << "," << -u(2, 0) << "," << x(0, 0) << "," << x(1, 0) << "," << x(2, 0) << std::endl;
+
+            right_leg->tau_setpoint = get_joint_torques(-u.block<3, 1>(3, 0), right_leg->theta1, right_leg->theta2, right_leg->theta3, right_leg->theta4, right_leg->theta5, x(0, 0), x(1, 0), x(2, 0), right_leg->config);
             for(int i = 0; i < 5; ++i) {
                 constrain(right_leg->tau_setpoint(i), -200, 200);
             }
@@ -941,7 +865,7 @@ void run_mpc() {
     ipopt_opts["acceptable_tol"] = 1e-7;
     ipopt_opts["acceptable_obj_change_tol"] = 1e-5;
     ipopt_opts["linear_solver"] = "ma27";
-
+    
     opts["print_time"] = 0;
     opts["ipopt"] = ipopt_opts;
     opts["expand"] = false;
@@ -2038,44 +1962,47 @@ int main(int _argc, char **_argv)
 
     // Create a cpu_set_t object representing a set of CPUs. Clear it and mark only CPU i as set.
     // Source: https://eli.thegreenplace.net/2016/c11-threads-affinity-and-hyperthreading/
+
+    int mpc_cpu = 6, left_leg_cpu = 7, right_leg_cpu = 19, time_cpu = 19;
+
     // Extra scope to avoid redeclaration error
     {
         cpu_set_t cpuset;
         CPU_ZERO(&cpuset);
-        CPU_SET(1, &cpuset);
+        CPU_SET(mpc_cpu, &cpuset);
         int rc = pthread_setaffinity_np(mpc_thread.native_handle(), sizeof(cpu_set_t), &cpuset);
         if (rc != 0) {
-            std::cerr << "Error calling pthread_setaffinity_np while trying to set MPC thread to CPU 1: " << rc << "\n";
+            std::cerr << "Error calling pthread_setaffinity_np while trying to set MPC thread to CPU" << mpc_cpu <<": " << rc << "\n";
         }
     }
     // Extra scopes to avoid redeclaration error
     {
         cpu_set_t cpuset;
         CPU_ZERO(&cpuset);
-        CPU_SET(2, &cpuset);
+        CPU_SET(left_leg_cpu, &cpuset);
         int rc = pthread_setaffinity_np(left_leg_torque_thread.native_handle(), sizeof(cpu_set_t), &cpuset);
         if (rc != 0) {
-            std::cerr << "Error calling pthread_setaffinity_np while trying to set left leg impedance control thread to CPU 2: " << rc << "\n";
+            std::cerr << "Error calling pthread_setaffinity_np while trying to set left leg impedance control thread to CPU" << left_leg_cpu << ": " << rc << "\n";
         }
     }
     // Extra scope to avoid redeclaration error
     {
         cpu_set_t cpuset;
         CPU_ZERO(&cpuset);
-        CPU_SET(8, &cpuset);
+        CPU_SET(right_leg_cpu, &cpuset);
         int rc = pthread_setaffinity_np(right_leg_torque_thread.native_handle(), sizeof(cpu_set_t), &cpuset);
         if (rc != 0) {
-            std::cerr << "Error calling pthread_setaffinity_np while trying to set right leg impedance control thread to CPU 8: " << rc << "\n";
+            std::cerr << "Error calling pthread_setaffinity_np while trying to set right leg impedance control thread to CPU" << right_leg_cpu << ": " << rc << "\n";
         }
     }
     // Extra scope to avoid redeclaration error
     {
         cpu_set_t cpuset;
         CPU_ZERO(&cpuset);
-        CPU_SET(8, &cpuset);
+        CPU_SET(time_cpu, &cpuset);
         int rc = pthread_setaffinity_np(time_thread.native_handle(), sizeof(cpu_set_t), &cpuset);
         if (rc != 0) {
-            std::cerr << "Error calling pthread_setaffinity_np while trying to set time thread to CPU 8: " << rc << "\n";
+            std::cerr << "Error calling pthread_setaffinity_np while trying to set time thread to CPU" << time_cpu << ": " << rc << "\n";
         }
     }
     

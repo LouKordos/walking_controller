@@ -81,7 +81,11 @@
 			"shared_mutex": "cpp",
 			"stop_token": "cpp",
 			"variant": "cpp",
-			"hash_map": "cpp"
+			"hash_map": "cpp",
+			"hash_set": "cpp",
+			"codecvt": "cpp",
+			"forward_list": "cpp",
+			"unordered_set": "cpp"
 		}
 	}
 }
