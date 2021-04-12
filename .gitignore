@@ -9,6 +9,7 @@ compile_commands.json
 CTestTestfile.cmake
 _deps
 plot_data/*.csv
+plot_data/*.log
 build
 expression.txt
 expression_parsed.txt
