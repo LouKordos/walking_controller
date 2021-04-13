@@ -338,13 +338,9 @@ void calculate_left_leg_torques() {
             theta5_dot = atof(state[9].c_str());
 
             // Update states based on parsed angles
-            left_leg->q_mutex.lock();
-            left_leg->q << theta1, theta2, theta3, theta4, theta5;
-            left_leg->q_mutex.unlock();
+            left_leg->set_q(theta1, theta2, theta3, theta4, theta5);
 
-            left_leg->q_dot_mutex.lock();
-            left_leg->q_dot << theta1_dot, theta2_dot, theta3_dot, theta4_dot, theta5_dot;
-            left_leg->q_dot_mutex.unlock();
+            left_leg->set_q_dot(theta1_dot, theta2_dot, theta3_dot, theta4_dot, theta5_dot);
 
             left_leg->theta1 = theta1;
             left_leg->theta2 = theta2;
@@ -366,9 +362,8 @@ void calculate_left_leg_torques() {
         left_leg->update();
 
         // If swing, leg trajectory should be followed, if not, foot is in contact with the ground and MPC forces should be converted into torques and applied
-        if(left_leg->swing_phase /*&& !left_leg->contactState.hasContact()*/) {
-            left_leg->trajectory_start_time_mutex.lock();
-            double current_trajectory_time = get_time(false) - left_leg->trajectory_start_time;
+        if(left_leg->get_swing_phase() /*&& !left_leg->contactState.hasContact()*/) {
+            double current_trajectory_time = get_time(false) - left_leg->get_trajectory_start_time();
 
             current_traj_time_temp = current_trajectory_time;
 
@@ -376,18 +371,12 @@ void calculate_left_leg_torques() {
                 std::cout << "WARNING!!!! Desired trajectory time exceeds gait phase duration by " << current_trajectory_time - t_stance << "s" << std::endl;
             }
 
-            left_leg->trajectory_start_time_mutex.unlock();
-
             // Due to the impedance control running at a much higher frequency than the MPC, the time might exceed t_stance because the MPC only updates the start time after 1/50s (worst case), which would be 50 iterations for the impedance control
             constrain(current_trajectory_time, 0, t_stance);
-
-            left_leg->foot_trajectory_mutex.lock();
 
             left_leg->pos_desired << (left_leg->H_hip_body.inverse() * (Eigen::Matrix<double, 4, 1>() << left_leg->foot_trajectory.get_position(current_trajectory_time), 1).finished()).block<3, 1>(0, 0), 0, 0;
             left_leg->vel_desired << left_leg->foot_trajectory.get_velocity(current_trajectory_time), 0, 0;
             left_leg->accel_desired << left_leg->foot_trajectory.get_acceleration(current_trajectory_time);
-
-            left_leg->foot_trajectory_mutex.unlock();
 
             left_leg->update_torque_setpoint();
         }
@@ -588,13 +577,9 @@ void calculate_right_leg_torques() {
             theta5_dot = atof(state[9].c_str());
 
             // Update states based on parsed angles
-            right_leg->q_mutex.lock();
-            right_leg->q << theta1, theta2, theta3, theta4, theta5;
-            right_leg->q_mutex.unlock();
+            right_leg->set_q(theta1, theta2, theta3, theta4, theta5);
 
-            right_leg->q_dot_mutex.lock();
-            right_leg->q_dot << theta1_dot, theta2_dot, theta3_dot, theta4_dot, theta5_dot;
-            right_leg->q_dot_mutex.unlock();
+            right_leg->set_q_dot(theta1_dot, theta2_dot, theta3_dot, theta4_dot, theta5_dot);
 
             right_leg->theta1 = theta1;
             right_leg->theta2 = theta2;
@@ -617,9 +602,8 @@ void calculate_right_leg_torques() {
         right_leg->update();
 
         // If swing, leg trajectory should be followed, if not, foot is in contact with the ground and MPC forces should be converted into torques and applied
-        if(right_leg->swing_phase /*&& !right_leg->contactState.hasContact()*/) {
-            right_leg->trajectory_start_time_mutex.lock();
-            double current_trajectory_time = get_time(false) - right_leg->trajectory_start_time;
+        if(right_leg->get_swing_phase() /*&& !right_leg->contactState.hasContact()*/) {
+            double current_trajectory_time = get_time(false) - right_leg->get_trajectory_start_time();
 
             current_traj_time_temp = current_trajectory_time;
 
@@ -627,18 +611,13 @@ void calculate_right_leg_torques() {
                 std::cout << "WARNING!!!! Desired trajectory time exceeds gait phase duration by " << current_trajectory_time - t_stance << "s" << std::endl;
             }
 
-            right_leg->trajectory_start_time_mutex.unlock();
 
             // Due to the impedance control running at a much higher frequency than the MPC, the time might exceed t_stance because the MPC only updates the start time after 1/50s (worst case), which would be 50 iterations for the impedance control
             constrain(current_trajectory_time, 0, t_stance);
 
-            right_leg->foot_trajectory_mutex.lock();
-
             right_leg->pos_desired << (right_leg->H_hip_body.inverse() * (Eigen::Matrix<double, 4, 1>() << right_leg->foot_trajectory.get_position(current_trajectory_time), 1).finished()).block<3, 1>(0, 0), 0, 0;
             right_leg->vel_desired << right_leg->foot_trajectory.get_velocity(current_trajectory_time), 0, 0;
             right_leg->accel_desired << right_leg->foot_trajectory.get_acceleration(current_trajectory_time);
-
-            right_leg->foot_trajectory_mutex.unlock();
 
             right_leg->update_torque_setpoint();
         }
@@ -1122,22 +1101,15 @@ void run_mpc() {
         
         double time = get_time(false) + dt;
 
-        bool swing_left_temp = left_leg->swing_phase;
-        bool swing_right_temp = right_leg->swing_phase;
+        bool swing_left_temp = left_leg->get_swing_phase();
+        bool swing_right_temp = right_leg->get_swing_phase();
 
         // Update gait phase and lift-off position for the foot that transitioned to swing phase
         if(swing_left_temp != !get_contact(get_contact_phase(time))) {
             // TODO: If I'm not missing anything, it should still work if reduced to only one variable, i.e. only lift_off_pos and lift_off_vel
-            left_leg->lift_off_pos_mutex.lock();
-            right_leg->lift_off_pos_mutex.lock();
-            left_leg->lift_off_vel_mutex.lock();
-            right_leg->lift_off_vel_mutex.lock();
 
-            left_leg->trajectory_start_time_mutex.lock();
-            right_leg->trajectory_start_time_mutex.lock();
-            left_leg->trajectory_start_time = right_leg->trajectory_start_time = get_time(false);
-            right_leg->trajectory_start_time_mutex.unlock();
-            left_leg->trajectory_start_time_mutex.unlock();
+            left_leg->set_trajectory_start_time(time);
+            right_leg->set_trajectory_start_time(time);
 
             // x_mutex.lock();
             Eigen::Matrix<double, n, 1> x_temp = x_lift_off_update = P_param.block<n, 1>(0, 0);
@@ -1145,31 +1117,22 @@ void run_mpc() {
 
             if(!swing_left_temp) { // Left foot will now be in swing phase so we need to save lift off position for swing trajectory planning
                 left_leg->update_foot_pos_body_frame(x_temp);
-                left_leg->foot_pos_body_frame_mutex.lock();
-                left_leg->lift_off_pos = left_leg->foot_pos_body_frame;
-                left_leg->foot_pos_body_frame_mutex.unlock();
+                left_leg->set_lift_off_pos(left_leg->get_foot_pos_body_frame());
 
-                left_leg->lift_off_vel = x_temp.block<3, 1>(9, 0);
+                left_leg->set_lift_off_vel(x_temp.block<3, 1>(9, 0));
             }
             if(!swing_right_temp) { // Right foot will now be in swing phase so we need to save lift off position for swing trajectory planning
                 right_leg->update_foot_pos_body_frame(x_temp);
-                right_leg->foot_pos_body_frame_mutex.lock();
-                right_leg->lift_off_pos = right_leg->foot_pos_body_frame;
-                right_leg->foot_pos_body_frame_mutex.unlock();
+                right_leg->set_lift_off_pos(right_leg->get_foot_pos_body_frame());
 
-                right_leg->lift_off_vel = x_temp.block<3, 1>(9, 0);
+                right_leg->set_lift_off_vel(x_temp.block<3, 1>(9, 0));
             }
-
-            left_leg->lift_off_pos_mutex.unlock();
-            right_leg->lift_off_pos_mutex.unlock();
-            left_leg->lift_off_vel_mutex.unlock();
-            right_leg->lift_off_vel_mutex.unlock();
 
             std::cout << "Contact swap event occured at iterations=" << total_iterations << std::endl;
         }
 
-        left_leg->swing_phase = !get_contact(get_contact_phase(time));
-        right_leg->swing_phase = !get_contact(get_contact_phase(time) + 0.5);
+        left_leg->set_swing_phase(!get_contact(get_contact_phase(time)));
+        right_leg->set_swing_phase(!get_contact(get_contact_phase(time) + 0.5));
 
         // time += dt;
         for(int k = 0; k < N; k++) {
@@ -1250,50 +1213,51 @@ void run_mpc() {
             constrain(vel_vector(1, 0), 0, vel_y_desired); // Limit velocity used for calculating desired foot position to desired velocity, preventing steps too far out that slow the robot down too much
         }
 
-        left_leg->foot_pos_world_desired_mutex.lock();
-        right_leg->foot_pos_world_desired_mutex.lock();
-
         // Only change where forces are applied when in swing phase, foot cannot move while in contact
-        if(left_leg->swing_phase) {
+        if(left_leg->get_swing_phase()) {
             // pos_error_gain * (P_param[3:6, 0].reshape(3, 1) - np.array([[pos_x_desired], [pos_y_desired], [pos_z_desired]])
-            left_leg->foot_pos_world_desired = /*pos_error_gain * (P_param.block<3, 1>(3, 0) - pos_desired_vector) +*/ hip_pos_world_left + (t_stance/2.0) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(P_param(5, 0)) / 9.81) * vel_vector.cross(omega_desired_vector);
+            Eigen::Matrix<double, 3, 1> foot_pos_world_desired = hip_pos_world_left + (t_stance/2.0) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) 
+                                                                    + 0.5 * sqrt(abs(P_param(5, 0)) / 9.81) * vel_vector.cross(omega_desired_vector);
             
             //TODO: Instead of using inverse, either solve the inverse symbolically in python or just ues Transpose as shown in Modern Robotics Video
             // Find foot position in body frame to limit it in order to account for leg reachability, collision with other leg and reasonable values
             //H_body_world.inverse() is H_world_body
-            Eigen::Matrix<double, 3, 1> left_foot_pos_body = (H_body_world.inverse() * (Eigen::Matrix<double, 4, 1>() << left_leg->foot_pos_world_desired, 1).finished()).block<3,1>(0, 0);
+            Eigen::Matrix<double, 3, 1> left_foot_pos_body = (H_body_world.inverse() * (Eigen::Matrix<double, 4, 1>() << foot_pos_world_desired, 1).finished()).block<3,1>(0, 0);
             
             // Constrain X value of foot position in body coordinates
             if (left_foot_pos_body(0, 0) > r_x_limit - hip_offset) {
                 left_foot_pos_body(0, 0) = r_x_limit - hip_offset;
-                left_leg->foot_pos_world_desired = (H_body_world * (Eigen::Matrix<double, 4, 1>() << left_foot_pos_body, 1).finished()).block<3,1>(0, 0);
+                foot_pos_world_desired = (H_body_world * (Eigen::Matrix<double, 4, 1>() << left_foot_pos_body, 1).finished()).block<3,1>(0, 0);
             }
             else if (left_foot_pos_body(0, 0) < -r_x_limit - hip_offset) {
                 left_foot_pos_body(0, 0) = -r_x_limit - hip_offset;
-                left_leg->foot_pos_world_desired = (H_body_world * (Eigen::Matrix<double, 4, 1>() << left_foot_pos_body, 1).finished()).block<3,1>(0, 0);
+                foot_pos_world_desired = (H_body_world * (Eigen::Matrix<double, 4, 1>() << left_foot_pos_body, 1).finished()).block<3,1>(0, 0);
             }
-            left_leg->foot_pos_world_desired(2, 0) = 0; // This is needed because the formula above doesn't make sense for Z, and the foot naturally touches the ground at Z = 0 in the world frame
+            foot_pos_world_desired(2, 0) = 0;
+            left_leg->set_foot_pos_world_desired(foot_pos_world_desired); // This is needed because the formula above doesn't make sense for Z, and the foot naturally touches the ground at Z = 0 in the world frame
         }
 
         // Only change where forces are applied when in swing phase, foot cannot move while in contact
-        if(right_leg->swing_phase) {
-            right_leg->foot_pos_world_desired = /*pos_error_gain * (P_param.block<3, 1>(3, 0) - pos_desired_vector) +*/ hip_pos_world_right + (t_stance/2.0) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(P_param(5, 0)) / 9.81) * vel_vector.cross(omega_desired_vector);
+        if(right_leg->get_swing_phase()) {
+            Eigen::Matrix<double, 3, 1> foot_pos_world_desired = hip_pos_world_right + (t_stance/2.0) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) 
+                                                                    + 0.5 * sqrt(abs(P_param(5, 0)) / 9.81) * vel_vector.cross(omega_desired_vector);
            
             //TODO: Instead of using inverse, either solve the inverse symbolically in python or just ues Transpose as shown in Modern Robotics Video
             // Find foot position in body frame to limit it in order to account for leg reachability, collision with other leg and reasonable values
             //H_body_world.inverse() is H_world_body
-            Eigen::Matrix<double, 3, 1> right_foot_pos_body = (H_body_world.inverse() * (Eigen::Matrix<double, 4, 1>() << right_leg->foot_pos_world_desired, 1).finished()).block<3,1>(0,0);
+            Eigen::Matrix<double, 3, 1> right_foot_pos_body = (H_body_world.inverse() * (Eigen::Matrix<double, 4, 1>() << foot_pos_world_desired, 1).finished()).block<3,1>(0,0);
 
             // Constrain X value of foot position in body coordinates
             if (right_foot_pos_body(0, 0) > r_x_limit + hip_offset) {
                 right_foot_pos_body(0, 0) = r_x_limit + hip_offset;
-                right_leg->foot_pos_world_desired = (H_body_world * (Eigen::Matrix<double, 4, 1>() << right_foot_pos_body, 1).finished()).block<3,1>(0, 0);
+                foot_pos_world_desired = (H_body_world * (Eigen::Matrix<double, 4, 1>() << right_foot_pos_body, 1).finished()).block<3,1>(0, 0);
             }
             else if (right_foot_pos_body(0, 0) < -r_x_limit + hip_offset) {
                 right_foot_pos_body(0, 0) = -r_x_limit + hip_offset;
-                right_leg->foot_pos_world_desired = (H_body_world * (Eigen::Matrix<double, 4, 1>() << right_foot_pos_body, 1).finished()).block<3,1>(0, 0);
+                foot_pos_world_desired = (H_body_world * (Eigen::Matrix<double, 4, 1>() << right_foot_pos_body, 1).finished()).block<3,1>(0, 0);
             }
-            right_leg->foot_pos_world_desired(2, 0) = 0; // This is needed because the formula above doesn't make sense for Z, and the foot naturally touches the ground at Z = 0 in the world frame
+            foot_pos_world_desired(2, 0) = 0; // This is needed because the formula above doesn't make sense for Z, and the foot naturally touches the ground at Z = 0 in the world frame
+            right_leg->set_foot_pos_world_desired(foot_pos_world_desired);
         }
         
         // stringstream temp;
@@ -1301,38 +1265,37 @@ void run_mpc() {
         // print_threadsafe(temp.str(), "mpc_thread", INFO);
 
         // Calculate r from foot world position
-        if(left_leg->swing_phase) {
-            r_x_left = left_leg->foot_pos_world_desired(0, 0) - P_param(3, 0);
-            r_y_left = left_leg->foot_pos_world_desired(1, 0) - P_param(4, 0);
+        if(left_leg->get_swing_phase()) {
+            Eigen::Matrix<double, 3, 1> foot_pos_world_desired = left_leg->get_foot_pos_world_desired();
+            r_x_left = foot_pos_world_desired(0, 0) - P_param(3, 0);
+            r_y_left = foot_pos_world_desired(1, 0) - P_param(4, 0);
             r_z_left = -P_param(5, 0);
         }
         else  { // If in stance phase, tell the MPC where the foot actually is, not where the MPC expects it to be
             Eigen::Matrix<double, n, 1> x_temp = P_param.block<n,1>(0, 0);
             Eigen::Matrix<double, 3, 1> foot_pos_world_left = left_leg->get_foot_pos_world(x_temp);
-            left_leg->foot_pos_world_desired = foot_pos_world_left;
+            left_leg->set_foot_pos_world_desired(foot_pos_world_left);
 
             r_x_left = foot_pos_world_left(0, 0) - P_param(3, 0);
             r_y_left = foot_pos_world_left(1, 0) - P_param(4, 0);
             r_z_left = -P_param(5, 0);
         }
 
-        if(right_leg->swing_phase) {
-            r_x_right = right_leg->foot_pos_world_desired(0, 0) - P_param(3, 0);
-            r_y_right = right_leg->foot_pos_world_desired(1, 0) - P_param(4, 0);
+        if(right_leg->get_swing_phase()) {
+            Eigen::Matrix<double, 3, 1> foot_pos_world_desired = right_leg->get_foot_pos_world_desired();
+            r_x_right = foot_pos_world_desired(0, 0) - P_param(3, 0);
+            r_y_right = foot_pos_world_desired(1, 0) - P_param(4, 0);
             r_z_right = -P_param(5, 0);
         }
         else { // If in stance phase, tell the MPC where the foot actually is, not where the MPC expects it to be
             Eigen::Matrix<double, n, 1> x_temp = P_param.block<n,1>(0, 0);
             Eigen::Matrix<double, 3, 1> foot_pos_world_right = right_leg->get_foot_pos_world(x_temp);
-            right_leg->foot_pos_world_desired = foot_pos_world_right;
+            right_leg->set_foot_pos_world_desired(foot_pos_world_right);
 
             r_x_right = foot_pos_world_right(0, 0) - P_param(3, 0);
             r_y_right = foot_pos_world_right(1, 0) - P_param(4, 0);
             r_z_right = -P_param(5, 0);
         }
-
-        left_leg->foot_pos_world_desired_mutex.unlock();
-        right_leg->foot_pos_world_desired_mutex.unlock();
 
         double pos_x_desired_temp = pos_x_desired;
         double pos_y_desired_temp = pos_y_desired;
@@ -1399,12 +1362,8 @@ void run_mpc() {
         double r_y_left_prev = r_y_left;
         double r_y_right_prev = r_y_right;
 
-        left_leg->foot_pos_world_desired_mutex.lock();
-        right_leg->foot_pos_world_desired_mutex.lock();
-        left_leg->foot_pos_world_discretization = left_leg->foot_pos_world_desired;
-        right_leg->foot_pos_world_discretization = right_leg->foot_pos_world_desired;
-        left_leg->foot_pos_world_desired_mutex.unlock();
-        right_leg->foot_pos_world_desired_mutex.unlock();
+        left_leg->foot_pos_world_discretization = left_leg->get_foot_pos_world_desired();
+        right_leg->foot_pos_world_discretization = right_leg->get_foot_pos_world_desired();
 
         double phi_t = 0.0;
         double theta_t = 0.0;
@@ -1542,17 +1501,13 @@ void run_mpc() {
 
                 // Go to next contact swap in prediction horizon and get desired foot position for trajectory planner. The if + if statement is badly written and should be refactored
                 if(swing_left != swing_left_prev && !contact_swap_updated) { 
-                    left_leg->next_foot_pos_world_desired_mutex.lock();
-                    right_leg->next_foot_pos_world_desired_mutex.lock();
                     next_body_vel_mutex.lock();
 
-                    left_leg->next_foot_pos_world_desired = left_leg->foot_pos_world_discretization;
-                    right_leg->next_foot_pos_world_desired = right_leg->foot_pos_world_discretization;
+                    left_leg->set_next_foot_pos_world_desired(left_leg->foot_pos_world_discretization);
+                    right_leg->set_next_foot_pos_world_desired(right_leg->foot_pos_world_discretization);
 
                     next_body_vel = (Eigen::Matrix<double, 3, 1>() << vel_x_t, vel_y_t, vel_z_t).finished();
                     
-                    left_leg->next_foot_pos_world_desired_mutex.unlock();
-                    right_leg->next_foot_pos_world_desired_mutex.unlock();
                     next_body_vel_mutex.unlock();
 
                     predicted_contact_swap_iterations = total_iterations + i;
@@ -1755,16 +1710,6 @@ void run_mpc() {
         u_mutex.lock();
         x_mutex.lock();
 
-        left_leg->trajectory_start_time_mutex.lock();
-        right_leg->trajectory_start_time_mutex.lock();
-        left_leg->foot_trajectory_mutex.lock();
-        right_leg->foot_trajectory_mutex.lock();
-        left_leg->foot_pos_world_desired_mutex.lock();
-        right_leg->foot_pos_world_desired_mutex.lock();
-        left_leg->foot_pos_body_frame_mutex.lock();
-        right_leg->foot_pos_body_frame_mutex.lock();
-        left_leg->next_foot_pos_world_desired_mutex.lock();
-        right_leg->next_foot_pos_world_desired_mutex.lock();
         next_body_vel_mutex.lock();
 
         // Get rough value without logging duration to have value for logfile.
@@ -1775,6 +1720,13 @@ void run_mpc() {
         temp.str(std::string());
         temp << "Full MPC iteration loop duration: " << full_iteration_duration << "µS";
         log(temp.str(), INFO);
+
+        Eigen::Matrix<double, 3, 1> foot_pos_body_frame_left = left_leg->get_foot_pos_body_frame();
+        Eigen::Matrix<double, 3, 1> foot_pos_body_frame_right = right_leg->get_foot_pos_body_frame();
+        Eigen::Matrix<double, 3, 1> next_foot_pos_world_desired_left = left_leg->get_next_foot_pos_world_desired();
+        Eigen::Matrix<double, 3, 1> next_foot_pos_world_desired_right = right_leg->get_next_foot_pos_world_desired();
+        Eigen::Matrix<double, 3, 1> foot_pos_world_desired_left = left_leg->get_foot_pos_world_desired();
+        Eigen::Matrix<double, 3, 1> foot_pos_world_desired_right = right_leg->get_foot_pos_world_desired();
 
         // Log data to csv file
         ofstream data_file;
@@ -1787,29 +1739,19 @@ void run_mpc() {
                 << "," << r_x_actual_left << "," << r_y_actual_left << "," << r_z_actual_left
                 << "," << r_x_actual_right << "," << r_y_actual_right << "," << r_z_actual_right
                 << "," << next_body_vel(0, 0) << "," << next_body_vel(1, 0) << "," << next_body_vel(2, 0)
-                << "," << !left_leg->swing_phase * 0.1 << "," << !right_leg->swing_phase * 0.1
+                << "," << !left_leg->get_swing_phase() * 0.1 << "," << !right_leg->get_swing_phase() * 0.1
                 << "," << left_leg->contactState.hasContact() * 0.1 << "," << right_leg->contactState.hasContact() * 0.1
-                << "," << left_leg->foot_pos_body_frame(0, 0) << "," << left_leg->foot_pos_body_frame(1, 0) << "," << left_leg->foot_pos_body_frame(2, 0)
-                << "," << right_leg->foot_pos_body_frame(0, 0) << "," << right_leg->foot_pos_body_frame(1, 0) << "," << right_leg->foot_pos_body_frame(2, 0)
-                << "," << left_leg->foot_pos_world_desired(0, 0) << "," << left_leg->foot_pos_world_desired(1, 0) << "," << left_leg->foot_pos_world_desired(2, 0)
-                << "," << right_leg->foot_pos_world_desired(0, 0) << "," << right_leg->foot_pos_world_desired(1, 0) << "," << right_leg->foot_pos_world_desired(2, 0)
+                << "," << foot_pos_body_frame_left(0, 0) << "," << foot_pos_body_frame_left(1, 0) << "," << foot_pos_body_frame_left(2, 0)
+                << "," << foot_pos_body_frame_right(0, 0) << "," << foot_pos_body_frame_right(1, 0) << "," << foot_pos_body_frame_right(2, 0)
+                << "," << foot_pos_world_desired_left(0, 0) << "," << foot_pos_world_desired_left(1, 0) << "," << foot_pos_world_desired_left(2, 0)
+                << "," << foot_pos_world_desired_right(0, 0) << "," << foot_pos_world_desired_right(1, 0) << "," << foot_pos_world_desired_right(2, 0)
                 << "," << left_leg->foot_trajectory.get_position(1.0 / 3.0)(0, 0) << "," << left_leg->foot_trajectory.get_position(1.0 / 3.0)(1, 0) << "," << left_leg->foot_trajectory.get_position(1.0 / 3.0)(2, 0)
                 << "," << right_leg->foot_trajectory.get_position(1.0 / 3.0)(0, 0) << "," << right_leg->foot_trajectory.get_position(1.0 / 3.0)(1, 0) << "," << right_leg->foot_trajectory.get_position(1.0 / 3.0)(2, 0)
-                << "," << left_leg->next_foot_pos_world_desired(0, 0) << "," << left_leg->next_foot_pos_world_desired(1, 0) << "," << left_leg->next_foot_pos_world_desired(2, 0)
-                << "," << right_leg->next_foot_pos_world_desired(0, 0) << "," << right_leg->next_foot_pos_world_desired(1, 0) << "," << right_leg->next_foot_pos_world_desired(2, 0)
+                << "," << next_foot_pos_world_desired_left(0, 0) << "," << next_foot_pos_world_desired_left(1, 0) << "," << next_foot_pos_world_desired_left(2, 0)
+                << "," << next_foot_pos_world_desired_right(0, 0) << "," << next_foot_pos_world_desired_right(1, 0) << "," << next_foot_pos_world_desired_right(2, 0)
                 << "," << P_param(1, 0) << "," << full_iteration_duration / 1000.0 << "," << solution_variables(n, 0) << "," << predicted_contact_swap_iterations << ",";
 
         next_body_vel_mutex.unlock();
-        left_leg->foot_pos_world_desired_mutex.unlock();
-        right_leg->foot_pos_world_desired_mutex.unlock();
-        left_leg->foot_pos_body_frame_mutex.unlock();
-        right_leg->foot_pos_body_frame_mutex.unlock();
-        left_leg->next_foot_pos_world_desired_mutex.unlock();
-        right_leg->next_foot_pos_world_desired_mutex.unlock();
-        left_leg->foot_trajectory_mutex.unlock();
-        right_leg->foot_trajectory_mutex.unlock();
-        left_leg->trajectory_start_time_mutex.unlock();
-        right_leg->trajectory_start_time_mutex.unlock();
 
         u_mutex.unlock();
         x_mutex.unlock();
@@ -1945,13 +1887,12 @@ int main(int _argc, char **_argv)
     filename = std::to_string(largest_index + 1);
     std::cout << "Filename: " << filename << std::endl;
 
-    left_leg->foot_pos_world_desired << -0.15, 0, 0;
-    right_leg->foot_pos_world_desired << 0.15, 0, 0;
+    left_leg->set_foot_pos_world_desired((Eigen::Matrix<double, 3, 1> () << -0.15, 0, 0).finished());
+    right_leg->set_foot_pos_world_desired((Eigen::Matrix<double, 3, 1>() << 0.15, 0, 0).finished());
 
     // Inverted because swap will occur at iteration 0, so set opposite contact state of what you want here
     alternate_contacts = true;
-    left_leg->swing_phase = true;
-    
+    left_leg->set_swing_phase(true);    
     // Bind functions to threads
     // left_leg_state_thread = std::thread(std::bind(update_left_leg_state));
     left_leg_torque_thread = std::thread(std::bind(calculate_left_leg_torques));
