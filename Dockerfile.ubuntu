@@ -69,4 +69,5 @@ COPY ./nlp.so /
 CMD "./controller"
 
 # Command to run:
-# docker run -v $HOME/dev/walki_controller/plot_data:/plot_data -e "IS_DOCKER=Y" -e "TERM=xterm-256color" -it --net=host loukordos/walking_controller:[tag]
+# chrt -r 1 docker run -v $HOME/dev/walking_controller/plot_data:/plot_data -e "IS_DOCKER=Y" -e "TERM=xterm-256color" -it --net=host loukordos/walking_controller:[tag]
+# chrt -r 1 taskset -c 8-11,20-23 gazebo -e bullet --verbose -r --record_path $(pwd) ../../simplified_biped.world
