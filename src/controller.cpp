@@ -361,6 +361,42 @@ void calculate_left_leg_torques() {
         // Update no matter the gait phase to keep foot state updated
         left_leg->update();
 
+        double time = get_time(false);
+
+        bool swing_left_temp = left_leg->get_swing_phase();
+        bool swing_right_temp = right_leg->get_swing_phase();
+
+        // Update gait phase and lift-off position for the foot that transitioned to swing phase
+        if(swing_left_temp != !get_contact(get_contact_phase(time))) {
+            // TODO: If I'm not missing anything, it should still work if reduced to only one variable, i.e. only lift_off_pos and lift_off_vel
+
+            left_leg->set_trajectory_start_time(time);
+            right_leg->set_trajectory_start_time(time);
+
+            if(!swing_left_temp) { // Left foot will now be in swing phase so we need to save lift off position for swing trajectory planning
+                left_leg->update_foot_pos_body_frame(x);
+                left_leg->set_lift_off_pos(left_leg->get_foot_pos_body_frame());
+
+                left_leg->set_lift_off_vel(x.block<3, 1>(9, 0));
+            }
+            if(!swing_right_temp) { // Right foot will now be in swing phase so we need to save lift off position for swing trajectory planning
+                right_leg->update_foot_pos_body_frame(x);
+                right_leg->set_lift_off_pos(right_leg->get_foot_pos_body_frame());
+
+                right_leg->set_lift_off_vel(x.block<3, 1>(9, 0));
+            }
+
+            // std::cout << "Contact swap event occured at iterations=" << total_iterations << std::endl;
+        }
+
+        left_leg->set_swing_phase(!get_contact(get_contact_phase(get_time(false))));
+        right_leg->set_swing_phase(!get_contact(get_contact_phase(get_time(false)) + 0.5));
+
+        next_body_vel_mutex.lock();
+        left_leg->update_foot_trajectory(x, next_body_vel, t_stance, get_time(false));
+        right_leg->update_foot_trajectory(x, next_body_vel, t_stance, get_time(false));
+        next_body_vel_mutex.unlock();
+
         // If swing, leg trajectory should be followed, if not, foot is in contact with the ground and MPC forces should be converted into torques and applied
         if(left_leg->get_swing_phase() /*&& !left_leg->contactState.hasContact()*/) {
             double current_trajectory_time = get_time(false) - left_leg->get_trajectory_start_time();
@@ -1101,39 +1137,6 @@ void run_mpc() {
         
         double time = get_time(false) + dt;
 
-        bool swing_left_temp = left_leg->get_swing_phase();
-        bool swing_right_temp = right_leg->get_swing_phase();
-
-        // Update gait phase and lift-off position for the foot that transitioned to swing phase
-        if(swing_left_temp != !get_contact(get_contact_phase(time))) {
-            // TODO: If I'm not missing anything, it should still work if reduced to only one variable, i.e. only lift_off_pos and lift_off_vel
-
-            left_leg->set_trajectory_start_time(time);
-            right_leg->set_trajectory_start_time(time);
-
-            // x_mutex.lock();
-            Eigen::Matrix<double, n, 1> x_temp = x_lift_off_update = P_param.block<n, 1>(0, 0);
-            // x_mutex.unlock();
-
-            if(!swing_left_temp) { // Left foot will now be in swing phase so we need to save lift off position for swing trajectory planning
-                left_leg->update_foot_pos_body_frame(x_temp);
-                left_leg->set_lift_off_pos(left_leg->get_foot_pos_body_frame());
-
-                left_leg->set_lift_off_vel(x_temp.block<3, 1>(9, 0));
-            }
-            if(!swing_right_temp) { // Right foot will now be in swing phase so we need to save lift off position for swing trajectory planning
-                right_leg->update_foot_pos_body_frame(x_temp);
-                right_leg->set_lift_off_pos(right_leg->get_foot_pos_body_frame());
-
-                right_leg->set_lift_off_vel(x_temp.block<3, 1>(9, 0));
-            }
-
-            std::cout << "Contact swap event occured at iterations=" << total_iterations << std::endl;
-        }
-
-        left_leg->set_swing_phase(!get_contact(get_contact_phase(time)));
-        right_leg->set_swing_phase(!get_contact(get_contact_phase(time) + 0.5));
-
         // time += dt;
         for(int k = 0; k < N; k++) {
             double phi_predicted_left = get_contact_phase(time + dt * k);
@@ -1501,13 +1504,12 @@ void run_mpc() {
 
                 // Go to next contact swap in prediction horizon and get desired foot position for trajectory planner. The if + if statement is badly written and should be refactored
                 if(swing_left != swing_left_prev && !contact_swap_updated) { 
-                    next_body_vel_mutex.lock();
 
                     left_leg->set_next_foot_pos_world_desired(left_leg->foot_pos_world_discretization);
                     right_leg->set_next_foot_pos_world_desired(right_leg->foot_pos_world_discretization);
-
-                    next_body_vel = (Eigen::Matrix<double, 3, 1>() << vel_x_t, vel_y_t, vel_z_t).finished();
                     
+                    next_body_vel_mutex.lock();
+                    next_body_vel = (Eigen::Matrix<double, 3, 1>() << vel_x_t, vel_y_t, vel_z_t).finished();
                     next_body_vel_mutex.unlock();
 
                     predicted_contact_swap_iterations = total_iterations + i;
@@ -1586,13 +1588,13 @@ void run_mpc() {
 
         r_z_left = r_z_right = -P_param(5, 0);
 
-        x_mutex.lock();
-        Eigen::Matrix<double, n, 1> x_temp = x_trajectory_update = x_t;
-        x_mutex.unlock();
-        next_body_vel_mutex.lock();
-        left_leg->update_foot_trajectory(x_temp, next_body_vel, t_stance, get_time(false));
-        right_leg->update_foot_trajectory(x_temp, next_body_vel, t_stance, get_time(false));
-        next_body_vel_mutex.unlock();
+        // x_mutex.lock();
+        // Eigen::Matrix<double, n, 1> x_temp = x_trajectory_update = x_t;
+        // x_mutex.unlock();
+        // next_body_vel_mutex.lock();
+        // left_leg->update_foot_trajectory(x_temp, next_body_vel, t_stance, get_time(false));
+        // right_leg->update_foot_trajectory(x_temp, next_body_vel, t_stance, get_time(false));
+        // next_body_vel_mutex.unlock();
 
         // Copy all values from Eigen Matrices to casadi DM because that's what casadi accepts for the solver
         size_t rows_P_param = P_param.rows();
@@ -1651,7 +1653,7 @@ void run_mpc() {
             u_t = Eigen::ArrayXd::Zero(6, 1);
         }
 
-        x_temp = P_param.block<n,1>(0, 0);
+        Eigen::Matrix<double, n, 1> x_temp = P_param.block<n,1>(0, 0);
         Eigen::Matrix<double, 3, 1> foot_pos_world_left = left_leg->get_foot_pos_world(x_temp);
         Eigen::Matrix<double, 3, 1> foot_pos_world_right = right_leg->get_foot_pos_world(x_temp);
 
