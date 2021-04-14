@@ -1052,7 +1052,7 @@ void run_mpc() {
                 << "foot_pos_body_frame_desired_x_right,foot_pos_body_frame_desired_y_right,foot_pos_body_frame_desired_z_right,"
                 << "next_foot_pos_world_desired_x_left,next_foot_pos_world_desired_y_left,next_foot_pos_world_desired_z_left,"
                 << "next_foot_pos_world_desired_x_right,next_foot_pos_world_desired_y_right, next_foot_pos_world_desired_z_right,"
-                << "theta_delay_compensation,full_iteration_time,phi_delay_compensation,predicted_contact_swap_iterations,X_t,U_t,P_param_full,x_lift_off_update,x_trajectory_update" << std::endl; // Add header to csv file
+                << "theta_delay_compensation,full_iteration_time,solver_time,phi_delay_compensation,predicted_contact_swap_iterations,X_t,U_t,P_param_full,x_lift_off_update,x_trajectory_update" << std::endl; // Add header to csv file
     data_file.close();
 
     struct timespec deadline; // timespec struct for storing time that execution thread should sleep for
@@ -1757,7 +1757,7 @@ void run_mpc() {
                 << "," << right_leg->foot_trajectory.get_position(1.0 / 3.0)(0, 0) << "," << right_leg->foot_trajectory.get_position(1.0 / 3.0)(1, 0) << "," << right_leg->foot_trajectory.get_position(1.0 / 3.0)(2, 0)
                 << "," << next_foot_pos_world_desired_left(0, 0) << "," << next_foot_pos_world_desired_left(1, 0) << "," << next_foot_pos_world_desired_left(2, 0)
                 << "," << next_foot_pos_world_desired_right(0, 0) << "," << next_foot_pos_world_desired_right(1, 0) << "," << next_foot_pos_world_desired_right(2, 0)
-                << "," << P_param(1, 0) << "," << full_iteration_duration / 1000.0 << "," << solution_variables(n, 0) << "," << predicted_contact_swap_iterations << ",";
+                << "," << P_param(1, 0) << "," << full_iteration_duration / 1000.0 << "," << solver_time / 1000.0 << "," << solution_variables(n, 0) << "," << predicted_contact_swap_iterations << ",";
 
         next_body_vel_mutex.unlock();
 
