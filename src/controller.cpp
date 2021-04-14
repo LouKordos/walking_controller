@@ -361,6 +361,8 @@ void calculate_left_leg_torques() {
         // Update no matter the gait phase to keep foot state updated
         left_leg->update();
 
+        auto start_temp = high_resolution_clock::now();
+
         double time = get_time(false);
 
         bool swing_left_temp = left_leg->get_swing_phase();
@@ -396,6 +398,10 @@ void calculate_left_leg_torques() {
         left_leg->update_foot_trajectory(x, next_body_vel, t_stance, get_time(false));
         right_leg->update_foot_trajectory(x, next_body_vel, t_stance, get_time(false));
         next_body_vel_mutex.unlock();
+
+        auto end_temp = high_resolution_clock::now();
+
+        std::cout << "Stuff duration=" << duration_cast<microseconds>(end_temp - start_temp).count() << "uS\n";
 
         // If swing, leg trajectory should be followed, if not, foot is in contact with the ground and MPC forces should be converted into torques and applied
         if(left_leg->get_swing_phase() /*&& !left_leg->contactState.hasContact()*/) {
