@@ -186,6 +186,20 @@ double get_contact_phase(double time) {
     return (time - get_last_contact_swap_time()) / (t_stance * 2.0); // Multiply t_stance by 2 because the function returning a discrete contact phase base on phi already splits it up into two parts.
 }
 
+Eigen::Matrix<double, 3, 1> get_next_body_vel() {
+    next_body_vel_mutex.lock();
+    Eigen::Matrix<double,  3, 1> temp = next_body_vel;
+    next_body_vel_mutex.unlock();
+
+    return temp;
+}
+
+void set_next_body_vel(const Eigen::Matrix<double, 3, 1> val) {
+    next_body_vel_mutex.lock();
+    next_body_vel = val;
+    next_body_vel_mutex.unlock();
+}
+
 void update_left_leg_state() {
 
     // High resolution clocks used for measuring execution time of loop iteration.
@@ -380,10 +394,9 @@ void calculate_left_leg_torques() {
         left_leg->set_swing_phase(!get_contact(get_contact_phase(get_time(false))));
         right_leg->set_swing_phase(!get_contact(get_contact_phase(get_time(false)) + 0.5));
 
-        // next_body_vel_mutex.lock();
-        left_leg->update_foot_trajectory(x, next_body_vel, t_stance, get_time(false));
-        right_leg->update_foot_trajectory(x, next_body_vel, t_stance, get_time(false));
-        // next_body_vel_mutex.unlock();
+        Eigen::Matrix<double, 3, 1> next_body_vel_temp = get_next_body_vel();
+        left_leg->update_foot_trajectory(x, next_body_vel_temp, t_stance, get_time(false));
+        right_leg->update_foot_trajectory(x, next_body_vel_temp, t_stance, get_time(false));
 
         auto end_temp = high_resolution_clock::now();
 
@@ -1493,9 +1506,7 @@ void run_mpc() {
                     left_leg->set_next_foot_pos_world_desired(left_leg->foot_pos_world_discretization);
                     right_leg->set_next_foot_pos_world_desired(right_leg->foot_pos_world_discretization);
                     
-                    // next_body_vel_mutex.lock();
-                    next_body_vel = (Eigen::Matrix<double, 3, 1>() << vel_x_t, vel_y_t, vel_z_t).finished();
-                    // next_body_vel_mutex.unlock();
+                    set_next_body_vel((Eigen::Matrix<double, 3, 1>() << vel_x_t, vel_y_t, vel_z_t).finished());
 
                     predicted_contact_swap_iterations = total_iterations + i;
                     
@@ -1691,8 +1702,6 @@ void run_mpc() {
         u_mutex.lock();
         x_mutex.lock();
 
-        next_body_vel_mutex.lock();
-
         // Get rough value without logging duration to have value for logfile.
         auto end_total = high_resolution_clock::now();
         double full_iteration_duration = duration_cast<microseconds> (end_total - start_total).count();
@@ -1708,6 +1717,7 @@ void run_mpc() {
         Eigen::Matrix<double, 3, 1> next_foot_pos_world_desired_right = right_leg->get_next_foot_pos_world_desired();
         Eigen::Matrix<double, 3, 1> foot_pos_world_desired_left = left_leg->get_foot_pos_world_desired();
         Eigen::Matrix<double, 3, 1> foot_pos_world_desired_right = right_leg->get_foot_pos_world_desired();
+        Eigen::Matrix<double, 3, 1 > next_body_vel_temp = get_next_body_vel();
 
         // Log data to csv file
         ofstream data_file;
@@ -1719,7 +1729,7 @@ void run_mpc() {
                 << "," << r_x_right << "," << r_y_right << "," << r_z_right
                 << "," << r_x_actual_left << "," << r_y_actual_left << "," << r_z_actual_left
                 << "," << r_x_actual_right << "," << r_y_actual_right << "," << r_z_actual_right
-                << "," << next_body_vel(0, 0) << "," << next_body_vel(1, 0) << "," << next_body_vel(2, 0)
+                << "," << next_body_vel_temp(0, 0) << "," << next_body_vel_temp(1, 0) << "," << next_body_vel_temp(2, 0)
                 << "," << !left_leg->get_swing_phase() * 0.1 << "," << !right_leg->get_swing_phase() * 0.1
                 << "," << left_leg->contactState.hasContact() * 0.1 << "," << right_leg->contactState.hasContact() * 0.1
                 << "," << foot_pos_body_frame_left(0, 0) << "," << foot_pos_body_frame_left(1, 0) << "," << foot_pos_body_frame_left(2, 0)
@@ -1731,8 +1741,6 @@ void run_mpc() {
                 << "," << next_foot_pos_world_desired_left(0, 0) << "," << next_foot_pos_world_desired_left(1, 0) << "," << next_foot_pos_world_desired_left(2, 0)
                 << "," << next_foot_pos_world_desired_right(0, 0) << "," << next_foot_pos_world_desired_right(1, 0) << "," << next_foot_pos_world_desired_right(2, 0)
                 << "," << P_param(1, 0) << "," << full_iteration_duration / 1000.0 << "," << solver_time / 1000.0 << "," << solution_variables(n, 0) << "," << predicted_contact_swap_iterations << ",";
-
-        next_body_vel_mutex.unlock();
 
         u_mutex.unlock();
         x_mutex.unlock();
