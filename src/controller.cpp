@@ -463,9 +463,6 @@ void calculate_left_leg_torques() {
             constrain(left_leg->tau_setpoint(4), -15, 15);
         }
 
-        if(simState->isPaused()) {
-            left_leg->tau_setpoint = Eigen::ArrayXd::Zero(5, 1);
-        }
         auto torque_calculation_end = high_resolution_clock::now();
 
         double torque_calculation_duration = duration_cast<nanoseconds>(torque_calculation_end - torque_calculation_start).count();
@@ -726,9 +723,9 @@ void calculate_right_leg_torques() {
 
         double torque_calculation_duration = duration_cast<nanoseconds>(torque_calculation_end - torque_calculation_start).count();
         
-        if(simState->isPaused()) {
-            right_leg->tau_setpoint = Eigen::ArrayXd::Zero(5, 1);
-        }
+        // if(simState->isPaused()) {
+        //     right_leg->tau_setpoint = Eigen::ArrayXd::Zero(5, 1);
+        // }
 
         // right_leg->tau_setpoint(0, 0) = 0;
 
@@ -1774,12 +1771,6 @@ void run_mpc() {
                 solution_variables(n*(N+1)+3),
                 solution_variables(n*(N+1)+4),
                 solution_variables(n*(N+1)+5);
-
-        if(simState->isPaused()) {
-            u_t = Eigen::ArrayXd::Zero(6, 1);
-        }
-
-        // time = get_time(false) + dt;
         
         // Send optimal control over UDP, along with logging info for the gazebo plugin
         stringstream s;
@@ -1808,9 +1799,11 @@ void run_mpc() {
         U_t.block<m*(N-1), 1>(0, 0) = solution_variables.block<m*(N-1), 1>(n*(N+1) + m, 0);
         U_t.block<m, 1>(m*(N-1), 0) = solution_variables.block<m, 1>(n*(N+1)+m*(N-1), 0);
 
-        if(!simState->isPaused()) {
-            ++total_iterations;
-        }
+        // if(!simState->isPaused()) {
+        //     ++total_iterations;
+        // }
+
+        ++total_iterations;
 
         end = high_resolution_clock::now();
         double duration_after = duration_cast<microseconds> (end - start).count();
