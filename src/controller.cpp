@@ -1584,14 +1584,6 @@ void run_mpc() {
 
         r_z_left = r_z_right = -P_param(5, 0);
 
-        // x_mutex.lock();
-        // Eigen::Matrix<double, n, 1> x_temp = x_trajectory_update = x_t;
-        // x_mutex.unlock();
-        // next_body_vel_mutex.lock();
-        // left_leg->update_foot_trajectory(x_temp, next_body_vel, t_stance, get_time(false));
-        // right_leg->update_foot_trajectory(x_temp, next_body_vel, t_stance, get_time(false));
-        // next_body_vel_mutex.unlock();
-
         // Copy all values from Eigen Matrices to casadi DM because that's what casadi accepts for the solver
         size_t rows_P_param = P_param.rows();
         size_t cols_P_param = P_param.cols();
