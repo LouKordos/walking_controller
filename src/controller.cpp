@@ -116,17 +116,6 @@ double get_time(bool simTime) {
 
         return t;
     }
-
-    // time_mutex.lock();
-    // double t = current_time; // Store in temporary variable because return would exit the function, but the mutex still has to be unlocked
-    // time_mutex.unlock();
-
-
-    // if (abs(t - simTime) > 0.01) {
-    //     std::cout << "Time drift detected, get back to the future! Time diff=" << t - simTime << "\n";
-    // }
-
-    // return t;
 }
 
 void update_time() {
@@ -178,8 +167,6 @@ bool isTimeSynced() {
 
     return synced;
 }
-
-
 
 double get_last_contact_swap_time() {
     last_contact_swap_time_mutex.lock();
@@ -440,17 +427,11 @@ void calculate_left_leg_torques() {
                 constrain(left_leg->tau_setpoint(i), -200, 200);
             }
             constrain(left_leg->tau_setpoint(4), -15, 15);
-
-            // if(!left_leg->contactState.hasContact()) {
-            //     left_leg->tau_setpoint = Eigen::ArrayXd::Zero(5, 1);
-            // }
         }
 
         if(simState->isPaused()) {
             left_leg->tau_setpoint = Eigen::ArrayXd::Zero(5, 1);
         }
-
-        // left_leg->tau_setpoint(0, 0) = 0;
 
         stringstream s;
         s << left_leg->tau_setpoint(0, 0) << "|" << left_leg->tau_setpoint(1, 0) << "|" << left_leg->tau_setpoint(2, 0) << "|" << left_leg->tau_setpoint(3, 0) << "|" << left_leg->tau_setpoint(4, 0); // Write torque setpoints to stringstream
