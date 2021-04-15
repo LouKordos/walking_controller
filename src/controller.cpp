@@ -476,9 +476,9 @@ void calculate_left_leg_torques() {
         // then calculates the remaining time for the loop to run at the desired frequency and waits this duration.
         duration = duration_cast<microseconds>(end - start).count();
 
-        stringstream temp;
-        temp << "Left leg torque thread loop duration: " << duration << "µS";
-        log(temp.str(), INFO);
+        // stringstream temp;
+        // temp << "Left leg torque thread loop duration: " << duration << "µS";
+        // log(temp.str(), INFO);
 
         // std::cout << "Loop duration: " << duration << "µS, iteration_counter: " << iteration_counter - 1 << std::endl;
         long long remainder = (torque_calculation_interval - duration) * 1e+03;
@@ -716,9 +716,9 @@ void calculate_right_leg_torques() {
         // then calculates the remaining time for the loop to run at the desired frequency and waits this duration.
         duration = duration_cast<microseconds>(end - start).count();
 
-        stringstream temp;
-        temp << "right leg torque thread loop duration: " << duration << "µS";
-        log(temp.str(), INFO);
+        // stringstream temp;
+        // temp << "right leg torque thread loop duration: " << duration << "µS";
+        // log(temp.str(), INFO);
 
         // std::cout << "Loop duration: " << duration << "µS, iteration_counter: " << iteration_counter - 1 << std::endl;
         long long remainder = (torque_calculation_interval - duration) * 1e+03;
@@ -1116,9 +1116,9 @@ void run_mpc() {
         // if (pos_y - pos_y_desired )
         // pos_y_desired = P_param(4, 0) + 0.1;
         
-        stringstream temp;
-        temp << "x_t:" << x_t(0, 0) << "," << x_t(1, 0) << "," << x_t(2, 0) << "," << x_t(3, 0) << "," << x_t(4, 0) << "," << x_t(5, 0) << "," << x_t(6, 0) << "," << x_t(7, 0) << "," << x_t(8, 0) << "," << x_t(9, 0) << "," << x_t(10, 0) << "," << x_t(11, 0) << "," << x_t(12, 0);
-        log(temp.str(), INFO);
+        // stringstream temp;
+        // temp << "x_t:" << x_t(0, 0) << "," << x_t(1, 0) << "," << x_t(2, 0) << "," << x_t(3, 0) << "," << x_t(4, 0) << "," << x_t(5, 0) << "," << x_t(6, 0) << "," << x_t(7, 0) << "," << x_t(8, 0) << "," << x_t(9, 0) << "," << x_t(10, 0) << "," << x_t(11, 0) << "," << x_t(12, 0);
+        // log(temp.str(), INFO);
         // print_threadsafe(temp.str(), "mpc_thread", INFO, true);
         
         double time = get_time(false) + dt;
@@ -1685,9 +1685,9 @@ void run_mpc() {
 
         // std::cout << "Solver preparation took " << duration_before + duration_after << " microseconds" << std::endl;
 
-        temp.str(std::string());
-        temp << "Solver preparation in MPC thread duration: " << duration_before + duration_after << "µS";
-        log(temp.str(), INFO);
+        // temp.str(std::string());
+        // temp << "Solver preparation in MPC thread duration: " << duration_before + duration_after << "µS";
+        // log(temp.str(), INFO);
 
         u_mutex.lock();
         x_mutex.lock();
@@ -1699,9 +1699,9 @@ void run_mpc() {
         double full_iteration_duration = duration_cast<microseconds> (end_total - start_total).count();
 
         std::cout << "Full iteration took " << full_iteration_duration << " microseconds" << std::endl;
-        temp.str(std::string());
-        temp << "Full MPC iteration loop duration: " << full_iteration_duration << "µS";
-        log(temp.str(), INFO);
+        // temp.str(std::string());
+        // temp << "Full MPC iteration loop duration: " << full_iteration_duration << "µS";
+        // log(temp.str(), INFO);
 
         Eigen::Matrix<double, 3, 1> foot_pos_body_frame_left = left_leg->get_foot_pos_body_frame();
         Eigen::Matrix<double, 3, 1> foot_pos_body_frame_right = right_leg->get_foot_pos_body_frame();
