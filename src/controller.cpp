@@ -276,7 +276,7 @@ void calculate_left_leg_torques() {
 
     bool time_switch = false; // used for running a two-phase trajectory, otherwise obsolete
 
-    while(!isTimeSynced) { // Only start running Leg code after first MPC iteration to prevent problems with non-updated values
+    while(!isTimeSynced()) { // Only start running Leg code after first MPC iteration to prevent problems with non-updated values
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 
