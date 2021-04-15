@@ -280,7 +280,7 @@ void calculate_left_leg_torques() {
                 << "foot_vel_x_desired,foot_vel_y_desired,foot_vel_z_desired,"
                 << "foot_phi,foot_theta,foot_psi," 
                 << "foot_phi_desired,foot_theta_desired,foot_psi_desired," 
-                << "current_trajectory_time" << std::endl; // Add header to csv file
+                << "current_trajectory_time,state_update_time,model_update_time,gait_update_time,trajectory_update_time,torque_calculation_time" << std::endl; // Add header to csv file
     data_file.close();
 
     ofstream torque_function_file;
@@ -317,6 +317,8 @@ void calculate_left_leg_torques() {
 
         msg_length = recvfrom(sockfd, (char *)buffer, udp_buffer_size, 0, ( struct sockaddr *) &cliaddr, &len); // Receive message over UDP containing full leg state
         buffer[msg_length] = '\0'; // Add string ending delimiter to end of string (n is length of message)
+
+        auto state_update_start = high_resolution_clock::now();
 
         std::string raw_state(buffer); // Create string from buffer char array to split
 
@@ -358,10 +360,21 @@ void calculate_left_leg_torques() {
                 x(i, 0) = atof(state[i + 10].c_str());
             }
         }
+
+        auto state_update_end = high_resolution_clock::now();
+
+        double state_update_duration = duration_cast<nanoseconds>(state_update_end - state_update_start).count();
+
+        auto model_update_start = high_resolution_clock::now();
+
         // Update no matter the gait phase to keep foot state updated
         left_leg->update();
 
-        auto start_temp = high_resolution_clock::now();
+        auto model_update_end = high_resolution_clock::now();
+
+        double model_update_duration = duration_cast<nanoseconds>(model_update_end - model_update_start).count();
+
+        auto gait_update_start = high_resolution_clock::now();
 
         double time = get_time(false);
 
@@ -394,13 +407,21 @@ void calculate_left_leg_torques() {
         left_leg->set_swing_phase(!get_contact(get_contact_phase(get_time(false))));
         right_leg->set_swing_phase(!get_contact(get_contact_phase(get_time(false)) + 0.5));
 
+        auto gait_update_end = high_resolution_clock::now();
+        
+        double gait_update_duration = duration_cast<nanoseconds>(gait_update_end - gait_update_start).count();
+
+        auto trajectory_update_start = high_resolution_clock::now();
+
         Eigen::Matrix<double, 3, 1> next_body_vel_temp = get_next_body_vel();
         left_leg->update_foot_trajectory(x, next_body_vel_temp, t_stance, get_time(false));
         right_leg->update_foot_trajectory(x, next_body_vel_temp, t_stance, get_time(false));
 
-        auto end_temp = high_resolution_clock::now();
+        auto trajectory_update_end = high_resolution_clock::now();
+        
+        double trajectory_update_duration = duration_cast<nanoseconds>(trajectory_update_end - trajectory_update_start).count();
 
-        // std::cout << "Stuff duration=" << duration_cast<microseconds>(end_temp - start_temp).count() << "uS\n";
+        auto torque_calculation_start = high_resolution_clock::now();
 
         // If swing, leg trajectory should be followed, if not, foot is in contact with the ground and MPC forces should be converted into torques and applied
         if(left_leg->get_swing_phase() /*&& !left_leg->contactState.hasContact()*/) {
@@ -445,6 +466,13 @@ void calculate_left_leg_torques() {
         if(simState->isPaused()) {
             left_leg->tau_setpoint = Eigen::ArrayXd::Zero(5, 1);
         }
+        auto torque_calculation_end = high_resolution_clock::now();
+
+        double torque_calculation_duration = duration_cast<nanoseconds>(torque_calculation_end - torque_calculation_start).count();
+
+        // if(simState->isPaused()) {
+        //     left_leg->tau_setpoint = Eigen::ArrayXd::Zero(5, 1);
+        // }
 
         stringstream s;
         s << left_leg->tau_setpoint(0, 0) << "|" << left_leg->tau_setpoint(1, 0) << "|" << left_leg->tau_setpoint(2, 0) << "|" << left_leg->tau_setpoint(3, 0) << "|" << left_leg->tau_setpoint(4, 0); // Write torque setpoints to stringstream
@@ -476,7 +504,8 @@ void calculate_left_leg_torques() {
                         << "," << left_leg->vel_desired(0, 0) << "," << left_leg->vel_desired(1, 0) << "," << left_leg->vel_desired(2, 0) 
                         << "," << left_leg->foot_pos(3, 0) << "," << left_leg->foot_pos(4, 0) << "," << 0 
                         << "," << left_leg->pos_desired(3, 0) << "," << left_leg->pos_desired(4, 0) << "," << 0
-                        << "," << current_traj_time_temp << std::endl;
+                        << "," << current_traj_time_temp
+                        << "," << state_update_duration << "," << model_update_duration << "," << gait_update_duration << "," << trajectory_update_duration << "," << torque_calculation_duration << std::endl;
                 
             data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
         }
@@ -559,7 +588,7 @@ void calculate_right_leg_torques() {
                 << "foot_vel_x_desired,foot_vel_y_desired,foot_vel_z_desired,"
                 << "foot_phi,foot_theta,foot_psi,"
                 << "foot_phi_desired,foot_theta_desired,foot_psi_desired," 
-                << "current_trajectory_time" << std::endl; // Add header to csv file
+                << "current_trajectory_time,state_update_time,model_update_time,torque_calculation_time" << std::endl; // Add header to csv file
     data_file.close();
 
     bool time_switch = false; // used for running a two-phase trajectory, otherwise obsolete
@@ -591,6 +620,8 @@ void calculate_right_leg_torques() {
 
         msg_length = recvfrom(sockfd, (char *)buffer, udp_buffer_size, 0, ( struct sockaddr *) &cliaddr, &len); // Receive message over UDP containing full leg state
         buffer[msg_length] = '\0'; // Add string ending delimiter to end of string (n is length of message)
+
+        auto state_update_start = high_resolution_clock::now();
 
         std::string raw_state(buffer); // Create string from buffer char array to split
 
@@ -633,8 +664,20 @@ void calculate_right_leg_torques() {
             }
         }
 
+        auto state_update_end = high_resolution_clock::now();
+
+        double state_update_duration = duration_cast<nanoseconds>(state_update_end - state_update_start).count();
+
+        auto model_update_start = high_resolution_clock::now();
+
         //TODO: Maybe rework to only use q and q_dot
         right_leg->update();
+
+        auto model_update_end = high_resolution_clock::now();
+
+        double model_update_duration = duration_cast<nanoseconds>(model_update_end - model_update_start).count();
+
+        auto torque_calculation_start = high_resolution_clock::now();
 
         // If swing, leg trajectory should be followed, if not, foot is in contact with the ground and MPC forces should be converted into torques and applied
         if(right_leg->get_swing_phase() /*&& !right_leg->contactState.hasContact()*/) {
@@ -678,6 +721,10 @@ void calculate_right_leg_torques() {
             //     right_leg->tau_setpoint = Eigen::ArrayXd::Zero(5, 1);
             // }
         }
+
+        auto torque_calculation_end = high_resolution_clock::now();
+
+        double torque_calculation_duration = duration_cast<nanoseconds>(torque_calculation_end - torque_calculation_start).count();
         
         if(simState->isPaused()) {
             right_leg->tau_setpoint = Eigen::ArrayXd::Zero(5, 1);
@@ -715,7 +762,8 @@ void calculate_right_leg_torques() {
                         << "," << right_leg->vel_desired(0, 0) << "," << right_leg->vel_desired(1, 0) << "," << right_leg->vel_desired(2, 0) 
                         << "," << right_leg->foot_pos(3, 0) << "," << right_leg->foot_pos(4, 0) << "," << 0
                         << "," << right_leg->pos_desired(3, 0) << "," << right_leg->pos_desired(4, 0) << "," << 0
-                        << "," << current_traj_time_temp << std::endl;
+                        << "," << current_traj_time_temp
+                        << "," << state_update_duration << "," << model_update_duration << "," << torque_calculation_duration << std::endl;
                 
             data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
         }
@@ -1044,7 +1092,8 @@ void run_mpc() {
                 << "foot_pos_body_frame_desired_x_right,foot_pos_body_frame_desired_y_right,foot_pos_body_frame_desired_z_right,"
                 << "next_foot_pos_world_desired_x_left,next_foot_pos_world_desired_y_left,next_foot_pos_world_desired_z_left,"
                 << "next_foot_pos_world_desired_x_right,next_foot_pos_world_desired_y_right, next_foot_pos_world_desired_z_right,"
-                << "theta_delay_compensation,full_iteration_time,solver_time,phi_delay_compensation,predicted_contact_swap_iterations,X_t,U_t,P_param_full,x_lift_off_update,x_trajectory_update" << std::endl; // Add header to csv file
+                << "theta_delay_compensation,full_iteration_time,solver_time,state_update,delay_compensation,contact_update,reference_update,foot_pos_left_update,foot_pos_right_update,r_update,x_ref_update,foot_pos_left_discretization_update,foot_pos_right_discretization_update,trajectory_target_update,memcpy,solution_update,log_lock,"
+                << "phi_delay_compensation,predicted_contact_swap_iterations,X_t,U_t,P_param_full,x_lift_off_update,x_trajectory_update" << std::endl; // Add header to csv file
     data_file.close();
 
     struct timespec deadline; // timespec struct for storing time that execution thread should sleep for
@@ -1083,6 +1132,8 @@ void run_mpc() {
         msg_length = recvfrom(sockfd, (char *)buffer, udp_buffer_size, 0, ( struct sockaddr *) &cliaddr, &len); // Receive message over UDP containing full leg state
         buffer[msg_length] = '\0'; // Add string ending delimiter to end of string (n is length of message)
         
+        auto state_update_start = high_resolution_clock::now();
+        
         std::string raw_state(buffer); // Create string from buffer char array to split
         
         std::vector<std::string> com_state = split_string(raw_state, '|'); // Split raw state message by message delimiter to parse individual elements
@@ -1093,12 +1144,22 @@ void run_mpc() {
             // P_param(i,0) = x_t(i, 0);
         }
         x_mutex.unlock();
+
+        auto state_update_end = high_resolution_clock::now();
+
+        double state_update_duration = duration_cast<nanoseconds>(state_update_end - state_update_start).count();
         
         // P_param.block<n,1>(0, 0) = x_t;
         
+        auto delay_compensation_start = high_resolution_clock::now();
+
         // Step the model one timestep and use the resulting state as the initial state for the solver. This compensates for the roughly 1 sample delay due to the solver time
         P_param.block<n,1>(0, 0) = step_discrete_model(x_t, u_t, r_x_left, r_x_right, r_y_left, r_y_right, r_z_left, r_z_right);
         // P_param(7, 0) = x_t(7, 0);
+
+        auto delay_compensation_end = high_resolution_clock::now();
+
+        double delay_compensation_duration = duration_cast<nanoseconds>(delay_compensation_end - delay_compensation_start).count();
 
         if (total_iterations == 0) {
             // Give solver better guess for first iteration to reduce solver time and generate more fitting solution
@@ -1133,6 +1194,8 @@ void run_mpc() {
         // log(temp.str(), INFO);
         // print_threadsafe(temp.str(), "mpc_thread", INFO, true);
         
+        auto contact_update_start = high_resolution_clock::now();
+
         double time = get_time(false) + dt;
 
         // time += dt;
@@ -1154,6 +1217,12 @@ void run_mpc() {
 
         // Update P_param
         P_param.block<m, m*N> (0, 1 + N + n*N + m*N) = D_vector;
+
+        auto contact_update_end = high_resolution_clock::now();
+
+        double contact_update_duration = duration_cast<nanoseconds>(contact_update_end - contact_update_start).count();
+
+        auto reference_update_start = high_resolution_clock::now();
 
         //Set U_ref depending on contact combination present
         for(int k = 0; k < N; ++k) {
@@ -1191,6 +1260,10 @@ void run_mpc() {
             }
         }
 
+        auto reference_update_end = high_resolution_clock::now();
+
+        double reference_update_duration = duration_cast<nanoseconds>(reference_update_end - reference_update_start).count();
+
         // Transformation matrix from body frame to world frame, ZYX order
         Eigen::Matrix<double, 4, 4> H_body_world = (Eigen::Matrix<double, 4, 4>() << 
                 cos(P_param(2, 0))*cos(P_param(1, 0)), sin(P_param(0, 0))*sin(P_param(1, 0))*cos(P_param(2, 0)) - sin(P_param(2, 0))*cos(P_param(0, 0)), sin(P_param(0, 0))*sin(P_param(2, 0)) + sin(P_param(1, 0))*cos(P_param(0, 0))*cos(P_param(2, 0)), P_param(3, 0),
@@ -1213,6 +1286,8 @@ void run_mpc() {
         else if(vel_y_desired > 0) {
             constrain(vel_vector(1, 0), 0, vel_y_desired); // Limit velocity used for calculating desired foot position to desired velocity, preventing steps too far out that slow the robot down too much
         }
+
+        auto foot_pos_left_update_start = high_resolution_clock::now();
 
         // Only change where forces are applied when in swing phase, foot cannot move while in contact
         if(left_leg->get_swing_phase()) {
@@ -1238,6 +1313,12 @@ void run_mpc() {
             left_leg->set_foot_pos_world_desired(foot_pos_world_desired); // This is needed because the formula above doesn't make sense for Z, and the foot naturally touches the ground at Z = 0 in the world frame
         }
 
+        auto foot_pos_left_update_end = high_resolution_clock::now();
+
+        double foot_pos_left_update_duration = duration_cast<nanoseconds>(foot_pos_left_update_end - foot_pos_left_update_start).count();
+
+        auto foot_pos_right_update_start = high_resolution_clock::now();
+
         // Only change where forces are applied when in swing phase, foot cannot move while in contact
         if(right_leg->get_swing_phase()) {
             Eigen::Matrix<double, 3, 1> foot_pos_world_desired = hip_pos_world_right + (t_stance/2.0) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) 
@@ -1260,10 +1341,16 @@ void run_mpc() {
             foot_pos_world_desired(2, 0) = 0; // This is needed because the formula above doesn't make sense for Z, and the foot naturally touches the ground at Z = 0 in the world frame
             right_leg->set_foot_pos_world_desired(foot_pos_world_desired);
         }
-        
+
+        auto foot_pos_right_update_end = high_resolution_clock::now();
+
+        double foot_pos_right_update_duration = duration_cast<nanoseconds>(foot_pos_right_update_end - foot_pos_right_update_start).count();
+
         // stringstream temp;
         // temp << "left_foot_pos_world_desired: " << left_foot_pos_world(0, 0) << "," << left_foot_pos_world(1, 0) << "," << left_foot_pos_world(2, 0);
         // print_threadsafe(temp.str(), "mpc_thread", INFO);
+
+        auto r_update_start = high_resolution_clock::now();
 
         // Calculate r from foot world position
         if(left_leg->get_swing_phase()) {
@@ -1297,6 +1384,12 @@ void run_mpc() {
             r_y_right = foot_pos_world_right(1, 0) - P_param(4, 0);
             r_z_right = -P_param(5, 0);
         }
+
+        auto r_update_end = high_resolution_clock::now();
+
+        double r_update_duration = duration_cast<nanoseconds>(r_update_end - r_update_start).count();
+
+        auto x_ref_update_start = high_resolution_clock::now();
 
         double pos_x_desired_temp = pos_x_desired;
         double pos_y_desired_temp = pos_y_desired;
@@ -1357,6 +1450,10 @@ void run_mpc() {
         theta_desired += omega_y_desired * dt;
         psi_desired += omega_z_desired * dt;
 
+        auto x_ref_update_end = high_resolution_clock::now();
+
+        double x_ref_update_duration = duration_cast<nanoseconds>(x_ref_update_end - x_ref_update_start).count();
+
         double r_x_left_prev = r_x_left;
         double r_x_right_prev = r_x_right;
 
@@ -1379,6 +1476,10 @@ void run_mpc() {
         double pos_z_t = 0.0;
 
         bool contact_swap_updated = false; // Is set to true once first contact swap has been found in future contact states.
+
+        double foot_pos_left_discretization_update_duration = 0;
+        double foot_pos_right_discretization_update_duration = 0;
+        double trajectory_target_update_duration = 0;
 
         // Discretization loop for Prediction Horizon
         for(int i = 0; i < N; ++i) {
@@ -1459,6 +1560,8 @@ void run_mpc() {
                 constrain(vel_vector(1, 0), 0, x_ref(10, i));
             }
 
+            auto foot_pos_left_discretization_update_start = high_resolution_clock::now();
+
             // Only change where forces are applied when in swing phase, foot cannot move while in contact
             if(swing_left) {
                 left_leg->foot_pos_world_discretization = /*pos_error_gain * (pos_vector - pos_desired_vector) +*/ hip_pos_world_left + (t_stance/2.0) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(pos_z_t) / 9.81) * vel_vector.cross(omega_desired_vector);
@@ -1478,6 +1581,12 @@ void run_mpc() {
                 left_leg->foot_pos_world_discretization(2, 0) = 0; // This is needed because the formula above doesn't make sense for Z, and the foot naturally touches the ground at Z = 0 in the world frame
             }
 
+            auto foot_pos_left_discretization_update_end = high_resolution_clock::now();
+
+            foot_pos_left_discretization_update_duration = duration_cast<nanoseconds>(foot_pos_left_discretization_update_end - foot_pos_left_discretization_update_start).count();
+
+            auto foot_pos_right_discretization_update_start = high_resolution_clock::now();
+
             // Only change where forces are applied when in swing phase, foot cannot move while in contact
             if(swing_right) {
                 right_leg->foot_pos_world_discretization = /*pos_error_gain * (pos_vector - pos_desired_vector) +*/ hip_pos_world_right + (t_stance/2.0) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(pos_z_t) / 9.81) * vel_vector.cross(omega_desired_vector);
@@ -1495,6 +1604,12 @@ void run_mpc() {
                 }
                 right_leg->foot_pos_world_discretization(2, 0) = 0; // This is needed because the formula above doesn't make sense for Z, and the foot naturally touches the ground at Z = 0 in the world frame
             }
+
+            auto foot_pos_right_discretization_update_end = high_resolution_clock::now();
+
+            foot_pos_right_discretization_update_duration = duration_cast<nanoseconds>(foot_pos_right_discretization_update_end - foot_pos_right_discretization_update_start).count();
+
+            auto trajectory_target_update_start = high_resolution_clock::now();
             
             if(i != 0) {
                 // Get previous contact state to compared to current, if different contact swap occurs at the current iteration and swing trajectory target needs to be updated
@@ -1513,6 +1628,10 @@ void run_mpc() {
                     contact_swap_updated = true;
                 }
             }
+
+            auto trajectory_target_update_end = high_resolution_clock::now();
+
+            trajectory_target_update_duration = duration_cast<nanoseconds>(trajectory_target_update_end - trajectory_target_update_start).count();
 
             r_x_left = left_leg->foot_pos_world_discretization(0, 0) - pos_x_t;
             r_y_left = left_leg->foot_pos_world_discretization(1, 0) - pos_y_t;
@@ -1584,6 +1703,8 @@ void run_mpc() {
 
         r_z_left = r_z_right = -P_param(5, 0);
 
+        auto memcpy_start = high_resolution_clock::now();
+
         // Copy all values from Eigen Matrices to casadi DM because that's what casadi accepts for the solver
         size_t rows_P_param = P_param.rows();
         size_t cols_P_param = P_param.cols();
@@ -1605,6 +1726,8 @@ void run_mpc() {
 
         auto end = high_resolution_clock::now();
 
+        double memcpy_duration = duration_cast<nanoseconds>(end - memcpy_start).count();
+
         double duration_before = duration_cast<microseconds>(end - start).count();
 
         auto sol_start = high_resolution_clock::now();
@@ -1615,6 +1738,9 @@ void run_mpc() {
         double solver_time = duration_cast<microseconds>(sol_end - sol_start).count();
 
         start = high_resolution_clock::now();
+
+        auto solution_update_start = high_resolution_clock::now();
+
         // Extract u_t (optimal first control action) from solution
         size_t rows = solution.at("x").size1();
         size_t cols = solution.at("x").size2();
@@ -1668,6 +1794,10 @@ void run_mpc() {
 
         u_mutex.unlock();
         x_mutex.unlock();
+
+        auto solution_update_end = high_resolution_clock::now();
+
+        double solution_update_duration = duration_cast<nanoseconds>(solution_update_end - solution_update_start).count();
         
         sendto(sockfd, (const char *)s.str().c_str(), strlen(s.str().c_str()), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
 
@@ -1703,6 +1833,8 @@ void run_mpc() {
         // temp << "Full MPC iteration loop duration: " << full_iteration_duration << "µS";
         // log(temp.str(), INFO);
 
+        auto log_lock_start = high_resolution_clock::now();
+
         Eigen::Matrix<double, 3, 1> foot_pos_body_frame_left = left_leg->get_foot_pos_body_frame();
         Eigen::Matrix<double, 3, 1> foot_pos_body_frame_right = right_leg->get_foot_pos_body_frame();
         Eigen::Matrix<double, 3, 1> next_foot_pos_world_desired_left = left_leg->get_next_foot_pos_world_desired();
@@ -1710,6 +1842,13 @@ void run_mpc() {
         Eigen::Matrix<double, 3, 1> foot_pos_world_desired_left = left_leg->get_foot_pos_world_desired();
         Eigen::Matrix<double, 3, 1> foot_pos_world_desired_right = right_leg->get_foot_pos_world_desired();
         Eigen::Matrix<double, 3, 1 > next_body_vel_temp = get_next_body_vel();
+
+        bool swing_left_temp = left_leg->get_swing_phase();
+        bool swing_right_temp = right_leg->get_swing_phase();
+
+        auto log_lock_end = high_resolution_clock::now();
+
+        double log_lock_duration = duration_cast<nanoseconds>(log_lock_end - log_lock_start).count();
 
         // Log data to csv file
         ofstream data_file;
@@ -1736,6 +1875,11 @@ void run_mpc() {
 
         u_mutex.unlock();
         x_mutex.unlock();
+                << "," << P_param(1, 0) << "," << full_iteration_duration / 1000.0 << "," << solver_time / 1000.0 << "," << state_update_duration << "," << delay_compensation_duration << "," << contact_update_duration 
+                << "," << reference_update_duration << "," << foot_pos_left_update_duration << "," << foot_pos_right_update_duration << "," << r_update_duration << "," << x_ref_update_duration
+                << "," << foot_pos_left_discretization_update_duration << "," << foot_pos_right_discretization_update_duration << "," << trajectory_target_update_duration << "," << memcpy_duration
+                << "," << solution_update_duration << "," << log_lock_duration 
+                << "," << solution_variables(n, 0) << "," << predicted_contact_swap_iterations << ",";
 
         // auto before_logging = high_resolution_clock::now();
 
