@@ -380,14 +380,14 @@ void calculate_left_leg_torques() {
         left_leg->set_swing_phase(!get_contact(get_contact_phase(get_time(false))));
         right_leg->set_swing_phase(!get_contact(get_contact_phase(get_time(false)) + 0.5));
 
-        next_body_vel_mutex.lock();
+        // next_body_vel_mutex.lock();
         left_leg->update_foot_trajectory(x, next_body_vel, t_stance, get_time(false));
         right_leg->update_foot_trajectory(x, next_body_vel, t_stance, get_time(false));
-        next_body_vel_mutex.unlock();
+        // next_body_vel_mutex.unlock();
 
         auto end_temp = high_resolution_clock::now();
 
-        std::cout << "Stuff duration=" << duration_cast<microseconds>(end_temp - start_temp).count() << "uS\n";
+        // std::cout << "Stuff duration=" << duration_cast<microseconds>(end_temp - start_temp).count() << "uS\n";
 
         // If swing, leg trajectory should be followed, if not, foot is in contact with the ground and MPC forces should be converted into torques and applied
         if(left_leg->get_swing_phase() /*&& !left_leg->contactState.hasContact()*/) {
@@ -632,7 +632,6 @@ void calculate_right_leg_torques() {
             if(current_trajectory_time > t_stance + (1.0 / 50.0)) {
                 std::cout << "WARNING!!!! Desired trajectory time exceeds gait phase duration by " << current_trajectory_time - t_stance << "s" << std::endl;
             }
-
 
             // Due to the impedance control running at a much higher frequency than the MPC, the time might exceed t_stance because the MPC only updates the start time after 1/50s (worst case), which would be 50 iterations for the impedance control
             constrain(current_trajectory_time, 0, t_stance);
@@ -1494,9 +1493,9 @@ void run_mpc() {
                     left_leg->set_next_foot_pos_world_desired(left_leg->foot_pos_world_discretization);
                     right_leg->set_next_foot_pos_world_desired(right_leg->foot_pos_world_discretization);
                     
-                    next_body_vel_mutex.lock();
+                    // next_body_vel_mutex.lock();
                     next_body_vel = (Eigen::Matrix<double, 3, 1>() << vel_x_t, vel_y_t, vel_z_t).finished();
-                    next_body_vel_mutex.unlock();
+                    // next_body_vel_mutex.unlock();
 
                     predicted_contact_swap_iterations = total_iterations + i;
                     
