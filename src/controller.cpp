@@ -280,7 +280,7 @@ void calculate_left_leg_torques() {
                 << "foot_vel_x_desired,foot_vel_y_desired,foot_vel_z_desired,"
                 << "foot_phi,foot_theta,foot_psi," 
                 << "foot_phi_desired,foot_theta_desired,foot_psi_desired," 
-                << "current_trajectory_time,state_update_time,model_update_time,gait_update_time,trajectory_update_time,torque_calculation_time" << std::endl; // Add header to csv file
+                << "current_trajectory_time,state_update_time,model_update_time,gait_update_time,trajectory_update_time,torque_calculation_time,message_wait_time" << std::endl; // Add header to csv file
     data_file.close();
 
     ofstream torque_function_file;
@@ -315,8 +315,14 @@ void calculate_left_leg_torques() {
 
         Eigen::Matrix<double, n, 1> x = Eigen::ArrayXXd::Zero(n, 1);
 
+        auto message_wait_start = high_resolution_clock::now();
+
         msg_length = recvfrom(sockfd, (char *)buffer, udp_buffer_size, 0, ( struct sockaddr *) &cliaddr, &len); // Receive message over UDP containing full leg state
         buffer[msg_length] = '\0'; // Add string ending delimiter to end of string (n is length of message)
+
+        auto message_wait_end = high_resolution_clock::now();
+
+        double message_wait_duration = duration_cast<nanoseconds>(message_wait_end - message_wait_start).count();
 
         auto state_update_start = high_resolution_clock::now();
 
@@ -502,7 +508,7 @@ void calculate_left_leg_torques() {
                         << "," << left_leg->foot_pos(3, 0) << "," << left_leg->foot_pos(4, 0) << "," << 0 
                         << "," << left_leg->pos_desired(3, 0) << "," << left_leg->pos_desired(4, 0) << "," << 0
                         << "," << current_traj_time_temp
-                        << "," << state_update_duration << "," << model_update_duration << "," << gait_update_duration << "," << trajectory_update_duration << "," << torque_calculation_duration << std::endl;
+                        << "," << state_update_duration << "," << model_update_duration << "," << gait_update_duration << "," << trajectory_update_duration << "," << torque_calculation_duration << "," << message_wait_duration << std::endl;
                 
             data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
         }
@@ -585,7 +591,7 @@ void calculate_right_leg_torques() {
                 << "foot_vel_x_desired,foot_vel_y_desired,foot_vel_z_desired,"
                 << "foot_phi,foot_theta,foot_psi,"
                 << "foot_phi_desired,foot_theta_desired,foot_psi_desired," 
-                << "current_trajectory_time,state_update_time,model_update_time,torque_calculation_time" << std::endl; // Add header to csv file
+                << "current_trajectory_time,state_update_time,model_update_time,torque_calculation_time,message_wait_time" << std::endl; // Add header to csv file
     data_file.close();
 
     bool time_switch = false; // used for running a two-phase trajectory, otherwise obsolete
@@ -615,8 +621,14 @@ void calculate_right_leg_torques() {
 
         Eigen::Matrix<double, n, 1> x = Eigen::ArrayXXd::Zero(n, 1);
 
+        auto message_wait_start = high_resolution_clock::now();
+
         msg_length = recvfrom(sockfd, (char *)buffer, udp_buffer_size, 0, ( struct sockaddr *) &cliaddr, &len); // Receive message over UDP containing full leg state
         buffer[msg_length] = '\0'; // Add string ending delimiter to end of string (n is length of message)
+
+        auto message_wait_end = high_resolution_clock::now();
+
+        double message_wait_duration = duration_cast<nanoseconds>(message_wait_end - message_wait_start).count();
 
         auto state_update_start = high_resolution_clock::now();
 
@@ -760,7 +772,7 @@ void calculate_right_leg_torques() {
                         << "," << right_leg->foot_pos(3, 0) << "," << right_leg->foot_pos(4, 0) << "," << 0
                         << "," << right_leg->pos_desired(3, 0) << "," << right_leg->pos_desired(4, 0) << "," << 0
                         << "," << current_traj_time_temp
-                        << "," << state_update_duration << "," << model_update_duration << "," << torque_calculation_duration << std::endl;
+                        << "," << state_update_duration << "," << model_update_duration << "," << torque_calculation_duration << "," << message_wait_duration << std::endl;
                 
             data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
         }
@@ -1089,7 +1101,7 @@ void run_mpc() {
                 << "foot_pos_body_frame_desired_x_right,foot_pos_body_frame_desired_y_right,foot_pos_body_frame_desired_z_right,"
                 << "next_foot_pos_world_desired_x_left,next_foot_pos_world_desired_y_left,next_foot_pos_world_desired_z_left,"
                 << "next_foot_pos_world_desired_x_right,next_foot_pos_world_desired_y_right, next_foot_pos_world_desired_z_right,"
-                << "theta_delay_compensation,full_iteration_time,solver_time,state_update,delay_compensation,contact_update,reference_update,foot_pos_left_update,foot_pos_right_update,r_update,x_ref_update,foot_pos_left_discretization_update,foot_pos_right_discretization_update,trajectory_target_update,memcpy,solution_update,log_lock,"
+                << "theta_delay_compensation,full_iteration_time,solver_time,state_update_time,delay_compensation_time,contact_update_time,reference_update_time,foot_pos_left_update_time,foot_pos_right_update_time,r_update_time,x_ref_update_time,foot_pos_left_discretization_update_time,foot_pos_right_discretization_update_time,trajectory_target_update_time,memcpy_time,solution_update_time,log_lock_time,message_wait_time,"
                 << "phi_delay_compensation,predicted_contact_swap_iterations,X_t,U_t,P_param_full,x_lift_off_update,x_trajectory_update" << std::endl; // Add header to csv file
     data_file.close();
 
@@ -1126,8 +1138,14 @@ void run_mpc() {
 
         // std::cout << "-----------------------------------------------------------------------------\nr_left at beginning of iteration: " << r_x_left << "," << r_y_left << "," << r_z_left << ", r_right at beginning of iteration: " << r_x_right << "," << r_y_right << "," << r_z_right << std::endl;
 
+        auto message_wait_start = high_resolution_clock::now();
+
         msg_length = recvfrom(sockfd, (char *)buffer, udp_buffer_size, 0, ( struct sockaddr *) &cliaddr, &len); // Receive message over UDP containing full leg state
         buffer[msg_length] = '\0'; // Add string ending delimiter to end of string (n is length of message)
+
+        auto message_wait_end = high_resolution_clock::now();
+
+        double message_wait_duration = duration_cast<nanoseconds>(message_wait_end - message_wait_start).count();
         
         auto state_update_start = high_resolution_clock::now();
         
@@ -1871,7 +1889,7 @@ void run_mpc() {
                 << "," << P_param(1, 0) << "," << full_iteration_duration / 1000.0 << "," << solver_time / 1000.0 << "," << state_update_duration << "," << delay_compensation_duration << "," << contact_update_duration 
                 << "," << reference_update_duration << "," << foot_pos_left_update_duration << "," << foot_pos_right_update_duration << "," << r_update_duration << "," << x_ref_update_duration
                 << "," << foot_pos_left_discretization_update_duration << "," << foot_pos_right_discretization_update_duration << "," << trajectory_target_update_duration << "," << memcpy_duration
-                << "," << solution_update_duration << "," << log_lock_duration 
+                << "," << solution_update_duration << "," << log_lock_duration << "," << message_wait_duration
                 << "," << solution_variables(n, 0) << "," << predicted_contact_swap_iterations << ",";
 
         // auto before_logging = high_resolution_clock::now();
