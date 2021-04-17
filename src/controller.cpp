@@ -506,10 +506,8 @@ void calculate_left_leg_torques() {
                 << "foot_phi_desired,foot_theta_desired,foot_psi_desired"
             */
             
-            ofstream data_file;
-            data_file.open(plotDataDirPath + filename + "_left.csv", ios::app); // Open csv file in append mode
-            // Write plot values to csv file
-            data_file << get_time(true) << "," << get_time(false)
+            stringstream log_entry;
+            log_entry << get_time(true) << "," << get_time(false)
                         << "," << theta1 << "," << theta2 << "," << theta3 << "," << theta4 << "," << theta5
                         << "," << theta1_dot << "," << theta2_dot << "," << theta3_dot << "," << theta4_dot << "," << theta5_dot
                         << "," << left_leg->tau_setpoint(0) << "," << left_leg->tau_setpoint(1) << "," << left_leg->tau_setpoint(2) << "," << left_leg->tau_setpoint(3) << "," << left_leg->tau_setpoint(4)
@@ -520,8 +518,12 @@ void calculate_left_leg_torques() {
                         << "," << left_leg->foot_pos(3, 0) << "," << left_leg->foot_pos(4, 0) << "," << 0 
                         << "," << left_leg->pos_desired(3, 0) << "," << left_leg->pos_desired(4, 0) << "," << 0
                         << "," << current_traj_time_temp
-                        << "," << state_update_duration << "," << model_update_duration << "," << gait_update_duration << "," << trajectory_update_duration << "," << torque_calculation_duration << "," << message_wait_duration << "," << message_send_duration << "," << previous_logging_duration << std::endl;
-                
+                        << "," << state_update_duration << "," << model_update_duration << "," << gait_update_duration << "," << trajectory_update_duration << "," << torque_calculation_duration << "," << message_wait_duration << "," << message_send_duration << "," << previous_logging_duration << "\n";
+            
+            ofstream data_file;
+            data_file.open(plotDataDirPath + filename + "_left.csv", ios::app); // Open csv file in append mode
+            // Write plot values to csv file
+            data_file << log_entry.str();
             data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
         }
 
@@ -782,10 +784,8 @@ void calculate_right_leg_torques() {
                 << "foot_phi_desired,foot_theta_desired,foot_psi_desired"
             */
             
-            ofstream data_file;
-            data_file.open(plotDataDirPath + filename + "_right.csv", ios::app); // Open csv file in append mode
-            // Write plot values to csv file
-            data_file << get_time(true) << "," << get_time(false)
+            stringstream log_entry;
+            log_entry << get_time(true) << "," << get_time(false)
                         << "," << theta1 << "," << theta2 << "," << theta3 << "," << theta4 << "," << theta5
                         << "," << theta1_dot << "," << theta2_dot << "," << theta3_dot << "," << theta4_dot << "," << theta5_dot
                         << "," << right_leg->tau_setpoint(0, 0) << "," << right_leg->tau_setpoint(1, 0) << "," << right_leg->tau_setpoint(2, 0) << "," << right_leg->tau_setpoint(3, 0) << "," << right_leg->tau_setpoint(4, 0)
@@ -796,8 +796,11 @@ void calculate_right_leg_torques() {
                         << "," << right_leg->foot_pos(3, 0) << "," << right_leg->foot_pos(4, 0) << "," << 0
                         << "," << right_leg->pos_desired(3, 0) << "," << right_leg->pos_desired(4, 0) << "," << 0
                         << "," << current_traj_time_temp
-                        << "," << state_update_duration << "," << model_update_duration << "," << torque_calculation_duration << "," << message_wait_duration << "," << message_send_duration << "," << previous_logging_duration << std::endl;
-                
+                        << "," << state_update_duration << "," << model_update_duration << "," << torque_calculation_duration << "," << message_wait_duration << "," << message_send_duration << "," << previous_logging_duration << "\n";
+            ofstream data_file;
+            data_file.open(plotDataDirPath + filename + "_right.csv", ios::app); // Open csv file in append mode
+            // Write plot values to csv file
+            data_file << log_entry.str();
             data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
         }
 
