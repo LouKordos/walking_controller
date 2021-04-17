@@ -280,12 +280,12 @@ void calculate_left_leg_torques() {
                 << "foot_vel_x_desired,foot_vel_y_desired,foot_vel_z_desired,"
                 << "foot_phi,foot_theta,foot_psi," 
                 << "foot_phi_desired,foot_theta_desired,foot_psi_desired," 
-                << "current_trajectory_time,state_update_time,model_update_time,gait_update_time,trajectory_update_time,torque_calculation_time,message_wait_time" << std::endl; // Add header to csv file
+                << "current_trajectory_time,state_update_time,model_update_time,gait_update_time,trajectory_update_time,torque_calculation_time,message_wait_time,message_send_time,previous_logging_time" << std::endl; // Add header to csv file
     data_file.close();
 
     ofstream torque_function_file;
     torque_function_file.open(plotDataDirPath  + filename + "_torque_function_left.csv");
-    torque_function_file << "t,iteration,theta1,theta2,theta3,theta4,theta5,f_x,f_y,f_z,phi,theta,psi" << std::endl;
+    torque_function_file << "t_sim,iteration,theta1,theta2,theta3,theta4,theta5,f_x,f_y,f_z,phi,theta,psi" << std::endl;
     torque_function_file.close();
 
     bool time_switch = false; // used for running a two-phase trajectory, otherwise obsolete
@@ -295,6 +295,7 @@ void calculate_left_leg_torques() {
     }
 
     double current_traj_time_temp = 0;
+    double previous_logging_duration = 0;
 
     while(true) {
         start = high_resolution_clock::now();
@@ -476,11 +477,18 @@ void calculate_left_leg_torques() {
         // if(simState->isPaused()) {
         //     left_leg->tau_setpoint = Eigen::ArrayXd::Zero(5, 1);
         // }
+        auto message_send_start = high_resolution_clock::now();
 
         stringstream s;
         s << left_leg->tau_setpoint(0, 0) << "|" << left_leg->tau_setpoint(1, 0) << "|" << left_leg->tau_setpoint(2, 0) << "|" << left_leg->tau_setpoint(3, 0) << "|" << left_leg->tau_setpoint(4, 0); // Write torque setpoints to stringstream
         sendto(sockfd, (const char *)s.str().c_str(), strlen(s.str().c_str()), 
                 MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len); // Send the torque setpoint string to the simulation
+
+        auto message_send_end = high_resolution_clock::now();
+        
+        double message_send_duration = duration_cast<nanoseconds>(message_send_end - message_send_start).count();
+
+        auto logging_start = high_resolution_clock::now();
 
         if(iteration_counter % 1 == 0) {
             /*  << "t,"
@@ -508,7 +516,7 @@ void calculate_left_leg_torques() {
                         << "," << left_leg->foot_pos(3, 0) << "," << left_leg->foot_pos(4, 0) << "," << 0 
                         << "," << left_leg->pos_desired(3, 0) << "," << left_leg->pos_desired(4, 0) << "," << 0
                         << "," << current_traj_time_temp
-                        << "," << state_update_duration << "," << model_update_duration << "," << gait_update_duration << "," << trajectory_update_duration << "," << torque_calculation_duration << "," << message_wait_duration << std::endl;
+                        << "," << state_update_duration << "," << model_update_duration << "," << gait_update_duration << "," << trajectory_update_duration << "," << torque_calculation_duration << "," << message_wait_duration << "," << message_send_duration << "," << previous_logging_duration << std::endl;
                 
             data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
         }
@@ -520,6 +528,8 @@ void calculate_left_leg_torques() {
         // This timed loop approach calculates the execution time of the current iteration,
         // then calculates the remaining time for the loop to run at the desired frequency and waits this duration.
         duration = duration_cast<microseconds>(end - start).count();
+
+        previous_logging_duration = duration_cast<nanoseconds>(end - logging_start).count();
 
         // stringstream temp;
         // temp << "Left leg torque thread loop duration: " << duration << "µS";
@@ -577,7 +587,7 @@ void calculate_right_leg_torques() {
 
     ofstream torque_function_file;
     torque_function_file.open(plotDataDirPath  + filename + "_torque_function_right.csv");
-    torque_function_file << "t,iteration,theta1,theta2,theta3,theta4,theta5,f_x,f_y,f_z,phi,theta,psi" << std::endl;
+    torque_function_file << "t_sim,iteration,theta1,theta2,theta3,theta4,theta5,f_x,f_y,f_z,phi,theta,psi" << std::endl;
     torque_function_file.close();
 
     ofstream data_file;
@@ -591,7 +601,7 @@ void calculate_right_leg_torques() {
                 << "foot_vel_x_desired,foot_vel_y_desired,foot_vel_z_desired,"
                 << "foot_phi,foot_theta,foot_psi,"
                 << "foot_phi_desired,foot_theta_desired,foot_psi_desired," 
-                << "current_trajectory_time,state_update_time,model_update_time,torque_calculation_time,message_wait_time" << std::endl; // Add header to csv file
+                << "current_trajectory_time,state_update_time,model_update_time,torque_calculation_time,message_wait_time,message_send_time,previous_logging_time" << std::endl; // Add header to csv file
     data_file.close();
 
     bool time_switch = false; // used for running a two-phase trajectory, otherwise obsolete
@@ -601,6 +611,7 @@ void calculate_right_leg_torques() {
     }
 
     double current_traj_time_temp = 0;
+    double previous_logging_duration = 0;
 
     while(true) {
         start = high_resolution_clock::now();
@@ -741,10 +752,18 @@ void calculate_right_leg_torques() {
 
         // right_leg->tau_setpoint(0, 0) = 0;
 
+        auto message_send_start = high_resolution_clock::now();
+
         stringstream s;
         s << right_leg->tau_setpoint(0, 0) << "|" << right_leg->tau_setpoint(1, 0) << "|" << right_leg->tau_setpoint(2, 0) << "|" << right_leg->tau_setpoint(3, 0) << "|" << right_leg->tau_setpoint(4, 0); // Write torque setpoints to stringstream
         sendto(sockfd, (const char *)s.str().c_str(), strlen(s.str().c_str()), 
                 MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len); // Send the torque setpoint string to the simulation
+
+        auto message_send_end = high_resolution_clock::now();
+
+        double message_send_duration = duration_cast<nanoseconds>(message_send_end - message_send_start).count();
+
+        auto logging_start = high_resolution_clock::now();
 
         if(iteration_counter % 1 == 0) {
             /*  << "t" << ","
@@ -772,7 +791,7 @@ void calculate_right_leg_torques() {
                         << "," << right_leg->foot_pos(3, 0) << "," << right_leg->foot_pos(4, 0) << "," << 0
                         << "," << right_leg->pos_desired(3, 0) << "," << right_leg->pos_desired(4, 0) << "," << 0
                         << "," << current_traj_time_temp
-                        << "," << state_update_duration << "," << model_update_duration << "," << torque_calculation_duration << "," << message_wait_duration << std::endl;
+                        << "," << state_update_duration << "," << model_update_duration << "," << torque_calculation_duration << "," << message_wait_duration << "," << message_send_duration << "," << previous_logging_duration << std::endl;
                 
             data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
         }
@@ -780,6 +799,8 @@ void calculate_right_leg_torques() {
         iteration_counter++; // Increment iteration counter
 
         end = high_resolution_clock::now();
+
+        previous_logging_duration = duration_cast<nanoseconds>(end - logging_start).count();
 
         // This timed loop approach calculates the execution time of the current iteration,
         // then calculates the remaining time for the loop to run at the desired frequency and waits this duration.
@@ -1101,7 +1122,7 @@ void run_mpc() {
                 << "foot_pos_body_frame_desired_x_right,foot_pos_body_frame_desired_y_right,foot_pos_body_frame_desired_z_right,"
                 << "next_foot_pos_world_desired_x_left,next_foot_pos_world_desired_y_left,next_foot_pos_world_desired_z_left,"
                 << "next_foot_pos_world_desired_x_right,next_foot_pos_world_desired_y_right, next_foot_pos_world_desired_z_right,"
-                << "theta_delay_compensation,full_iteration_time,solver_time,state_update_time,delay_compensation_time,contact_update_time,reference_update_time,foot_pos_left_update_time,foot_pos_right_update_time,r_update_time,x_ref_update_time,foot_pos_left_discretization_update_time,foot_pos_right_discretization_update_time,trajectory_target_update_time,memcpy_time,solution_update_time,log_lock_time,message_wait_time,"
+                << "theta_delay_compensation,full_iteration_time,prev_full_iteration_time,solver_time,state_update_time,delay_compensation_time,contact_update_time,reference_update_time,foot_pos_left_update_time,foot_pos_right_update_time,r_update_time,x_ref_update_time,foot_pos_left_discretization_update_time,foot_pos_right_discretization_update_time,trajectory_target_update_time,memcpy_time,solution_update_time,log_lock_time,message_wait_time,previous_logging_time,"
                 << "phi_delay_compensation,predicted_contact_swap_iterations,X_t,U_t,P_param_full,x_lift_off_update,x_trajectory_update" << std::endl; // Add header to csv file
     data_file.close();
 
@@ -1113,6 +1134,9 @@ void run_mpc() {
     // Temporary variables for debugging contact planner
     Eigen::Matrix<double, n, 1> x_lift_off_update = Eigen::ArrayXXd::Zero(n, 1);
     Eigen::Matrix<double, n, 1> x_trajectory_update = Eigen::ArrayXXd::Zero(n, 1);
+
+    double previous_full_iteration_duration = 0;
+    double previous_logging_duration = 0;
 
     while(true) {
         // Loop starts here
@@ -1865,6 +1889,8 @@ void run_mpc() {
 
         double log_lock_duration = duration_cast<nanoseconds>(log_lock_end - log_lock_start).count();
 
+        auto logging_start = high_resolution_clock::now();
+
         // Log data to csv file
         ofstream data_file;
         data_file.open(plotDataDirPath + filename + "_mpc_log.csv", ios::app); // Open csv file in append mode
@@ -1886,10 +1912,10 @@ void run_mpc() {
                 << "," << right_leg->foot_trajectory.get_position(1.0 / 3.0)(0, 0) << "," << right_leg->foot_trajectory.get_position(1.0 / 3.0)(1, 0) << "," << right_leg->foot_trajectory.get_position(1.0 / 3.0)(2, 0)
                 << "," << next_foot_pos_world_desired_left(0, 0) << "," << next_foot_pos_world_desired_left(1, 0) << "," << next_foot_pos_world_desired_left(2, 0)
                 << "," << next_foot_pos_world_desired_right(0, 0) << "," << next_foot_pos_world_desired_right(1, 0) << "," << next_foot_pos_world_desired_right(2, 0)
-                << "," << P_param(1, 0) << "," << full_iteration_duration / 1000.0 << "," << solver_time / 1000.0 << "," << state_update_duration << "," << delay_compensation_duration << "," << contact_update_duration 
+                << "," << P_param(1, 0) << "," << full_iteration_duration / 1000.0 << "," << previous_full_iteration_duration / 1000.0 << "," << solver_time / 1000.0 << "," << state_update_duration << "," << delay_compensation_duration << "," << contact_update_duration 
                 << "," << reference_update_duration << "," << foot_pos_left_update_duration << "," << foot_pos_right_update_duration << "," << r_update_duration << "," << x_ref_update_duration
                 << "," << foot_pos_left_discretization_update_duration << "," << foot_pos_right_discretization_update_duration << "," << trajectory_target_update_duration << "," << memcpy_duration
-                << "," << solution_update_duration << "," << log_lock_duration << "," << message_wait_duration
+                << "," << solution_update_duration << "," << log_lock_duration << "," << message_wait_duration << "," << previous_logging_duration
                 << "," << solution_variables(n, 0) << "," << predicted_contact_swap_iterations << ",";
 
         // auto before_logging = high_resolution_clock::now();
@@ -1962,7 +1988,10 @@ void run_mpc() {
         
         // Update full iteration time after logging
         end_total = high_resolution_clock::now();
-        full_iteration_duration = duration_cast<microseconds> (end_total - start_total).count();
+
+        previous_logging_duration = duration_cast<nanoseconds>(end_total - logging_start).count();
+
+        previous_full_iteration_duration = full_iteration_duration = duration_cast<microseconds> (end_total - start_total).count();
 
         long long remainder = (dt * 1e+6 - full_iteration_duration) * 1e+3;
         //std::cout << "Remainder: " << remainder << " microseconds" << std::endl;
