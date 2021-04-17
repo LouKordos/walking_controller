@@ -194,24 +194,6 @@ if delay_flag:
 else:
     print("Delay flag is set to False, skipping delay compensation plots.")
 
-lift_off_update_state_fig = plt.figure(figsize=angle_fig_size, dpi=save_dpi)
-lift_off_update_state_ax = lift_off_update_state_fig.add_subplot(111)
-
-for i in range(n - 1):
-    lift_off_update_state_ax.plot(dataframe["t_sim"], [float(x[i]) for x in [state.split("|") for state in dataframe["x_lift_off_update"]]], label=dataframe.columns[2 + i])
-
-plt.legend()
-lift_off_update_state_fig.savefig(plot_image_dir + "x_lift_off_update.pdf", dpi=save_dpi, bbox_inches='tight')
-
-traj_update_fig = plt.figure(figsize=angle_fig_size, dpi=save_dpi)
-traj_update_ax = traj_update_fig.add_subplot(111)
-
-for i in range(n - 1):
-    traj_update_ax.plot(dataframe["t_sim"], [float(x[i]) for x in [state.split("|") for state in dataframe["x_trajectory_update"]]], label=dataframe.columns[2 + i])
-
-plt.legend()
-traj_update_fig.savefig(plot_image_dir + "x_trajectory_update.pdf", dpi=save_dpi, bbox_inches='tight')
-
 print("Generating angle plots...")
 
 angle_ax.plot(dataframe["t_sim"], dataframe["psi_desired"], label=r"$\phi$-,$\theta$-,$\psi$-desired", color="black", linewidth=linewidth)
