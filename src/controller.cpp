@@ -467,7 +467,8 @@ void calculate_left_leg_torques() {
             ofstream torque_function_file;
             torque_function_file.open(plotDataDirPath  + filename + "_torque_function_left.csv", ios::app);
             torque_function_file << get_time(true) << "," << iteration_counter << "," << left_leg->theta1 << "," << left_leg->theta2 << "," << left_leg->theta3 << "," << left_leg->theta4 << "," << left_leg->theta5
-                                    << "," << -u(3, 0) << "," << -u(4, 0) << "," << -u(5, 0) << "," << x(0, 0) << "," << x(1, 0) << "," << x(2, 0) << std::endl;
+                                    << "," << -u(0, 0) << "," << -u(1, 0) << "," << -u(2, 0) << "," << x(0, 0) << "," << x(1, 0) << "," << x(2, 0) << std::endl;
+            torque_function_file.close();
  
             left_leg->tau_setpoint = get_joint_torques(-u.block<3, 1>(0, 0), left_leg->theta1, left_leg->theta2, left_leg->theta3, left_leg->theta4, left_leg->theta5, x(0, 0), x(1, 0), x(2, 0), left_leg->config);
             for(int i = 0; i < 5; ++i) {
@@ -735,7 +736,8 @@ void calculate_right_leg_torques() {
             // ofstream torque_function_file;
             torque_function_file.open(plotDataDirPath  + filename + "_torque_function_right.csv", ios::app);
             torque_function_file << get_time(true) << "," << iteration_counter << "," << right_leg->theta1 << "," << right_leg->theta2 << "," << right_leg->theta3 << "," << right_leg->theta4 << "," << right_leg->theta5
-                                    << "," << -u(0, 0) << "," << -u(1, 0) << "," << -u(2, 0) << "," << x(0, 0) << "," << x(1, 0) << "," << x(2, 0) << std::endl;
+                                    << "," << -u(3, 0) << "," << -u(4, 0) << "," << -u(5, 0) << "," << x(0, 0) << "," << x(1, 0) << "," << x(2, 0) << std::endl;
+            torque_function_file.close();
 
             right_leg->tau_setpoint = get_joint_torques(-u.block<3, 1>(3, 0), right_leg->theta1, right_leg->theta2, right_leg->theta3, right_leg->theta4, right_leg->theta5, x(0, 0), x(1, 0), x(2, 0), right_leg->config);
             for(int i = 0; i < 5; ++i) {
