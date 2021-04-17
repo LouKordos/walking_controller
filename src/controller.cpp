@@ -1138,10 +1138,6 @@ void run_mpc() {
     long predicted_contact_swap_iterations = 0;
     bool alternate_flag = false; // Temporary flag for waiting a bit before activating the gait
 
-    // Temporary variables for debugging contact planner
-    Eigen::Matrix<double, n, 1> x_lift_off_update = Eigen::ArrayXXd::Zero(n, 1);
-    Eigen::Matrix<double, n, 1> x_trajectory_update = Eigen::ArrayXXd::Zero(n, 1);
-
     double previous_full_iteration_duration = 0;
     double previous_logging_duration = 0;
 
@@ -1846,10 +1842,6 @@ void run_mpc() {
         U_t.block<m*(N-1), 1>(0, 0) = solution_variables.block<m*(N-1), 1>(n*(N+1) + m, 0);
         U_t.block<m, 1>(m*(N-1), 0) = solution_variables.block<m, 1>(n*(N+1)+m*(N-1), 0);
 
-        // if(!simState->isPaused()) {
-        //     ++total_iterations;
-        // }
-
         ++total_iterations;
 
         end = high_resolution_clock::now();
@@ -1970,23 +1962,8 @@ void run_mpc() {
 
         data_file << ",";
 
-        // Log state used for lift-off position update
-        for(int i = 0; i < n; i++) {
-            data_file << x_lift_off_update(i, 0);
-            if (i < n - 1) {
-                data_file << "|";
-            }
-        }
 
-        data_file << ",";
 
-        // Log state used for trajectory update
-        for(int i = 0; i < n; i++) {
-            data_file << x_trajectory_update(i, 0);
-            if (i < n - 1) {
-                data_file << "|";
-            }
-        }
 
         data_file << std::endl;
         data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
