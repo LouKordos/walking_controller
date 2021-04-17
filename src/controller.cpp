@@ -176,6 +176,12 @@ double get_last_contact_swap_time() {
     return temp;
 }
 
+void set_last_contact_swap_time(double value) {
+    last_contact_swap_time_mutex.lock();
+    last_contact_swap_time = value;
+    last_contact_swap_time_mutex.unlock();
+}
+
 bool get_contact(double phi) {
     return fmod(phi, 1) < 0.5 ? true : false; // fmod to handle wrap around that happens due to phi_offset for right leg where values become larger than 1.
 }
@@ -1221,9 +1227,7 @@ void run_mpc() {
             time_synced = true;
             time_synced_mutex.unlock();
 
-            last_contact_swap_time_mutex.lock();
-            last_contact_swap_time = get_time(false);
-            last_contact_swap_time_mutex.unlock();
+            set_last_contact_swap_time(get_time(false));
         }
         // if (pos_y - pos_y_desired )
         // pos_y_desired = P_param(4, 0) + 0.1;
