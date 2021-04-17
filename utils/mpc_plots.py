@@ -72,6 +72,12 @@ print("dt:", dt)
 for i in range(int(len(dataframe["t_sim"]))):
     if i > 0 and dataframe["t_sim"][i] - dataframe["t_sim"][i-1] > dt * 2.0:
         print(dataframe["t_sim"][i], ",", dataframe["t_sim"][i - 1])
+    
+    if dataframe["previous_logging_time"][i] > 500e+3: # nanoseconds
+        print("Spike in logging time detected at t=", dataframe["t_sim"][i], ", logging duration=", dataframe["previous_logging_time"][i])
+    
+    if dataframe["previous_file_write_time"][i] > 500e+3: # nanoseconds
+        print("Spike in log entry file write detected at t=", dataframe["t_sim"][i], ", file write duration=", dataframe["previous_file_write_time"][i])
 
 print("Parameters initialized.")
 
