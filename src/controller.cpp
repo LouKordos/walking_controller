@@ -481,9 +481,6 @@ void calculate_left_leg_torques() {
 
         double torque_calculation_duration = duration_cast<nanoseconds>(torque_calculation_end - torque_calculation_start).count();
 
-        // if(simState->isPaused()) {
-        //     left_leg->tau_setpoint = Eigen::ArrayXd::Zero(5, 1);
-        // }
         auto message_send_start = high_resolution_clock::now();
 
         stringstream s;
