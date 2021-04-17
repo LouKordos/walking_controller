@@ -1140,6 +1140,7 @@ void run_mpc() {
 
     double previous_full_iteration_duration = 0;
     double previous_logging_duration = 0;
+    double previous_file_write_duration = 0;
 
     while(true) {
         // Loop starts here
@@ -1882,16 +1883,20 @@ void run_mpc() {
         bool swing_left_temp = left_leg->get_swing_phase();
         bool swing_right_temp = right_leg->get_swing_phase();
 
+        double sim_time = get_time(true);
+        double controller_time = get_time(false);
+
+        bool left_leg_contact = left_leg->contactState.hasContact();
+        bool right_leg_contact = right_leg->contactState.hasContact();
+
         auto log_lock_end = high_resolution_clock::now();
 
         double log_lock_duration = duration_cast<nanoseconds>(log_lock_end - log_lock_start).count();
 
         auto logging_start = high_resolution_clock::now();
 
-        // Log data to csv file
-        ofstream data_file;
-        data_file.open(plotDataDirPath + filename + "_mpc_log.csv", ios::app); // Open csv file in append mode
-        data_file << get_time(true) << "," << get_time(false) << "," << x_t_temp(0, 0) << "," << x_t_temp(1, 0) << "," << x_t_temp(2, 0) << "," << x_t_temp(3, 0) << "," << x_t_temp(4, 0) << "," << x_t_temp(5, 0) << "," << x_t_temp(6, 0) << "," << x_t_temp(7, 0) << "," << x_t_temp(8, 0) << "," << x_t_temp(9, 0) << "," << x_t_temp(10, 0) << "," << x_t_temp(11, 0)
+        stringstream log_entry;
+        log_entry << sim_time << "," << controller_time << "," << x_t_temp(0, 0) << "," << x_t_temp(1, 0) << "," << x_t_temp(2, 0) << "," << x_t_temp(3, 0) << "," << x_t_temp(4, 0) << "," << x_t_temp(5, 0) << "," << x_t_temp(6, 0) << "," << x_t_temp(7, 0) << "," << x_t_temp(8, 0) << "," << x_t_temp(9, 0) << "," << x_t_temp(10, 0) << "," << x_t_temp(11, 0)
                 << "," << phi_desired << "," << theta_desired << "," << psi_desired << "," << pos_x_desired << "," << pos_y_desired << "," << pos_z_desired << "," << omega_x_desired << "," << omega_y_desired << "," << omega_z_desired << "," << vel_x_desired << "," << vel_y_desired << "," << vel_z_desired
                 << "," << u_t_temp(0) << "," << u_t_temp(1) << "," << u_t_temp(2) << "," << u_t_temp(3) << "," << u_t_temp(4) << "," << u_t_temp(5) 
                 << "," << r_x_left << "," << r_y_left << "," << r_z_left
@@ -1900,7 +1905,7 @@ void run_mpc() {
                 << "," << r_x_actual_right << "," << r_y_actual_right << "," << r_z_actual_right
                 << "," << next_body_vel_temp(0, 0) << "," << next_body_vel_temp(1, 0) << "," << next_body_vel_temp(2, 0)
                 << "," << !swing_left_temp * 0.1 << "," << !swing_right_temp * 0.1
-                << "," << left_leg->contactState.hasContact() * 0.1 << "," << right_leg->contactState.hasContact() * 0.1
+                << "," << left_leg_contact * 0.1 << "," << right_leg_contact * 0.1
                 << "," << foot_pos_body_frame_left(0, 0) << "," << foot_pos_body_frame_left(1, 0) << "," << foot_pos_body_frame_left(2, 0)
                 << "," << foot_pos_body_frame_right(0, 0) << "," << foot_pos_body_frame_right(1, 0) << "," << foot_pos_body_frame_right(2, 0)
                 << "," << foot_pos_world_desired_left(0, 0) << "," << foot_pos_world_desired_left(1, 0) << "," << foot_pos_world_desired_left(2, 0)
@@ -1912,66 +1917,66 @@ void run_mpc() {
                 << "," << P_param(1, 0) << "," << full_iteration_duration / 1000.0 << "," << previous_full_iteration_duration / 1000.0 << "," << solver_time / 1000.0 << "," << state_update_duration << "," << delay_compensation_duration << "," << contact_update_duration 
                 << "," << reference_update_duration << "," << foot_pos_left_update_duration << "," << foot_pos_right_update_duration << "," << r_update_duration << "," << x_ref_update_duration
                 << "," << foot_pos_left_discretization_update_duration << "," << foot_pos_right_discretization_update_duration << "," << trajectory_target_update_duration << "," << memcpy_duration
-                << "," << solution_update_duration << "," << log_lock_duration << "," << message_wait_duration << "," << previous_logging_duration
+                << "," << solution_update_duration << "," << log_lock_duration << "," << message_wait_duration << "," << previous_logging_duration << "," << previous_file_write_duration
                 << "," << solution_variables(n, 0) << "," << predicted_contact_swap_iterations << ",";
-
-        // auto before_logging = high_resolution_clock::now();
 
         // Log X_t and U_t
         for(int timestep = 0; timestep < N+1; timestep++) {
             for(int state = 0; state < n; state++) {
-                data_file << solution_variables(n * timestep + state, 0);
+                log_entry << solution_variables(n * timestep + state, 0);
                 if(state < n - 1) { // append separator except after last state
-                    data_file << "|";
+                    log_entry << "|";
                 }
             }
             
             if(timestep < (N+1) - 1) { // append separator except after last state sequence
-                data_file << ";";
+                log_entry << ";";
             }
         }
 
-        data_file << ",";
+        log_entry << ",";
 
         for(int timestep = 0; timestep < N; ++timestep) {
             for(int control = 0; control < m; ++control) {
-                data_file << solution_variables(n * (N+1) + m * timestep + control, 0); // Offset by n * (N + 1) since solution_variables also contains vertically stacked sequence of prediction horizon states
+                log_entry << solution_variables(n * (N+1) + m * timestep + control, 0); // Offset by n * (N + 1) since solution_variables also contains vertically stacked sequence of prediction horizon states
                 if(control < m - 1) {
-                    data_file << "|";
+                    log_entry << "|";
                 }
             }
 
             if(timestep < N - 1) {
-                data_file << ";";
+                log_entry << ";";
             }
         }
 
-        // auto after_logging = high_resolution_clock::now();
-
-        // std::cout << "Logging future states took " << duration_cast<microseconds>(after_logging - before_logging).count() << "µS\n";
-
-        data_file << ",";
+        log_entry << ",";
         
         // Log full P_param
         for(int i = 0; i < n; i++) {
-            data_file << P_param(i, 0);
+            log_entry << P_param(i, 0);
             if (i < n - 1) {
-                data_file << "|";
+                log_entry << "|";
             }
         }
 
-        data_file << ",";
+        log_entry << "\n";
 
+        auto logging_end = high_resolution_clock::now();
 
+        previous_logging_duration = duration_cast<nanoseconds>(logging_end - logging_start).count();
 
+        auto file_write_start = high_resolution_clock::now();
 
-        data_file << std::endl;
+        // Log data to csv file
+        ofstream data_file;
+        data_file.open(plotDataDirPath + filename + "_mpc_log.csv", ios::app); // Open csv file in append mode
+        data_file << log_entry.str();
         data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
         
         // Update full iteration time after logging
         end_total = high_resolution_clock::now();
 
-        previous_logging_duration = duration_cast<nanoseconds>(end_total - logging_start).count();
+        previous_file_write_duration = duration_cast<nanoseconds>(end_total - file_write_start).count();
 
         previous_full_iteration_duration = full_iteration_duration = duration_cast<microseconds> (end_total - start_total).count();
 
