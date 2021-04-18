@@ -1,6 +1,7 @@
 #include <iostream> // << operator and such
 #include <dirent.h> // File system operations
 #include <typeinfo>
+#include <poll.h>
 
 #include <chrono> // Execution time measurement
 #include <thread> // Threads
@@ -31,6 +32,9 @@
 #include <sys/socket.h> // for socket creation
 #include <netinet/in.h> //contains constants and structures needed for internet domain addresses
 
+#include <signal.h>
+#include <unistd.h>
+#include <cstring>
 #include <atomic>
 
 #include <iomanip> // 
