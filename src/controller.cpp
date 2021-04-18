@@ -1117,17 +1117,7 @@ void run_mpc() {
     double r_x_right = hip_offset;
     double r_y_right = 0;
     double r_z_right = -x_t(5, 0);
-
-    // // Initialize values used by trajectory planner because they are not updated until after first contact swap
-    // left_leg->lift_off_pos << -0.15, 0, -x_t(5, 0);
-    // right_leg->lift_off_pos << 0.15, 0, -x_t(5, 0);
-
-    // left_leg->lift_off_vel << 0, 0, 0;
-    // right_leg->lift_off_vel << 0, 0, 0;
     
-    // // Just assume it will reach desired velocity for now
-    // next_body_vel << -vel_x_desired, -vel_y_desired, -vel_z_desired;
-
     // TODO: Init next_foot_pos_world as well, maybe by integrating vel in all directions and using formula based on the resulting position
 
     Eigen::Matrix<double, n, n> A_c = Eigen::ArrayXXd::Zero(n, n); // A Matrix in Continuous time
@@ -1278,8 +1268,6 @@ void run_mpc() {
 
             set_last_contact_swap_time(get_time(false));
         }
-        // if (pos_y - pos_y_desired )
-        // pos_y_desired = P_param(4, 0) + 0.1;
         
         // stringstream temp;
         // temp << "x_t:" << x_t(0, 0) << "," << x_t(1, 0) << "," << x_t(2, 0) << "," << x_t(3, 0) << "," << x_t(4, 0) << "," << x_t(5, 0) << "," << x_t(6, 0) << "," << x_t(7, 0) << "," << x_t(8, 0) << "," << x_t(9, 0) << "," << x_t(10, 0) << "," << x_t(11, 0) << "," << x_t(12, 0);
