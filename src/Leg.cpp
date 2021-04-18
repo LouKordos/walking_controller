@@ -194,7 +194,6 @@ void Leg::update_torque_setpoint() {
     constrain(tau_setpoint(4, 0), -15, 15);
 }
 
-
 void Leg::set_q(const Eigen::Matrix<double, 5, 1> q) { 
     q_mutex.lock();
     Leg::q = q;
