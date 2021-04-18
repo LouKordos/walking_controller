@@ -1,4 +1,5 @@
 #include "include/Helpers.hpp"
+#include "include/async_logger.hpp"
 
 // Helper function for constraining a double precision float to limits and filtering out "nan" and "inf"
 void constrain(double &value, double lower_limit, double upper_limit) {
@@ -55,19 +56,19 @@ std::string getLogTypeString(LogType type) {
 }
 
 void log(std::string message, LogType type) {
-    ofstream log_file;
-    char* pPath;
-    pPath = getenv ("IS_DOCKER");
-    if (pPath == "Y" || pPath == "YES") {
-        log_file.open("/plot_data/controller_log.txt", ios::app);
-    }
-    else {
-        log_file.open("../.././plot_data/controller_log.txt", ios::app);
-    }
+    // ofstream log_file;
+    // char* pPath;
+    // pPath = getenv ("IS_DOCKER");
+    // if (pPath == "Y" || pPath == "YES") {
+    //     log_file.open("/plot_data/controller_log.txt", ios::app);
+    // }
+    // else {
+    //     log_file.open("../.././plot_data/controller_log.txt", ios::app);
+    // }
 
-    log_file << "[" << boost::posix_time::second_clock::local_time().time_of_day() << "] [" << getLogTypeString(type) << "]" << ": " << message << std::endl;
+    // log_file << "[" << boost::posix_time::second_clock::local_time().time_of_day() << "] [" << getLogTypeString(type) << "]" << ": " << message << std::endl;
     
-    log_file.close();
+    // log_file.close();
 }
 
 void print_threadsafe(std::string str, std::string sender, LogType type, bool log_to_file) {
