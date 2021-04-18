@@ -46,6 +46,7 @@ using namespace casadi;
 #include "include/Leg.hpp" // Leg object
 #include "include/Helpers.hpp" // Various Helper functions
 #include "include/SimState.hpp" // Gazebo Simulation State, mainly to synchronize Pause State of controller and Gazebo in order to avoid force "windup"
+#include "include/async_logger.hpp"
 
 using namespace std;
 using namespace std::chrono;
@@ -281,9 +282,12 @@ void calculate_left_leg_torques() {
     int msg_length; 
     socklen_t len;
 
-    ofstream data_file;
-    data_file.open(plotDataDirPath + filename + "_left.csv");
-    data_file << "t_sim,t_controller,"
+    async_buf main_sbuf(plotDataDirPath + filename + "_left.csv");
+    std::ostream log_stream(&main_sbuf);
+
+    // ofstream data_file;
+    // data_file.open(plotDataDirPath + filename + "_left.csv");
+    log_stream << "t_sim,t_controller,"
                 << "theta1,theta2,theta3,theta4,theta5,theta1_dot,theta2_dot,theta3_dot,theta4_dot,theta5_dot,"
                 << "tau_1,tau_2,tau_3,tau_4,tau_5,"
                 << "foot_pos_x,foot_pos_y,foot_pos_z,"
@@ -292,13 +296,17 @@ void calculate_left_leg_torques() {
                 << "foot_vel_x_desired,foot_vel_y_desired,foot_vel_z_desired,"
                 << "foot_phi,foot_theta,foot_psi," 
                 << "foot_phi_desired,foot_theta_desired,foot_psi_desired," 
-                << "current_trajectory_time,state_update_time,model_update_time,gait_update_time,trajectory_update_time,torque_calculation_time,message_wait_time,message_send_time,previous_logging_time" << std::endl; // Add header to csv file
-    data_file.close();
+                << "foot_pos_world_actual_x,foot_pos_world_actual_y,foot_pos_world_actual_z,"
+                << "current_trajectory_time,state_update_time,model_update_time,gait_update_time,trajectory_update_time,torque_calculation_time,message_wait_time,message_send_time,previous_logging_time,previous_file_write_time" 
+                << "\n" << std::flush; // Add header to csv file
 
-    ofstream torque_function_file;
-    torque_function_file.open(plotDataDirPath  + filename + "_torque_function_left.csv");
-    torque_function_file << "t_sim,iteration,theta1,theta2,theta3,theta4,theta5,f_x,f_y,f_z,phi,theta,psi" << std::endl;
-    torque_function_file.close();
+    async_buf torque_function_sbuf(plotDataDirPath + filename + "_torque_function_left.csv");
+    std::ostream torque_function_log_stream(&torque_function_sbuf);
+
+    // ofstream torque_function_file;
+    // torque_function_file.open(plotDataDirPath  + filename + "_torque_function_left.csv");
+    torque_function_log_stream << "t_sim,iteration,theta1,theta2,theta3,theta4,theta5,f_x,f_y,f_z,phi,theta,psi" << "\n" << std::flush;
+    // torque_function_file.close();
 
     bool time_switch = false; // used for running a two-phase trajectory, otherwise obsolete
 
@@ -308,6 +316,7 @@ void calculate_left_leg_torques() {
 
     double current_traj_time_temp = 0;
     double previous_logging_duration = 0;
+    double previous_file_write_duration = 0;
 
     struct timeval tv;
     tv.tv_sec = 1e+9; // Initially set to very high value to wait for first message because it takes some time to start up sim.
@@ -330,7 +339,8 @@ void calculate_left_leg_torques() {
         double theta3_dot = 0;
         double theta4_dot = 0;
         double theta5_dot = 0;
-
+        
+        Eigen::Matrix<double, 3, 1> foot_pos_world_actual = Eigen::ArrayXXd::Zero(3, 1);
         Eigen::Matrix<double, n, 1> x = Eigen::ArrayXXd::Zero(n, 1);
 
         auto message_wait_start = high_resolution_clock::now();
@@ -388,10 +398,13 @@ void calculate_left_leg_torques() {
             left_leg->theta3dot = theta3_dot;
             left_leg->theta4dot = theta4_dot;
             left_leg->theta5dot = theta5_dot;
+
             
             for(int i = 0; i < n; ++i) {
                 x(i, 0) = atof(state[i + 10].c_str());
             }
+
+            foot_pos_world_actual << atof(state[23].c_str()), atof(state[24].c_str()), atof(state[25].c_str());
         }
 
         auto state_update_end = high_resolution_clock::now();
@@ -484,11 +497,11 @@ void calculate_left_leg_torques() {
             u_mutex.unlock();
             
             /*"t,iteration,theta1,theta2,theta3,theta4,theta5,f_x,f_y,f_z,phi,theta,psi"*/
-            ofstream torque_function_file;
-            torque_function_file.open(plotDataDirPath  + filename + "_torque_function_left.csv", ios::app);
-            torque_function_file << get_time(true) << "," << iteration_counter << "," << left_leg->theta1 << "," << left_leg->theta2 << "," << left_leg->theta3 << "," << left_leg->theta4 << "," << left_leg->theta5
-                                    << "," << -u(0, 0) << "," << -u(1, 0) << "," << -u(2, 0) << "," << x(0, 0) << "," << x(1, 0) << "," << x(2, 0) << std::endl;
-            torque_function_file.close();
+            // ofstream torque_function_file;
+            // torque_function_file.open(plotDataDirPath  + filename + "_torque_function_left.csv", ios::app);
+            torque_function_log_stream << get_time(true) << "," << iteration_counter << "," << left_leg->theta1 << "," << left_leg->theta2 << "," << left_leg->theta3 << "," << left_leg->theta4 << "," << left_leg->theta5
+                                    << "," << -u(0, 0) << "," << -u(1, 0) << "," << -u(2, 0) << "," << x(0, 0) << "," << x(1, 0) << "," << x(2, 0) << "\n";
+            // torque_function_file.close();
  
             left_leg->tau_setpoint = get_joint_torques(-u.block<3, 1>(0, 0), left_leg->theta1, left_leg->theta2, left_leg->theta3, left_leg->theta4, left_leg->theta5, x(0, 0), x(1, 0), x(2, 0), left_leg->config);
             for(int i = 0; i < 5; ++i) {
@@ -512,8 +525,6 @@ void calculate_left_leg_torques() {
         
         double message_send_duration = duration_cast<nanoseconds>(message_send_end - message_send_start).count();
 
-        auto logging_start = high_resolution_clock::now();
-
         if(iteration_counter % 1 == 0) {
             /*  << "t,"
                 << "theta1,theta2,theta3,theta4,theta5,theta1_dot,theta2_dot,theta3_dot,theta4_dot,theta5_dot,"
@@ -525,6 +536,8 @@ void calculate_left_leg_torques() {
                 << "foot_phi,foot_theta,foot_psi," 
                 << "foot_phi_desired,foot_theta_desired,foot_psi_desired"
             */
+
+            auto logging_start = high_resolution_clock::now();
             
             stringstream log_entry;
             log_entry << get_time(true) << "," << get_time(false)
@@ -537,14 +550,26 @@ void calculate_left_leg_torques() {
                         << "," << left_leg->vel_desired(0, 0) << "," << left_leg->vel_desired(1, 0) << "," << left_leg->vel_desired(2, 0) 
                         << "," << left_leg->foot_pos(3, 0) << "," << left_leg->foot_pos(4, 0) << "," << 0 
                         << "," << left_leg->pos_desired(3, 0) << "," << left_leg->pos_desired(4, 0) << "," << 0
+                        << "," << foot_pos_world_actual(0, 0) << "," << foot_pos_world_actual(1, 0) << "," << foot_pos_world_actual(2, 0)
                         << "," << current_traj_time_temp
-                        << "," << state_update_duration << "," << model_update_duration << "," << gait_update_duration << "," << trajectory_update_duration << "," << torque_calculation_duration << "," << message_wait_duration << "," << message_send_duration << "," << previous_logging_duration << "\n";
+                        << "," << state_update_duration << "," << model_update_duration << "," << gait_update_duration << "," << trajectory_update_duration << "," << torque_calculation_duration << "," << message_wait_duration << "," << message_send_duration << "," << previous_logging_duration << "," << previous_file_write_duration
+                        << "\n";
+
+            auto logging_end = high_resolution_clock::now();
+
+            previous_logging_duration = duration_cast<nanoseconds>(logging_end - logging_start).count();
+
+            auto file_write_start = high_resolution_clock::now();
             
-            ofstream data_file;
-            data_file.open(plotDataDirPath + filename + "_left.csv", ios::app); // Open csv file in append mode
+            // ofstream data_file;
+            // data_file.open(plotDataDirPath + filename + "_left.csv", ios::app); // Open csv file in append mode
             // Write plot values to csv file
-            data_file << log_entry.str();
-            data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
+            log_stream << log_entry.str();
+
+            auto file_write_end = high_resolution_clock::now();
+
+            previous_file_write_duration = duration_cast<nanoseconds>(file_write_end - file_write_start).count();
+            // data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
         }
 
         iteration_counter++; // Increment iteration counter
@@ -555,7 +580,6 @@ void calculate_left_leg_torques() {
         // then calculates the remaining time for the loop to run at the desired frequency and waits this duration.
         duration = duration_cast<microseconds>(end - start).count();
 
-        previous_logging_duration = duration_cast<nanoseconds>(end - logging_start).count();
 
         // stringstream temp;
         // temp << "Left leg torque thread loop duration: " << duration << "µS";
@@ -611,14 +635,20 @@ void calculate_right_leg_torques() {
     int msg_length; 
     socklen_t len;
 
-    ofstream torque_function_file;
-    torque_function_file.open(plotDataDirPath  + filename + "_torque_function_right.csv");
-    torque_function_file << "t_sim,iteration,theta1,theta2,theta3,theta4,theta5,f_x,f_y,f_z,phi,theta,psi" << std::endl;
-    torque_function_file.close();
+    async_buf torque_function_sbuf(plotDataDirPath  + filename + "_torque_function_right.csv");
+    std::ostream torque_function_log_stream(&torque_function_sbuf);
 
-    ofstream data_file;
-    data_file.open(plotDataDirPath + filename + "_right.csv");
-    data_file << "t_sim,t_controller,"
+    // ofstream torque_function_file;
+    // torque_function_file.open(plotDataDirPath  + filename + "_torque_function_right.csv");
+    torque_function_log_stream << "t_sim,iteration,theta1,theta2,theta3,theta4,theta5,f_x,f_y,f_z,phi,theta,psi" << "\n" << std::flush;
+    // torque_function_file.close();
+
+    async_buf main_sbuf(plotDataDirPath + filename + "_right.csv");
+    std::ostream log_stream(&main_sbuf);
+
+    // ofstream data_file;
+    // data_file.open(plotDataDirPath + filename + "_right.csv");
+    log_stream << "t_sim,t_controller,"
                 << "theta1,theta2,theta3,theta4,theta5,theta1_dot,theta2_dot,theta3_dot,theta4_dot,theta5_dot,"
                 << "tau_1,tau_2,tau_3,tau_4,tau_5,"
                 << "foot_pos_x,foot_pos_y,foot_pos_z,"
@@ -626,9 +656,10 @@ void calculate_right_leg_torques() {
                 << "foot_vel_x,foot_vel_y,foot_vel_z,"
                 << "foot_vel_x_desired,foot_vel_y_desired,foot_vel_z_desired,"
                 << "foot_phi,foot_theta,foot_psi,"
-                << "foot_phi_desired,foot_theta_desired,foot_psi_desired," 
-                << "current_trajectory_time,state_update_time,model_update_time,torque_calculation_time,message_wait_time,message_send_time,previous_logging_time" << std::endl; // Add header to csv file
-    data_file.close();
+                << "foot_phi_desired,foot_theta_desired,foot_psi_desired,"
+                << "foot_pos_world_actual_x,foot_pos_world_actual_y,foot_pos_world_actual_z,"
+                << "current_trajectory_time,state_update_time,model_update_time,torque_calculation_time,message_wait_time,message_send_time,previous_logging_time,previous_file_write_time" << "\n" << std::flush; // Add header to csv file
+    // data_file.close();
 
     bool time_switch = false; // used for running a two-phase trajectory, otherwise obsolete
 
@@ -638,6 +669,7 @@ void calculate_right_leg_torques() {
 
     double current_traj_time_temp = 0;
     double previous_logging_duration = 0;
+    double previous_file_write_duration = 0;
 
     struct timeval tv;
     tv.tv_sec = 1e+9; // Initially set to very high value to wait for first message because it takes some time to start up sim.
@@ -661,6 +693,7 @@ void calculate_right_leg_torques() {
         double theta4_dot = 0;
         double theta5_dot = 0;
 
+        Eigen::Matrix<double, 3, 1> foot_pos_world_actual = Eigen::ArrayXXd::Zero(3, 1);
         Eigen::Matrix<double, n, 1> x = Eigen::ArrayXXd::Zero(n, 1);
 
         auto message_wait_start = high_resolution_clock::now();
@@ -722,6 +755,8 @@ void calculate_right_leg_torques() {
             for(int i = 0; i < n; ++i) {
                 x(i, 0) = atof(state[i + 10].c_str());
             }
+
+            foot_pos_world_actual << atof(state[23].c_str()), atof(state[24].c_str()), atof(state[25].c_str());
         }
 
         auto state_update_end = high_resolution_clock::now();
@@ -767,10 +802,10 @@ void calculate_right_leg_torques() {
             u_mutex.unlock();
 
             // ofstream torque_function_file;
-            torque_function_file.open(plotDataDirPath  + filename + "_torque_function_right.csv", ios::app);
-            torque_function_file << get_time(true) << "," << iteration_counter << "," << right_leg->theta1 << "," << right_leg->theta2 << "," << right_leg->theta3 << "," << right_leg->theta4 << "," << right_leg->theta5
-                                    << "," << -u(3, 0) << "," << -u(4, 0) << "," << -u(5, 0) << "," << x(0, 0) << "," << x(1, 0) << "," << x(2, 0) << std::endl;
-            torque_function_file.close();
+            // torque_function_file.open(plotDataDirPath  + filename + "_torque_function_right.csv", ios::app);
+            torque_function_log_stream << get_time(true) << "," << iteration_counter << "," << right_leg->theta1 << "," << right_leg->theta2 << "," << right_leg->theta3 << "," << right_leg->theta4 << "," << right_leg->theta5
+                                    << "," << -u(3, 0) << "," << -u(4, 0) << "," << -u(5, 0) << "," << x(0, 0) << "," << x(1, 0) << "," << x(2, 0) << "\n";
+            // torque_function_file.close();
 
             right_leg->tau_setpoint = get_joint_torques(-u.block<3, 1>(3, 0), right_leg->theta1, right_leg->theta2, right_leg->theta3, right_leg->theta4, right_leg->theta5, x(0, 0), x(1, 0), x(2, 0), right_leg->config);
             for(int i = 0; i < 5; ++i) {
@@ -804,8 +839,6 @@ void calculate_right_leg_torques() {
 
         double message_send_duration = duration_cast<nanoseconds>(message_send_end - message_send_start).count();
 
-        auto logging_start = high_resolution_clock::now();
-
         if(iteration_counter % 1 == 0) {
             /*  << "t" << ","
                 << "theta1,theta2,theta3,theta4,theta5,theta1_dot,theta2_dot,theta3_dot,theta4_dot,theta5_dot,"
@@ -817,7 +850,8 @@ void calculate_right_leg_torques() {
                 << "foot_phi,foot_theta,foot_psi," 
                 << "foot_phi_desired,foot_theta_desired,foot_psi_desired"
             */
-            
+            auto logging_start = high_resolution_clock::now();
+
             stringstream log_entry;
             log_entry << get_time(true) << "," << get_time(false)
                         << "," << theta1 << "," << theta2 << "," << theta3 << "," << theta4 << "," << theta5
@@ -829,20 +863,28 @@ void calculate_right_leg_torques() {
                         << "," << right_leg->vel_desired(0, 0) << "," << right_leg->vel_desired(1, 0) << "," << right_leg->vel_desired(2, 0) 
                         << "," << right_leg->foot_pos(3, 0) << "," << right_leg->foot_pos(4, 0) << "," << 0
                         << "," << right_leg->pos_desired(3, 0) << "," << right_leg->pos_desired(4, 0) << "," << 0
+                        << "," << foot_pos_world_actual(0, 0) << "," << foot_pos_world_actual(1, 0) << "," << foot_pos_world_actual(2, 0)
                         << "," << current_traj_time_temp
-                        << "," << state_update_duration << "," << model_update_duration << "," << torque_calculation_duration << "," << message_wait_duration << "," << message_send_duration << "," << previous_logging_duration << "\n";
-            ofstream data_file;
-            data_file.open(plotDataDirPath + filename + "_right.csv", ios::app); // Open csv file in append mode
-            // Write plot values to csv file
-            data_file << log_entry.str();
-            data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
+                        << "," << state_update_duration << "," << model_update_duration << "," << torque_calculation_duration << "," << message_wait_duration << "," << message_send_duration << "," << previous_logging_duration << "," << previous_file_write_duration << "\n";
+            
+            auto logging_end = high_resolution_clock::now();
+
+            previous_logging_duration = duration_cast<nanoseconds>(logging_end - logging_start).count();
+
+            auto file_write_start = high_resolution_clock::now();
+
+            // // Write plot values to csv file
+            log_stream << log_entry.str();
+
+            auto file_write_end = high_resolution_clock::now();
+
+            previous_file_write_duration = duration_cast<nanoseconds>(file_write_end - file_write_start).count();
         }
 
         iteration_counter++; // Increment iteration counter
 
         end = high_resolution_clock::now();
 
-        previous_logging_duration = duration_cast<nanoseconds>(end - logging_start).count();
 
         // This timed loop approach calculates the execution time of the current iteration,
         // then calculates the remaining time for the loop to run at the desired frequency and waits this duration.
@@ -1144,10 +1186,13 @@ void run_mpc() {
     solver_arguments["lbx"] = lbx; // Lower bounds on state
     solver_arguments["ubx"] = ubx; // Upper bounds on state
 
+    async_buf main_sbuf(plotDataDirPath + filename + "_mpc_log.csv");
+    std::ostream log_stream(&main_sbuf);
+
     // Log file
-    ofstream data_file;
-    data_file.open(plotDataDirPath + filename + "_mpc_log.csv");
-    data_file << "t_sim,t_controller,phi,theta,psi,pos_x,pos_y,pos_z,omega_x,omega_y,omega_z,vel_x,vel_y,vel_z,"
+    // ofstream data_file;
+    // data_file.open(plotDataDirPath + filename + "_mpc_log.csv");
+    log_stream << "t_sim,t_controller,phi,theta,psi,pos_x,pos_y,pos_z,omega_x,omega_y,omega_z,vel_x,vel_y,vel_z,"
                 << "phi_desired,theta_desired,psi_desired,pos_x_desired,pos_y_desired,pos_z_desired,omega_x_desired,omega_y_desired,omega_z_desired,vel_x_desired,vel_y_desired,vel_z_desired,"
                 << "f_x_left,f_y_left,f_z_left,f_x_right,f_y_right,f_z_right,"
                 << "r_x_left,r_y_left,r_z_left,r_x_right,r_y_right,r_z_right,"
@@ -1167,8 +1212,8 @@ void run_mpc() {
                 << "theta_delay_compensation,full_iteration_time,prev_full_iteration_time,solver_time,state_update_time,delay_compensation_time,contact_update_time,reference_update_time,foot_pos_left_update_time,foot_pos_right_update_time,"
                 << "r_update_time,x_ref_update_time,foot_pos_left_discretization_update_time,foot_pos_right_discretization_update_time,trajectory_target_update_time,memcpy_time,solution_update_time,log_lock_time,message_wait_time,"
                 << "previous_logging_time,previous_file_write_time,"
-                << "phi_delay_compensation,predicted_contact_swap_iterations,X_t,U_t,P_param_full" << std::endl; // Add header to csv file
-    data_file.close();
+                << "phi_delay_compensation,predicted_contact_swap_iterations,X_t,U_t,P_param_full" << "\n" << std::flush; // Add header to csv file
+    // data_file.close();
 
     struct timespec deadline; // timespec struct for storing time that execution thread should sleep for
 
@@ -2019,10 +2064,10 @@ void run_mpc() {
         auto file_write_start = high_resolution_clock::now();
 
         // Log data to csv file
-        ofstream data_file;
-        data_file.open(plotDataDirPath + filename + "_mpc_log.csv", ios::app); // Open csv file in append mode
-        data_file << log_entry.str();
-        data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
+        // ofstream data_file;
+        // data_file.open(plotDataDirPath + filename + "_mpc_log.csv", ios::app); // Open csv file in append mode
+        log_stream << log_entry.str();
+        // data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
         
         // Update full iteration time after logging
         end_total = high_resolution_clock::now();
