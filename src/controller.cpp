@@ -2209,12 +2209,15 @@ int main(int _argc, char **_argv)
     std::cout << "left_leg omega_desired is currently: " << left_leg->omega_desired(0) << ", " << left_leg->omega_desired(1) << ", " << left_leg->omega_desired(2) << std::endl; // Print out current natural frequency
     std::cout << std::endl;
 
-    std::this_thread::sleep_for(std::chrono::hours(6969));
     struct sigaction sa;
     memset( &sa, 0, sizeof(sa) );
     sa.sa_handler = handle_exit;
     sigfillset(&sa.sa_mask);
     sigaction(SIGINT,&sa,NULL);
+
+    left_leg_torque_thread.join();
+    right_leg_torque_thread.join();
+    mpc_thread.join();
 
     return 0;
 }
