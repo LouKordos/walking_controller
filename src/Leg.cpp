@@ -43,11 +43,18 @@ double psi = 0; // Yaw, rotation arond Z, gamma
 
 static leg_config config;
 
-void Leg::update_foot_pos_body_frame(Eigen::Matrix<double, 13, 1> &com_state) {
+void Leg::update_foot_pos_body_frame(const Eigen::Matrix<double, 13, 1> &com_state) {
+    foot_pos_body_frame_mutex.lock();
+    foot_pos_body_frame = (H_hip_body * (Eigen::Matrix<double, 4, 1>() << foot_pos.block<3,1>(0, 0), 1).finished()).block<3,1>(0, 0);
+    foot_pos_body_frame_mutex.unlock();
+}
 
-    Leg::foot_pos_body_frame_mutex.lock();
-    Leg::foot_pos_body_frame = (H_hip_body * (Eigen::Matrix<double, 4, 1>() << foot_pos.block<3,1>(0, 0), 1).finished()).block<3,1>(0, 0);
-    Leg::foot_pos_body_frame_mutex.unlock();
+Eigen::Matrix<double, 3, 1> Leg::get_foot_pos_body_frame() {
+    foot_pos_body_frame_mutex.lock();
+    const Eigen::Matrix<double, 3, 1> foot_pos_body_frame_temp = foot_pos_body_frame;
+    foot_pos_body_frame_mutex.unlock();
+
+    return foot_pos_body_frame_temp;
 }
 
 void Leg::update_foot_trajectory(Eigen::Matrix<double, 13, 1> &com_state, Eigen::Matrix<double, 3, 1> next_body_vel, double t_stance, double time) {
@@ -69,11 +76,7 @@ void Leg::update_foot_trajectory(Eigen::Matrix<double, 13, 1> &com_state, Eigen:
                                             sin(phi_com)*sin(psi_com) + sin(theta_com)*cos(phi_com)*cos(psi_com), -sin(phi_com)*cos(psi_com) + sin(psi_com)*sin(theta_com)*cos(phi_com), cos(phi_com)*cos(theta_com), -pos_x_com*sin(phi_com)*sin(psi_com) - pos_x_com*sin(theta_com)*cos(phi_com)*cos(psi_com) + pos_y_com*sin(phi_com)*cos(psi_com) - pos_y_com*sin(psi_com)*sin(theta_com)*cos(phi_com) - pos_z_com*cos(phi_com)*cos(theta_com), 
                                             0, 0, 0, 1).finished();
     
-    foot_pos_world_desired_mutex.lock();
-    foot_pos_desired_body_frame_mutex.lock();
-    foot_pos_desired_body_frame = (H_world_body * (Eigen::Matrix<double, 4, 1>() << next_foot_pos_world_desired, 1).finished()).block<3, 1>(0, 0);
-    foot_pos_desired_body_frame_mutex.unlock();
-    foot_pos_world_desired_mutex.unlock();
+    foot_pos_desired_body_frame = (H_world_body * (Eigen::Matrix<double, 4, 1>() << get_next_foot_pos_world_desired(), 1).finished()).block<3, 1>(0, 0);
     
     update_foot_pos_body_frame(com_state);
     
@@ -84,14 +87,11 @@ void Leg::update_foot_trajectory(Eigen::Matrix<double, 13, 1> &com_state, Eigen:
     lift_off_vel_mutex.lock();
     foot_trajectory_mutex.lock();
     
-    foot_pos_desired_body_frame_mutex.lock();
-
     Eigen::Matrix<double, 3, 1> middle_pos = (lift_off_pos + foot_pos_desired_body_frame) / 2; // In World frame
     middle_pos(2, 0) = step_height_body;
 
     foot_trajectory.update(lift_off_pos, middle_pos, foot_pos_desired_body_frame, -lift_off_vel, -next_body_vel, t_stance);
-
-    foot_pos_desired_body_frame_mutex.unlock();
+    
     foot_trajectory_mutex.unlock();
     lift_off_pos_mutex.unlock();
     lift_off_vel_mutex.unlock();
@@ -165,11 +165,11 @@ void Leg::update() {
     
     update_foot_pos(theta1, theta2, theta3, theta4, theta5, phi, psi, foot_pos, config);
     
-    Leg::q_dot_mutex.lock();
-    update_foot_vel(J_foot_combined, Leg::q_dot, foot_vel);
-    Leg::q_dot_mutex.unlock();
+    q_dot_mutex.lock();
+    update_foot_vel(J_foot_combined, q_dot, foot_vel);
+    q_dot_mutex.unlock();
 
-    Leg::iteration_counter++;
+    iteration_counter++;
 }
 
 // Returns the current foot position in world frame
@@ -192,4 +192,128 @@ void Leg::update_torque_setpoint() {
             constrain(tau_setpoint(i, 0), config.lower_torque_limit, config.upper_torque_limit); // constrain element based on global torque limits
     }
     constrain(tau_setpoint(4, 0), -15, 15);
+}
+
+void Leg::set_q(const Eigen::Matrix<double, 5, 1> q) { 
+    q_mutex.lock();
+    Leg::q = q;
+    q_mutex.unlock();
+}
+
+void Leg::set_q(const double theta1, const double theta2, const double theta3, const double theta4, const double theta5) {
+    q_mutex.lock();
+    q << theta1, theta2, theta3, theta4, theta5;
+    q_mutex.unlock();
+}
+
+Eigen::Matrix<double, 5, 1> Leg::get_q() {
+    q_mutex.lock();
+    const Eigen::Matrix<double, 5, 1> q_temp = q;
+    q_mutex.unlock();
+
+    return q_temp;
+}
+
+void Leg::set_q_dot(const Eigen::Matrix<double, 5, 1> q_dot) { 
+    q_dot_mutex.lock();
+    Leg::q_dot = q_dot;
+    q_dot_mutex.unlock();
+}
+
+void Leg::set_q_dot(const double theta1_dot, const double theta2_dot, const double theta3_dot, const double theta4_dot, const double theta5_dot) {
+    q_dot_mutex.lock();
+    q_dot << theta1_dot, theta2_dot, theta3_dot, theta4_dot, theta5_dot;
+    q_dot_mutex.unlock();
+}
+
+Eigen::Matrix<double, 5, 1> Leg::get_q_dot() {
+    q_dot_mutex.lock();
+    const Eigen::Matrix<double, 5, 1> q_dot_temp = q_dot;
+    q_dot_mutex.unlock();
+
+    return q_dot_temp;
+}
+
+double Leg::get_trajectory_start_time() {
+    trajectory_start_time_mutex.lock();
+    const double t = trajectory_start_time;
+    trajectory_start_time_mutex.unlock();
+
+    return t;
+}
+
+void Leg::set_trajectory_start_time(const double t) {
+    trajectory_start_time_mutex.lock();
+    trajectory_start_time = t;
+    trajectory_start_time_mutex.unlock();
+}
+
+void Leg::set_swing_phase(bool swing) {
+    swing_phase_mutex.lock();
+    swing_phase = swing;
+    swing_phase_mutex.unlock();
+}
+    
+bool Leg::get_swing_phase() {
+    swing_phase_mutex.lock();
+    const bool swing = swing_phase;
+    swing_phase_mutex.unlock();
+    
+    return swing;
+}
+
+Eigen::Matrix<double, 3, 1> Leg::get_next_foot_pos_world_desired() {
+    next_foot_pos_world_desired_mutex.lock();
+    const Eigen::Matrix<double, 3, 1> next_foot_pos_world_desired_temp = next_foot_pos_world_desired;
+    next_foot_pos_world_desired_mutex.unlock();
+
+    return next_foot_pos_world_desired_temp;
+}
+
+void Leg::set_next_foot_pos_world_desired(const Eigen::Matrix<double, 3, 1> next_foot_pos_world_desired) {
+    next_foot_pos_world_desired_mutex.lock();
+    Leg::next_foot_pos_world_desired = next_foot_pos_world_desired;
+    next_foot_pos_world_desired_mutex.unlock();
+}
+
+Eigen::Matrix<double, 3, 1> Leg::get_foot_pos_world_desired() {
+    foot_pos_world_desired_mutex.lock();
+    const Eigen::Matrix<double, 3, 1> foot_pos_world_desired_temp = foot_pos_world_desired;
+    foot_pos_world_desired_mutex.unlock();
+
+    return foot_pos_world_desired;
+}
+
+void Leg::set_foot_pos_world_desired(Eigen::Matrix<double, 3, 1> foot_pos_world_desired) {
+    foot_pos_world_desired_mutex.lock();
+    Leg::foot_pos_world_desired = foot_pos_world_desired;
+    foot_pos_world_desired_mutex.unlock();
+}
+
+Eigen::Matrix<double, 3, 1> Leg::get_lift_off_pos() {
+    lift_off_pos_mutex.lock();
+    Eigen::Matrix<double, 3, 1> lift_off_pos_temp = lift_off_pos;
+    lift_off_pos_mutex.unlock();
+
+    return lift_off_pos_temp;
+}
+
+void Leg::set_lift_off_pos(Eigen::Matrix<double, 3, 1> lift_off_pos) {
+    lift_off_pos_mutex.lock();
+    Leg::lift_off_pos = lift_off_pos;
+    lift_off_pos_mutex.unlock();
+}
+
+Eigen::Matrix<double, 3, 1> Leg::get_lift_off_vel() {
+    lift_off_vel_mutex.lock();
+    const Eigen::Matrix<double, 3, 1> lift_off_vel_temp = lift_off_vel;
+    lift_off_vel_mutex.unlock();
+
+    return lift_off_vel_temp;
+}
+
+void Leg::set_lift_off_vel(const Eigen::Matrix<double, 3, 1> lift_off_vel) {
+    lift_off_vel_mutex.lock();
+    Leg::lift_off_vel = lift_off_vel;
+    lift_off_vel_mutex.unlock();
 }

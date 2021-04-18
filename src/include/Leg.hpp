@@ -66,43 +66,43 @@ class Leg {
     public: double theta4dot;
     public: double theta5dot;
 
-    public: double trajectory_start_time;
+    private: double trajectory_start_time;
 
     // Boolean representing foot state. True means foot is in the air, i.e. no contact, false means foot is in stance phase. i.e. contact
-    public: bool swing_phase;
+    private: bool swing_phase;
     
-    public: std::mutex q_mutex, q_dot_mutex, foot_pos_world_desired_mutex, lift_off_pos_mutex, lift_off_vel_mutex, foot_pos_body_frame_mutex,
-                        trajectory_start_time_mutex, foot_trajectory_mutex, next_foot_pos_world_desired_mutex, foot_pos_desired_body_frame_mutex;
+    private: std::mutex q_mutex, q_dot_mutex, foot_pos_world_desired_mutex, lift_off_pos_mutex, lift_off_vel_mutex, foot_pos_body_frame_mutex,
+                        trajectory_start_time_mutex, foot_trajectory_mutex, next_foot_pos_world_desired_mutex, foot_pos_desired_body_frame_mutex, swing_phase_mutex;
     
-    public: Eigen::Matrix<double, 5, 1> q; // Leg angle vector / Model state
-    public: Eigen::Matrix<double, 5, 1> q_dot; // Leg angular velocity vector / Differentiated model state
+    private: Eigen::Matrix<double, 5, 1> q; // Leg angle vector / Model state
+    private: Eigen::Matrix<double, 5, 1> q_dot; // Leg angular velocity vector / Differentiated model state
 
-    public: Eigen::Matrix<double, 5, 1> C; // matrix containing the result of C * q_dot and the other terms based on the jupyter notebook
-    public: Eigen::Matrix<double, 5, 5> B; // mass and inertia matrix of the leg model
-    public: Eigen::Matrix<double, 5, 1> G; // gravity vector of the leg model. If directly applied as torques to each joint, it should compensate for gravity.
+    private: Eigen::Matrix<double, 5, 1> C; // matrix containing the result of C * q_dot and the other terms based on the jupyter notebook
+    private: Eigen::Matrix<double, 5, 5> B; // mass and inertia matrix of the leg model
+    private: Eigen::Matrix<double, 5, 1> G; // gravity vector of the leg model. If directly applied as torques to each joint, it should compensate for gravity.
 
-    public: Eigen::Matrix<double, 3, 5> J_foot; // Jacobian of the foot / end effector, also called the contact Jacobian.
-    public: Eigen::Matrix<double, 5, 5> J_foot_combined; // Combined Jacobian with geometric positional part and analytical orientation part.
-    public: Eigen::Matrix<double, 3, 5> J_foot_dot; // Time derivative of the contact / end effector Jacobian,
+    private: Eigen::Matrix<double, 3, 5> J_foot; // Jacobian of the foot / end effector, also called the contact Jacobian.
+    private: Eigen::Matrix<double, 5, 5> J_foot_combined; // Combined Jacobian with geometric positional part and analytical orientation part.
+    private: Eigen::Matrix<double, 3, 5> J_foot_dot; // Time derivative of the contact / end effector Jacobian,
 
-    public: Eigen::Matrix<double, 3, 3> Lambda; // "Desired Inertia matrix" of the leg, based on Jacobian and inertia matrix B / M
+    private: Eigen::Matrix<double, 3, 3> Lambda; // "Desired Inertia matrix" of the leg, based on Jacobian and inertia matrix B / M
 
-    public: Eigen::Matrix<double, 5, 5> Kp; // Cartesian Position gain matrix for calculation of torque setpoint
-    public: Eigen::Matrix<double, 5, 5> Kd; // Derivative / Cartesian Velocity for calculation of torque setpoint
+    private: Eigen::Matrix<double, 5, 5> Kp; // Cartesian Position gain matrix for calculation of torque setpoint
+    private: Eigen::Matrix<double, 5, 5> Kd; // Derivative / Cartesian Velocity for calculation of torque setpoint
 
-    public: Eigen::Matrix<double, 5, 1> tau_ff; // Vector containing feedforward torque based on Coriolis, Centrifugal, gravity and feed-forward acceleration terms.
+    private: Eigen::Matrix<double, 5, 1> tau_ff; // Vector containing feedforward torque based on Coriolis, Centrifugal, gravity and feed-forward acceleration terms.
     public: Eigen::Matrix<double, 5, 1> tau_setpoint; // Final torque setpoint calculated from above matrices and feedforward torque added.
 
     public: Eigen::Matrix<double, 5, 1> foot_pos; // Cartesian foot / end-effector position, hip frame
-    public: Eigen::Matrix<double, 3, 1> foot_pos_body_frame; // Foot / end-effector position in body frame
-    public: Eigen::Matrix<double, 3, 1> foot_pos_desired_body_frame; // Body frame
-    public: Eigen::Matrix<double, 3, 1> next_foot_pos_world_desired; // Next desired foot position in world frame, obtained from the MPC prediction horizon (at the next contact swap. It is also the target position for the trajectory calculator.
-    public: Eigen::Matrix<double, 3, 1> foot_pos_world_desired; // Most recent desired foot position in world frame, calculated by the MPC formula using Raibert heuristic etc.
-    public: Eigen::Matrix<double, 3, 1> lift_off_pos; // Body frame
+    private: Eigen::Matrix<double, 3, 1> foot_pos_body_frame; // Foot / end-effector position in body frame
+    private: Eigen::Matrix<double, 3, 1> foot_pos_desired_body_frame; // Body frame
+    private: Eigen::Matrix<double, 3, 1> next_foot_pos_world_desired; // Next desired foot position in world frame, obtained from the MPC prediction horizon at the next contact swap. It is also the target position for the trajectory planner.
+    private: Eigen::Matrix<double, 3, 1> foot_pos_world_desired; // Most recent desired foot position in world frame, calculated by the MPC formula using Raibert heuristic etc.
+    private: Eigen::Matrix<double, 3, 1> lift_off_pos; // Body frame
     public: Eigen::Matrix<double, 3, 1> foot_pos_world_discretization; // World frame
 
     public: Eigen::Matrix<double, 5, 1> foot_vel; // Cartesian foot/ end-effector velocity
-    public: Eigen::Matrix<double, 3, 1> lift_off_vel; // Body frame
+    private: Eigen::Matrix<double, 3, 1> lift_off_vel; // Body frame
 
     public: Eigen::Matrix<double, 5, 1> pos_desired; // Desired cartesian foot / end-effector position + orientation (roll and yaw)
     public: Eigen::Matrix<double, 5, 1> vel_desired; // Desired cartesian foot / end-effector velocity + angular velocity
@@ -130,9 +130,47 @@ class Leg {
 
     public: leg_config config;
 
+    public: void set_q(const Eigen::Matrix<double, 5, 1> q);
+    
+    public: void set_q(double theta1, double theta2, double theta3, double theta4, double theta5);
+
+    public: Eigen::Matrix<double, 5, 1> get_q();
+
+    public: void set_q_dot(const Eigen::Matrix<double, 5, 1> q_dot);
+    
+    public: void set_q_dot(double theta1_dot, double theta2_dot, double theta3_dot, double theta4_dot, double theta5_dot);
+
+    public: Eigen::Matrix<double, 5, 1> get_q_dot();
+
+    public: double get_trajectory_start_time();
+
+    public: void set_trajectory_start_time(const double t);
+
+    public: void set_swing_phase(const bool swing);
+    
+    public: bool get_swing_phase();
+
     public: void update_torque_setpoint();
 
-    public: void update_foot_pos_body_frame(Eigen::Matrix<double, 13, 1> &com_state);
+    public: void update_foot_pos_body_frame(const Eigen::Matrix<double, 13, 1> &com_state);
+
+    public: Eigen::Matrix<double, 3, 1> get_foot_pos_body_frame();
+
+    public: Eigen::Matrix<double, 3, 1> get_next_foot_pos_world_desired();
+
+    public: void set_next_foot_pos_world_desired(const Eigen::Matrix<double, 3, 1> next_foot_pos_world_desired);
+
+    public: Eigen::Matrix<double, 3, 1> get_foot_pos_world_desired();
+
+    public: void set_foot_pos_world_desired(const Eigen::Matrix<double, 3, 1> foot_pos_world_desired);
+
+    public: Eigen::Matrix<double, 3, 1> get_lift_off_pos();
+
+    public: void set_lift_off_pos(const Eigen::Matrix<double, 3, 1> lift_off_pos);
+
+    public: Eigen::Matrix<double, 3, 1> get_lift_off_vel();
+
+    public: void set_lift_off_vel(const Eigen::Matrix<double, 3, 1> lift_off_vel);
 
     public: void update_foot_trajectory(Eigen::Matrix<double, 13, 1> &com_state, Eigen::Matrix<double, 3, 1> next_body_vel, double t_stance, double time);
 

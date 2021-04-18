@@ -69,6 +69,16 @@ dt = 1.0/50.0
 print("N:", N)
 print("dt:", dt)
 
+print("Max prev_file_write_time:", max(dataframe["previous_file_write_time"]))
+
+for i in range(int(len(dataframe["t_sim"]))):
+    
+    if dataframe["previous_logging_time"][i] > 500e+3: # nanoseconds
+        print("Spike in logging time detected at t=", dataframe["t_sim"][i], ", logging duration=", dataframe["previous_logging_time"][i])
+    
+    if dataframe["previous_file_write_time"][i] > 500e+3: # nanoseconds
+        print("Spike in log entry file write detected at t=", dataframe["t_sim"][i], ", file write duration=", dataframe["previous_file_write_time"][i])
+
 print("Parameters initialized.")
 
 if delay_flag:
@@ -189,24 +199,6 @@ if delay_flag:
 
 else:
     print("Delay flag is set to False, skipping delay compensation plots.")
-
-lift_off_update_state_fig = plt.figure(figsize=angle_fig_size, dpi=save_dpi)
-lift_off_update_state_ax = lift_off_update_state_fig.add_subplot(111)
-
-for i in range(n - 1):
-    lift_off_update_state_ax.plot(dataframe["t_sim"], [float(x[i]) for x in [state.split("|") for state in dataframe["x_lift_off_update"]]], label=dataframe.columns[2 + i])
-
-plt.legend()
-lift_off_update_state_fig.savefig(plot_image_dir + "x_lift_off_update.pdf", dpi=save_dpi, bbox_inches='tight')
-
-traj_update_fig = plt.figure(figsize=angle_fig_size, dpi=save_dpi)
-traj_update_ax = traj_update_fig.add_subplot(111)
-
-for i in range(n - 1):
-    traj_update_ax.plot(dataframe["t_sim"], [float(x[i]) for x in [state.split("|") for state in dataframe["x_trajectory_update"]]], label=dataframe.columns[2 + i])
-
-plt.legend()
-traj_update_fig.savefig(plot_image_dir + "x_trajectory_update.pdf", dpi=save_dpi, bbox_inches='tight')
 
 print("Generating angle plots...")
 
