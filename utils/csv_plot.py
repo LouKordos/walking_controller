@@ -40,6 +40,8 @@ def plot_file_data(filepath):
 	data = np.genfromtxt(filepath, delimiter=',', skip_header=50,
 	     	skip_footer=0, names=['t_sim', 't_controller', 'theta1', 'theta2', 'theta3', 'theta4', 'theta5', 'theta1_dot', 'theta2_dot', 'theta3_dot', 'theta4_dot', 'theta5_dot', 'tau_1', 'tau_2', 'tau_3', 'tau_4', 'tau_5', 'foot_pos_x', 'foot_pos_y', 'foot_pos_z', 'foot_pos_x_desired', 'foot_pos_y_desired', 'foot_pos_z_desired', 'foot_vel_x', 'foot_vel_y', 'foot_vel_z', 'foot_vel_x_desired', 'foot_vel_y_desired', 'foot_vel_z_desired', 'foot_phi', 'foot_theta', 'foot_psi', 'foot_phi_desired', 'foot_theta_desired', 'foot_psi_desired', 'current_trajectory_time'])
 
+	print("Max prev_file_write_time:", max(data["previous_file_write_time"]))
+
 	#print(data)
 	scaling_factor = 0.75
 
