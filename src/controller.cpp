@@ -76,7 +76,7 @@ bool alternate_contacts;
 static Eigen::Matrix<double, n, 1> x_t = (Eigen::Matrix<double, n, 1>() << 0., 0., 0., 0, 0, 0.8, 0, 0, 0, 0, 0, 0, -9.81).finished();
 static Eigen::Matrix<double, m, 1> u_t = (Eigen::Matrix<double, m, 1>() << 0, 0, m_value*9.81 / 2, 0, 0, m_value*9.81/2).finished();
 
-static Eigen::Matrix<double, 3, 1> next_body_vel = Eigen::ArrayXd::Zero(3, 1);
+static Eigen::Matrix<double, n, 1> next_touchdown_state = Eigen::ArrayXd::Zero(n, 1);
 
 std::thread left_leg_state_thread; // Thread for updating left leg state based on gazebosim messages
 std::thread left_leg_torque_thread; // Thread for updating matrices, calculating torque setpoint and sending torque setpoint to gazebosim
@@ -95,7 +95,7 @@ static const double torque_calculation_interval = 960.0; // Interval for calcula
 static const double time_update_interval = 1000.0;
         
 std::mutex x_mutex, u_mutex,
-            next_body_vel_mutex,
+            next_touchdown_state_mutex,
             time_mutex, last_contact_swap_time_mutex, 
             time_synced_mutex;
 
@@ -199,18 +199,18 @@ double get_contact_phase(double time) {
     return (time - get_last_contact_swap_time()) / (t_stance * 2.0); // Multiply t_stance by 2 because the function returning a discrete contact phase base on phi already splits it up into two parts.
 }
 
-Eigen::Matrix<double, 3, 1> get_next_body_vel() {
-    next_body_vel_mutex.lock();
-    Eigen::Matrix<double,  3, 1> temp = next_body_vel;
-    next_body_vel_mutex.unlock();
+Eigen::Matrix<double, n, 1> get_next_touchdown_state() {
+    next_touchdown_state_mutex.lock();
+    Eigen::Matrix<double,  n, 1> temp = next_touchdown_state;
+    next_touchdown_state_mutex.unlock();
 
     return temp;
 }
 
-void set_next_body_vel(const Eigen::Matrix<double, 3, 1> val) {
-    next_body_vel_mutex.lock();
-    next_body_vel = val;
-    next_body_vel_mutex.unlock();
+void set_next_touchdown_state(const Eigen::Matrix<double, n, 1> val) {
+    next_touchdown_state_mutex.lock();
+    next_touchdown_state = val;
+    next_touchdown_state_mutex.unlock();
 }
 
 void update_left_leg_state() {
@@ -417,7 +417,7 @@ void calculate_left_leg_torques() {
         auto model_update_start = high_resolution_clock::now();
 
         // Update no matter the gait phase to keep foot state updated
-        left_leg->update();
+        left_leg->update(x);
 
         auto model_update_end = high_resolution_clock::now();
 
@@ -438,13 +438,11 @@ void calculate_left_leg_torques() {
             right_leg->set_trajectory_start_time(time);
 
             if(!swing_left_temp) { // Left foot will now be in swing phase so we need to save lift off position for swing trajectory planning
-                left_leg->update_foot_pos_body_frame(x);
                 left_leg->set_lift_off_pos(left_leg->get_foot_pos_body_frame());
 
                 left_leg->set_lift_off_vel(x.block<3, 1>(9, 0));
             }
             if(!swing_right_temp) { // Right foot will now be in swing phase so we need to save lift off position for swing trajectory planning
-                right_leg->update_foot_pos_body_frame(x);
                 right_leg->set_lift_off_pos(right_leg->get_foot_pos_body_frame());
 
                 right_leg->set_lift_off_vel(x.block<3, 1>(9, 0));
@@ -462,9 +460,9 @@ void calculate_left_leg_torques() {
 
         auto trajectory_update_start = high_resolution_clock::now();
 
-        Eigen::Matrix<double, 3, 1> next_body_vel_temp = get_next_body_vel();
-        left_leg->update_foot_trajectory(x, next_body_vel_temp, t_stance, get_time(false));
-        right_leg->update_foot_trajectory(x, next_body_vel_temp, t_stance, get_time(false));
+        Eigen::Matrix<double, n, 1> next_touchdown_state_temp = get_next_touchdown_state();
+        left_leg->update_foot_trajectory(x, next_touchdown_state_temp, t_stance);
+        right_leg->update_foot_trajectory(x, next_touchdown_state_temp, t_stance);
 
         auto trajectory_update_end = high_resolution_clock::now();
         
@@ -772,7 +770,7 @@ void calculate_right_leg_torques() {
         auto model_update_start = high_resolution_clock::now();
 
         //TODO: Maybe rework to only use q and q_dot
-        right_leg->update();
+        right_leg->update(x);
 
         auto model_update_end = high_resolution_clock::now();
 
@@ -1594,17 +1592,10 @@ void run_mpc() {
         left_leg->foot_pos_world_discretization = left_leg->get_foot_pos_world_desired();
         right_leg->foot_pos_world_discretization = right_leg->get_foot_pos_world_desired();
 
-        double phi_t = 0.0;
-        double theta_t = 0.0;
-        double psi_t = 0.0;
-
-        double vel_x_t = 0.0;
-        double vel_y_t = 0.0;
-        double vel_z_t = 0.0;
-        
-        double pos_x_t = 0.0;
-        double pos_y_t = 0.0;
-        double pos_z_t = 0.0;
+        double phi_t, theta_t, psi_t;
+        double pos_x_t, pos_y_t, pos_z_t;
+        double vel_x_t, vel_y_t, vel_z_t;
+        double omega_x_t, omega_y_t, omega_z_t;
 
         bool contact_swap_updated = false; // Is set to true once first contact swap has been found in future contact states.
 
@@ -1627,6 +1618,10 @@ void run_mpc() {
                 pos_x_t = X_t(n*(i+1)+3, 0);
                 pos_y_t = X_t(n*(i+1)+4, 0);
                 pos_z_t = X_t(n*(i+1)+5, 0);
+
+                omega_x_t = X_t(n*(i+1)+6, 0);
+                omega_y_t = X_t(n*(i+1)+7, 0);
+                omega_z_t = X_t(n*(i+1)+8, 0);
             }
             else {
                 phi_t = X_t(n*(N-1) + 0, 0);
@@ -1640,6 +1635,10 @@ void run_mpc() {
                 pos_x_t = X_t(n*(N-1) + 3, 0);
                 pos_y_t = X_t(n*(N-1) + 4, 0);
                 pos_z_t = X_t(n*(N-1) + 5, 0);
+
+                omega_x_t = X_t(n*(N-1) + 6, 0);
+                omega_y_t = X_t(n*(N-1) + 7, 0);
+                omega_z_t = X_t(n*(N-1) + 8, 0);
             }
 
             if(i == 0) {
@@ -1654,6 +1653,10 @@ void run_mpc() {
                 pos_x_t = (double)P_param(3, 0);
                 pos_y_t = (double)P_param(4, 0);
                 pos_z_t = (double)P_param(5, 0);
+
+                omega_x_t = (double)P_param(6, 0);
+                omega_y_t = (double)P_param(7, 0);
+                omega_z_t = (double)P_param(8, 0);
             }
 
             bool swing_left =  P_param(0, 1 + N + n * N + m * N + i * m);
@@ -1752,7 +1755,7 @@ void run_mpc() {
                     left_leg->set_next_foot_pos_world_desired(left_leg->foot_pos_world_discretization);
                     right_leg->set_next_foot_pos_world_desired(right_leg->foot_pos_world_discretization);
                     
-                    set_next_body_vel((Eigen::Matrix<double, 3, 1>() << vel_x_t, vel_y_t, vel_z_t).finished());
+                    set_next_touchdown_state((Eigen::Matrix<double, n, 1>() << phi_t, theta_t, psi_t, pos_x_t, pos_y_t, pos_z_t, omega_x_t, omega_y_t, omega_z_t, vel_x_t, vel_y_t, vel_z_t).finished());
 
                     predicted_contact_swap_iterations = total_iterations + i;
                     
@@ -1961,7 +1964,7 @@ void run_mpc() {
         Eigen::Matrix<double, 3, 1> next_foot_pos_world_desired_right = right_leg->get_next_foot_pos_world_desired();
         Eigen::Matrix<double, 3, 1> foot_pos_world_desired_left = left_leg->get_foot_pos_world_desired();
         Eigen::Matrix<double, 3, 1> foot_pos_world_desired_right = right_leg->get_foot_pos_world_desired();
-        Eigen::Matrix<double, 3, 1 > next_body_vel_temp = get_next_body_vel();
+        Eigen::Matrix<double, n, 1 > next_touchdown_state_temp = get_next_touchdown_state();
         u_mutex.lock();
         Eigen::Matrix<double, m, 1> u_t_temp = u_t;
         u_mutex.unlock();
@@ -1993,7 +1996,7 @@ void run_mpc() {
                 << "," << r_x_right << "," << r_y_right << "," << r_z_right
                 << "," << r_x_actual_left << "," << r_y_actual_left << "," << r_z_actual_left
                 << "," << r_x_actual_right << "," << r_y_actual_right << "," << r_z_actual_right
-                << "," << next_body_vel_temp(0, 0) << "," << next_body_vel_temp(1, 0) << "," << next_body_vel_temp(2, 0)
+                << "," << next_touchdown_state_temp(9, 0) << "," << next_touchdown_state_temp(10, 0) << "," << next_touchdown_state_temp(11, 0)
                 << "," << !swing_left_temp * 0.1 << "," << !swing_right_temp * 0.1
                 << "," << left_leg_contact * 0.1 << "," << right_leg_contact * 0.1
                 << "," << foot_pos_body_frame_left(0, 0) << "," << foot_pos_body_frame_left(1, 0) << "," << foot_pos_body_frame_left(2, 0)

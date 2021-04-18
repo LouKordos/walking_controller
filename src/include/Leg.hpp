@@ -172,9 +172,9 @@ class Leg {
 
     public: void set_lift_off_vel(const Eigen::Matrix<double, 3, 1> lift_off_vel);
 
-    public: void update_foot_trajectory(Eigen::Matrix<double, 13, 1> &com_state, Eigen::Matrix<double, 3, 1> next_body_vel, double t_stance, double time);
+    public: void update_foot_trajectory(Eigen::Matrix<double, 13, 1> &com_state, Eigen::Matrix<double, 13, 1> next_touchdown_state, double t_stance);
 
-    public: void update();
+    public: void update(Eigen::Matrix<double, 13, 1> x);
 
     public: Eigen::Matrix<double, 3, 1> get_foot_pos_world(Eigen::Matrix<double, 13, 1> &com_state);
 };

@@ -57,47 +57,39 @@ Eigen::Matrix<double, 3, 1> Leg::get_foot_pos_body_frame() {
     return foot_pos_body_frame_temp;
 }
 
-void Leg::update_foot_trajectory(Eigen::Matrix<double, 13, 1> &com_state, Eigen::Matrix<double, 3, 1> next_body_vel, double t_stance, double time) {
-    
-    double phi_com = com_state(0, 0);
-    double theta_com = com_state(1, 0);
-    double psi_com = com_state(2, 0);
+void Leg::update_foot_trajectory(Eigen::Matrix<double, 13, 1> &current_state, Eigen::Matrix<double, 13, 1> next_touchdown_state, double t_stance) {
 
-    double pos_x_com = com_state(3, 0);
-    double pos_y_com = com_state(4, 0);
-    double pos_z_com = com_state(5, 0);
+    // Eigen::Matrix<double, 4, 4> H_world_body = (Eigen::Matrix<double, 4, 4>() << cos(next_touchdown_state(2, 0))*cos(next_touchdown_state(1, 0)), sin(next_touchdown_state(2, 0))*cos(next_touchdown_state(1, 0)), -sin(next_touchdown_state(1, 0)), -next_touchdown_state(3, 0)*cos(next_touchdown_state(2, 0))*cos(next_touchdown_state(1, 0)) - next_touchdown_state(4, 0)*sin(next_touchdown_state(2, 0))*cos(next_touchdown_state(1, 0)) + next_touchdown_state(5, 0)*sin(next_touchdown_state(1, 0)), 
+    //                                         sin(next_touchdown_state(0, 0))*sin(next_touchdown_state(1, 0))*cos(next_touchdown_state(2, 0)) - sin(next_touchdown_state(2, 0))*cos(next_touchdown_state(0, 0)), sin(next_touchdown_state(0, 0))*sin(next_touchdown_state(2, 0))*sin(next_touchdown_state(1, 0)) + cos(next_touchdown_state(0, 0))*cos(next_touchdown_state(2, 0)), sin(next_touchdown_state(0, 0))*cos(next_touchdown_state(1, 0)), -next_touchdown_state(3, 0)*sin(next_touchdown_state(0, 0))*sin(next_touchdown_state(1, 0))*cos(next_touchdown_state(2, 0)) + next_touchdown_state(3, 0)*sin(next_touchdown_state(2, 0))*cos(next_touchdown_state(0, 0)) - next_touchdown_state(4, 0)*sin(next_touchdown_state(0, 0))*sin(next_touchdown_state(2, 0))*sin(next_touchdown_state(1, 0)) - next_touchdown_state(4, 0)*cos(next_touchdown_state(0, 0))*cos(next_touchdown_state(2, 0)) - next_touchdown_state(5, 0)*sin(next_touchdown_state(0, 0))*cos(next_touchdown_state(1, 0)), 
+    //                                         sin(next_touchdown_state(0, 0))*sin(next_touchdown_state(2, 0)) + sin(next_touchdown_state(1, 0))*cos(next_touchdown_state(0, 0))*cos(next_touchdown_state(2, 0)), -sin(next_touchdown_state(0, 0))*cos(next_touchdown_state(2, 0)) + sin(next_touchdown_state(2, 0))*sin(next_touchdown_state(1, 0))*cos(next_touchdown_state(0, 0)), cos(next_touchdown_state(0, 0))*cos(next_touchdown_state(1, 0)), -next_touchdown_state(3, 0)*sin(next_touchdown_state(0, 0))*sin(next_touchdown_state(2, 0)) - next_touchdown_state(3, 0)*sin(next_touchdown_state(1, 0))*cos(next_touchdown_state(0, 0))*cos(next_touchdown_state(2, 0)) + next_touchdown_state(4, 0)*sin(next_touchdown_state(0, 0))*cos(next_touchdown_state(2, 0)) - next_touchdown_state(4, 0)*sin(next_touchdown_state(2, 0))*sin(next_touchdown_state(1, 0))*cos(next_touchdown_state(0, 0)) - next_touchdown_state(5, 0)*cos(next_touchdown_state(0, 0))*cos(next_touchdown_state(1, 0)), 
+    //                                         0, 0, 0, 1).finished();
 
-    double vel_x_com = com_state(9, 0);
-    double vel_y_com = com_state(10, 0);
-    double vel_z_com = com_state(11, 0);
-
-    Eigen::Matrix<double, 4, 4> H_world_body = (Eigen::Matrix<double, 4, 4>() << cos(psi_com)*cos(theta_com), sin(psi_com)*cos(theta_com), -sin(theta_com), -pos_x_com*cos(psi_com)*cos(theta_com) - pos_y_com*sin(psi_com)*cos(theta_com) + pos_z_com*sin(theta_com), 
-                                            sin(phi_com)*sin(theta_com)*cos(psi_com) - sin(psi_com)*cos(phi_com), sin(phi_com)*sin(psi_com)*sin(theta_com) + cos(phi_com)*cos(psi_com), sin(phi_com)*cos(theta_com), -pos_x_com*sin(phi_com)*sin(theta_com)*cos(psi_com) + pos_x_com*sin(psi_com)*cos(phi_com) - pos_y_com*sin(phi_com)*sin(psi_com)*sin(theta_com) - pos_y_com*cos(phi_com)*cos(psi_com) - pos_z_com*sin(phi_com)*cos(theta_com), 
-                                            sin(phi_com)*sin(psi_com) + sin(theta_com)*cos(phi_com)*cos(psi_com), -sin(phi_com)*cos(psi_com) + sin(psi_com)*sin(theta_com)*cos(phi_com), cos(phi_com)*cos(theta_com), -pos_x_com*sin(phi_com)*sin(psi_com) - pos_x_com*sin(theta_com)*cos(phi_com)*cos(psi_com) + pos_y_com*sin(phi_com)*cos(psi_com) - pos_y_com*sin(psi_com)*sin(theta_com)*cos(phi_com) - pos_z_com*cos(phi_com)*cos(theta_com), 
+    Eigen::Matrix<double, 4, 4> H_world_body = (Eigen::Matrix<double, 4, 4>() << cos(current_state(2, 0))*cos(current_state(1, 0)), sin(current_state(2, 0))*cos(current_state(1, 0)), -sin(current_state(1, 0)), -current_state(3, 0)*cos(current_state(2, 0))*cos(current_state(1, 0)) - current_state(4, 0)*sin(current_state(2, 0))*cos(current_state(1, 0)) + current_state(5, 0)*sin(current_state(1, 0)), 
+                                            sin(current_state(0, 0))*sin(current_state(1, 0))*cos(current_state(2, 0)) - sin(current_state(2, 0))*cos(current_state(0, 0)), sin(current_state(0, 0))*sin(current_state(2, 0))*sin(current_state(1, 0)) + cos(current_state(0, 0))*cos(current_state(2, 0)), sin(current_state(0, 0))*cos(current_state(1, 0)), -current_state(3, 0)*sin(current_state(0, 0))*sin(current_state(1, 0))*cos(current_state(2, 0)) + current_state(3, 0)*sin(current_state(2, 0))*cos(current_state(0, 0)) - current_state(4, 0)*sin(current_state(0, 0))*sin(current_state(2, 0))*sin(current_state(1, 0)) - current_state(4, 0)*cos(current_state(0, 0))*cos(current_state(2, 0)) - current_state(5, 0)*sin(current_state(0, 0))*cos(current_state(1, 0)), 
+                                            sin(current_state(0, 0))*sin(current_state(2, 0)) + sin(current_state(1, 0))*cos(current_state(0, 0))*cos(current_state(2, 0)), -sin(current_state(0, 0))*cos(current_state(2, 0)) + sin(current_state(2, 0))*sin(current_state(1, 0))*cos(current_state(0, 0)), cos(current_state(0, 0))*cos(current_state(1, 0)), -current_state(3, 0)*sin(current_state(0, 0))*sin(current_state(2, 0)) - current_state(3, 0)*sin(current_state(1, 0))*cos(current_state(0, 0))*cos(current_state(2, 0)) + current_state(4, 0)*sin(current_state(0, 0))*cos(current_state(2, 0)) - current_state(4, 0)*sin(current_state(2, 0))*sin(current_state(1, 0))*cos(current_state(0, 0)) - current_state(5, 0)*cos(current_state(0, 0))*cos(current_state(1, 0)), 
                                             0, 0, 0, 1).finished();
     
     foot_pos_desired_body_frame = (H_world_body * (Eigen::Matrix<double, 4, 1>() << get_next_foot_pos_world_desired(), 1).finished()).block<3, 1>(0, 0);
-    
-    update_foot_pos_body_frame(com_state);
-    
+        
     double step_height_world = 0.1 /*+ 0.4*/;
-    double step_height_body = (H_world_body * (Eigen::Matrix<double, 4, 1>() << pos_x_com, pos_y_com, step_height_world, 1).finished())(2, 0);
+    double step_height_body = (H_world_body * (Eigen::Matrix<double, 4, 1>() << current_state(3, 0), current_state(4, 0), step_height_world, 1).finished())(2, 0);
     
     lift_off_pos_mutex.lock();
     lift_off_vel_mutex.lock();
-    foot_trajectory_mutex.lock();
     
     Eigen::Matrix<double, 3, 1> middle_pos = (lift_off_pos + foot_pos_desired_body_frame) / 2; // In World frame
     middle_pos(2, 0) = step_height_body;
 
-    foot_trajectory.update(lift_off_pos, middle_pos, foot_pos_desired_body_frame, -lift_off_vel, -next_body_vel, t_stance);
+    foot_trajectory_mutex.lock();
+
+    foot_trajectory.update(lift_off_pos, middle_pos, foot_pos_desired_body_frame, -lift_off_vel, -next_touchdown_state.block<3,1>(9, 0), t_stance);
     
     foot_trajectory_mutex.unlock();
     lift_off_pos_mutex.unlock();
     lift_off_vel_mutex.unlock();
 }
 
-void Leg::update() {
+void Leg::update(Eigen::Matrix<double, 13, 1> x) {
     q_mutex.lock();
     update_q(theta1, theta2, theta3, theta4, theta5, q);
     q_mutex.unlock();
@@ -168,6 +160,8 @@ void Leg::update() {
     q_dot_mutex.lock();
     update_foot_vel(J_foot_combined, q_dot, foot_vel);
     q_dot_mutex.unlock();
+
+    update_foot_pos_body_frame(x);
 
     iteration_counter++;
 }
