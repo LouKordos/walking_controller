@@ -1,6 +1,7 @@
 #include <iostream> // << operator and such
 #include <dirent.h> // File system operations
 #include <typeinfo>
+#include <poll.h>
 
 #include <chrono> // Execution time measurement
 #include <thread> // Threads
@@ -30,6 +31,11 @@
 #include <arpa/inet.h> // defines in_addr structure
 #include <sys/socket.h> // for socket creation
 #include <netinet/in.h> //contains constants and structures needed for internet domain addresses
+
+#include <signal.h>
+#include <unistd.h>
+#include <cstring>
+#include <atomic>
 
 #include <iomanip> // 
 #include "casadi/casadi.hpp" // casADi for solving NLP's
@@ -82,7 +88,6 @@ Leg *right_leg;
 
 SimState *simState;
 
-
 // Should be running at 1kHz but communication overhead is adding ~80µS, that's why it's reduced a bit
 static const double state_update_interval = 960.0; // Interval for fetching and parsing the leg state from gazebosim in microseconds
 static const double torque_calculation_interval = 960.0; // Interval for calculating and sending the torque setpoint to gazebosim in microseconds
@@ -101,10 +106,11 @@ static bool time_synced = false;
 // Setting up debugging and plotting csv file
 int largest_index = 0;
 std::string filename;
-std::string plotDataDirPath; 
- 
-double get_time(bool simTime) {
+std::string plotDataDirPath;
 
+std::atomic<bool> quit_flag(false);    // Exit signal flag
+
+double get_time(bool simTime) {
     if(simTime) {
         double simTime = simState->getSimTime();
         return simTime;
@@ -296,12 +302,17 @@ void calculate_left_leg_torques() {
 
     bool time_switch = false; // used for running a two-phase trajectory, otherwise obsolete
 
-    while(!isTimeSynced()) { // Only start running Leg code after first MPC iteration to prevent problems with non-updated values
+    while(!isTimeSynced() && !quit_flag.load()) { // Only start running Leg code after first MPC iteration to prevent problems with non-updated values
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 
     double current_traj_time_temp = 0;
     double previous_logging_duration = 0;
+
+    struct timeval tv;
+    tv.tv_sec = 1e+9; // Initially set to very high value to wait for first message because it takes some time to start up sim.
+    tv.tv_usec = 0;
+    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
 
     while(true) {
         start = high_resolution_clock::now();
@@ -324,8 +335,17 @@ void calculate_left_leg_torques() {
 
         auto message_wait_start = high_resolution_clock::now();
 
+        if(iteration_counter > 0 && tv.tv_sec == 1e+9) {
+            tv.tv_sec = 3;
+            setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
+        }
+
         msg_length = recvfrom(sockfd, (char *)buffer, udp_buffer_size, 0, ( struct sockaddr *) &cliaddr, &len); // Receive message over UDP containing full leg state
         buffer[msg_length] = '\0'; // Add string ending delimiter to end of string (n is length of message)
+
+        if(quit_flag.load()) { // Ctrl+C has been pressed
+            break;
+        }
 
         auto message_wait_end = high_resolution_clock::now();
 
@@ -612,12 +632,17 @@ void calculate_right_leg_torques() {
 
     bool time_switch = false; // used for running a two-phase trajectory, otherwise obsolete
 
-    while(!isTimeSynced()) { // Only start running Leg code after first MPC iteration to prevent problems with non-updated values
+    while(!isTimeSynced() && !quit_flag.load()) { // Only start running Leg code after first MPC iteration to prevent problems with non-updated values
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 
     double current_traj_time_temp = 0;
     double previous_logging_duration = 0;
+
+    struct timeval tv;
+    tv.tv_sec = 1e+9; // Initially set to very high value to wait for first message because it takes some time to start up sim.
+    tv.tv_usec = 0;
+    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
 
     while(true) {
         start = high_resolution_clock::now();
@@ -640,8 +665,17 @@ void calculate_right_leg_torques() {
 
         auto message_wait_start = high_resolution_clock::now();
 
+        if(iteration_counter > 0 && tv.tv_sec == 1e+9) {
+            tv.tv_sec = 3;
+            setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
+        }
+
         msg_length = recvfrom(sockfd, (char *)buffer, udp_buffer_size, 0, ( struct sockaddr *) &cliaddr, &len); // Receive message over UDP containing full leg state
         buffer[msg_length] = '\0'; // Add string ending delimiter to end of string (n is length of message)
+
+        if(quit_flag.load()) {
+            break;
+        }
 
         auto message_wait_end = high_resolution_clock::now();
 
@@ -1145,6 +1179,11 @@ void run_mpc() {
     double previous_logging_duration = 0;
     double previous_file_write_duration = 0;
 
+    struct timeval tv;
+    tv.tv_sec = 1e+9; // Initially set to very high value to wait for first message because it takes some time to start up sim.
+    tv.tv_usec = 0;
+    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
+
     while(true) {
         // Loop starts here
         auto start = high_resolution_clock::now();
@@ -1171,8 +1210,17 @@ void run_mpc() {
 
         auto message_wait_start = high_resolution_clock::now();
 
+        if(total_iterations > 0 && tv.tv_sec == 1e+9) {
+            tv.tv_sec = 3;
+            setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
+        }
+
         msg_length = recvfrom(sockfd, (char *)buffer, udp_buffer_size, 0, ( struct sockaddr *) &cliaddr, &len); // Receive message over UDP containing full leg state
         buffer[msg_length] = '\0'; // Add string ending delimiter to end of string (n is length of message)
+
+        if(quit_flag.load()) {
+            break;
+        }
 
         auto message_wait_end = high_resolution_clock::now();
 
@@ -1991,6 +2039,11 @@ void run_mpc() {
     }
 }
 
+void handle_exit(int) {
+    quit_flag.store(true);
+    std::cout << "Handled SIGINT, exiting" << std::endl;
+}
+
 int main(int _argc, char **_argv)
 {
     log("--------------------------------", INFO);
@@ -2112,6 +2165,11 @@ int main(int _argc, char **_argv)
     std::cout << std::endl;
 
     std::this_thread::sleep_for(std::chrono::hours(6969));
+    struct sigaction sa;
+    memset( &sa, 0, sizeof(sa) );
+    sa.sa_handler = handle_exit;
+    sigfillset(&sa.sa_mask);
+    sigaction(SIGINT,&sa,NULL);
 
     return 0;
 }
