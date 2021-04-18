@@ -1050,21 +1050,21 @@ void run_mpc() {
     static long long total_iterations = 0; // Total loop iterations
 
     // Desired state values
-    double pos_x_desired = 0;
-    double pos_y_desired = 0.0;
-    double pos_z_desired = 1.0;
+    double pos_x_desired = 0; // meters
+    double pos_y_desired = 0; // meters
+    double pos_z_desired = 1.0; // meters
 
-    double vel_x_desired = 0.0;
-    double vel_y_desired = 0.3;
-    double vel_z_desired = 0.0;
+    double vel_x_desired = 0.0; // m/s
+    double vel_y_desired = 0.3; // m/s
+    double vel_z_desired = 0.0; // m/s
 
-    double phi_desired = 0;
-    double theta_desired = 0;
-    double psi_desired = 0;
+    double phi_desired = 0; // rad
+    double theta_desired = 0; // rad
+    double psi_desired = 0; // rad
 
-    double omega_x_desired = 0;
-    double omega_y_desired = 0;
-    double omega_z_desired = 0;
+    double omega_x_desired = 0; // rad/s
+    double omega_y_desired = 0; // rad/s
+    double omega_z_desired = 0; // rad/s
 
     const double gait_gain = 0.1; // Try much lower value here, rename to more accurate name
     const Eigen::Matrix<double, 3, 3> pos_error_gain = (Eigen::Matrix<double, 3, 3>() << 0.5, 0, 0,
