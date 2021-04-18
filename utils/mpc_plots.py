@@ -69,9 +69,9 @@ dt = 1.0/50.0
 print("N:", N)
 print("dt:", dt)
 
+print("Max prev_file_write_time:", max(dataframe["previous_file_write_time"]))
+
 for i in range(int(len(dataframe["t_sim"]))):
-    if i > 0 and dataframe["t_sim"][i] - dataframe["t_sim"][i-1] > dt * 2.0:
-        print(dataframe["t_sim"][i], ",", dataframe["t_sim"][i - 1])
     
     if dataframe["previous_logging_time"][i] > 500e+3: # nanoseconds
         print("Spike in logging time detected at t=", dataframe["t_sim"][i], ", logging duration=", dataframe["previous_logging_time"][i])
