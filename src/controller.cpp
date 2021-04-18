@@ -1233,8 +1233,8 @@ void run_mpc() {
         //     vel_x_desired += 0.01;
         // }
 
-        // if (vel_y_desired < 0.3) {
-        //     vel_y_desired += 0.01;
+        // if (vel_y_desired < 0.6) {
+        //     vel_y_desired += 0.005;
         // }
 
         // if(omega_z_desired < 0.3) {
@@ -1519,7 +1519,7 @@ void run_mpc() {
         double pos_x_desired_temp = pos_x_desired;
         double pos_y_desired_temp = pos_y_desired;
         double vel_x_desired_temp = vel_x_desired;// - 0.01;
-        double vel_y_desired_temp = vel_y_desired;// - 0.01;
+        double vel_y_desired_temp = vel_y_desired;// - 0.005;
 
         double pos_z_desired_temp = pos_z_desired;
 
@@ -1534,8 +1534,8 @@ void run_mpc() {
             //     vel_x_desired_temp += 0.01;
             // }
             
-            // if (vel_y_desired_temp < 0.3) {
-            //     vel_y_desired_temp += 0.01;
+            // if (vel_y_desired_temp < 0.6) {
+            //     vel_y_desired_temp += 0.005;
             // }
 
             // if (omega_z_desired_temp < 0.3) {
