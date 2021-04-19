@@ -1137,8 +1137,10 @@ void run_mpc() {
     double pos_z_desired = 1.0; // meters
 
     double vel_x_desired = 0.0; // m/s
-    double vel_y_desired = 0.3; // m/s
+    double vel_y_desired = 0.0; // m/s
     double vel_z_desired = 0.0; // m/s
+
+    double vel_forward_desired = 0.3; // Desired forward velocity v = sqrt(vel_x_desired^2 + vel_y_desired^2)
 
     double phi_desired = 0; // rad
     double theta_desired = 0; // rad
@@ -1243,9 +1245,14 @@ void run_mpc() {
         //     vel_y_desired += 0.005;
         // }
 
-        // if(omega_z_desired < 0.3) {
-        //     omega_z_desired += 0.02;
-        // }
+        if(omega_z_desired > -0.1) {
+            omega_z_desired -= 0.001;
+        }
+
+        vel_x_desired = sin(-psi_desired) * vel_forward_desired;
+        vel_y_desired = cos(-psi_desired) * vel_forward_desired;
+
+        std::cout << sqrt(pow(x_t(9, 0), 2) + pow(x_t(10, 0), 2)) << std::endl;
 
         // std::cout << "-----------------------------------------------------------------------------\nr_left at beginning of iteration: " << r_x_left << "," << r_y_left << "," << r_z_left << ", r_right at beginning of iteration: " << r_x_right << "," << r_y_right << "," << r_z_right << std::endl;
 
@@ -1411,6 +1418,13 @@ void run_mpc() {
         Eigen::Matrix<double, 3, 1> vel_desired_vector = (Eigen::Matrix<double, 3, 1>() << vel_x_desired, vel_y_desired, vel_z_desired).finished() - pos_error_gain * (P_param.block<3, 1>(3, 0) - pos_desired_vector);
         Eigen::Matrix<double, 3, 1> omega_desired_vector = (Eigen::Matrix<double, 3, 1>() << omega_x_desired, omega_y_desired, omega_z_desired).finished();
 
+        if(vel_x_desired < 0) {
+            constrain(vel_vector(0, 0), vel_x_desired, 0); // Limit velocity used for calculating desired foot position to desired velocity, preventing steps too far out that slow the robot down too much
+        }
+        else if(vel_x_desired > 0) {
+            constrain(vel_vector(0, 0), 0, vel_x_desired); // Limit velocity used for calculating desired foot position to desired velocity, preventing steps too far out that slow the robot down too much
+        }
+
         if(vel_y_desired < 0) {
             constrain(vel_vector(1, 0), vel_y_desired, 0); // Limit velocity used for calculating desired foot position to desired velocity, preventing steps too far out that slow the robot down too much
         }
@@ -1532,7 +1546,7 @@ void run_mpc() {
         double phi_desired_temp = phi_desired;
         double theta_desired_temp = theta_desired;
         double psi_desired_temp = psi_desired;
-        double omega_z_desired_temp = omega_z_desired;// - 0.02;
+        double omega_z_desired_temp = omega_z_desired + 0.001;
         
         // Update reference trajectory
         for(int i = 0; i < N; ++i) {
@@ -1544,9 +1558,9 @@ void run_mpc() {
             //     vel_y_desired_temp += 0.005;
             // }
 
-            // if (omega_z_desired_temp < 0.3) {
-            //     omega_z_desired_temp += 0.02;
-            // }
+            if (omega_z_desired_temp > -0.1) {
+                omega_z_desired_temp -= 0.001;
+            }
 
             pos_x_desired_temp += vel_x_desired * dt;
             pos_y_desired_temp += vel_y_desired_temp * dt;
@@ -1684,6 +1698,13 @@ void run_mpc() {
             // So using current velocity is not really accurate since the velocity when touching down (or just before, when the contact position is "decided") 
             // is probaby higher than the mean velocity, thus the foot will be placed too far ahead. 
             // It is probably higher since it has to catch up a bit after loosing some velocity when touching down
+            if(x_ref(9, i) < 0) {
+                constrain(vel_vector(0, 0), x_ref(9, i), 0);
+            }
+            else if (x_ref(9, i) > 0) {
+                constrain(vel_vector(0, 0), 0, x_ref(9, i));
+            }
+            
             if(x_ref(10, i) < 0) {
                 constrain(vel_vector(1, 0), x_ref(10, i), 0);
             }
