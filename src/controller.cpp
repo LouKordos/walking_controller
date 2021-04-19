@@ -1562,7 +1562,7 @@ void run_mpc() {
                 omega_z_desired_temp -= 0.001;
             }
 
-            pos_x_desired_temp += vel_x_desired * dt;
+            pos_x_desired_temp += vel_x_desired_temp * dt;
             pos_y_desired_temp += vel_y_desired_temp * dt;
             pos_z_desired_temp += vel_z_desired * dt;
 
