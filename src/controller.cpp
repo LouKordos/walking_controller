@@ -1118,7 +1118,9 @@ void run_mpc() {
 
     Eigen::Matrix<double, n*(N+1)+m*N, 1> x0_solver = Eigen::ArrayXXd::Zero(n*(N+1)+m*N, 1); // Full initial solver state, containing initial model state, N future states and N control actions
     Eigen::Matrix<double, n*(N+1), 1> X_t = Eigen::ArrayXXd::Zero(n*(N+1), 1); // Maybe this is actually obsolete and only x0_solver is sufficient
-    
+    Eigen::Matrix<double, n-1, 1> Q = (Eigen::Matrix<double, n - 1, 1>() << 2e+7, 1e+7, 1e+7, 1e+6, 2e+6, 1e+6, 1e+5, 2e+6, 1e+5, 1.5e+3, 4e+6, 4e+4).finished();
+    Eigen::Matrix<double, m, 1> R = (Eigen::Matrix<double, m, 1>() << 1, 1, 1, 1, 1, 1).finished();
+
     static Eigen::Matrix<double, m*N, 1> U_t = Eigen::ArrayXXd::Zero(m*N, 1); // Same here
 
     static Eigen::Matrix<double, n, N> x_ref = Eigen::ArrayXXd::Zero(n, N); // N states "stacked" horizontally, containing the reference state trajectory for the prediction horizon
@@ -1230,6 +1232,12 @@ void run_mpc() {
         auto start = high_resolution_clock::now();
         auto start_total = high_resolution_clock::now();
 
+        for(int i = 0; i < N; i++) {
+            P_param.block<6,1>(6, 1 + N + n*N + m*N + (i*m) + 1) = R.block<6,1>(0, 0); // R
+            P_param.block<6,1>(6, 1 + N + n*N + m*N + (i*m) + 2) = Q.block<6,1>(0, 0); // Q column 1 (first 6 entries)
+            P_param.block<6,1>(6, 1 + N + n*N + m*N + (i*m) + 3) = Q.block<6,1>(6, 0); // Q column 2 (second 6 entries)
+        }
+
         // while(simState->isPaused() && total_iterations > 3) {
         //     sendto(sockfd, (const char *)"0|0|0|0|0|0|0|0|0|0|0|0", strlen("0|0|0|0|0|0|0|0|0|0|0|0"), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
         //     sleep(dt);
@@ -1243,9 +1251,9 @@ void run_mpc() {
         //     vel_y_desired += 0.005;
         // }
 
-        // if(omega_z_desired < 0.3) {
-        //     omega_z_desired += 0.02;
-        // }
+        if(omega_z_desired < 0.1) {
+            omega_z_desired += 0.001;
+        }
 
         // std::cout << "-----------------------------------------------------------------------------\nr_left at beginning of iteration: " << r_x_left << "," << r_y_left << "," << r_z_left << ", r_right at beginning of iteration: " << r_x_right << "," << r_y_right << "," << r_z_right << std::endl;
 
@@ -1295,6 +1303,9 @@ void run_mpc() {
         auto delay_compensation_end = high_resolution_clock::now();
 
         double delay_compensation_duration = duration_cast<nanoseconds>(delay_compensation_end - delay_compensation_start).count();
+
+        pos_x_desired = P_param(3, 0);
+        pos_y_desired = P_param(4, 0);
 
         if (total_iterations == 0) {
             // Give solver better guess for first iteration to reduce solver time and generate more fitting solution
@@ -1424,7 +1435,7 @@ void run_mpc() {
         if(left_leg->get_swing_phase()) {
             // pos_error_gain * (P_param[3:6, 0].reshape(3, 1) - np.array([[pos_x_desired], [pos_y_desired], [pos_z_desired]])
             Eigen::Matrix<double, 3, 1> foot_pos_world_desired = hip_pos_world_left + (t_stance/2.0) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) 
-                                                                    + 0.5 * sqrt(abs(P_param(5, 0)) / 9.81) * vel_vector.cross(omega_desired_vector);
+                                                                    + 0.5 * sqrt(abs(1) / 9.81) * vel_vector.cross(omega_desired_vector);
             
             //TODO: Instead of using inverse, either solve the inverse symbolically in python or just ues Transpose as shown in Modern Robotics Video
             // Find foot position in body frame to limit it in order to account for leg reachability, collision with other leg and reasonable values
@@ -1453,7 +1464,7 @@ void run_mpc() {
         // Only change where forces are applied when in swing phase, foot cannot move while in contact
         if(right_leg->get_swing_phase()) {
             Eigen::Matrix<double, 3, 1> foot_pos_world_desired = hip_pos_world_right + (t_stance/2.0) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) 
-                                                                    + 0.5 * sqrt(abs(P_param(5, 0)) / 9.81) * vel_vector.cross(omega_desired_vector);
+                                                                    + 0.5 * sqrt(abs(1) / 9.81) * vel_vector.cross(omega_desired_vector);
            
             //TODO: Instead of using inverse, either solve the inverse symbolically in python or just ues Transpose as shown in Modern Robotics Video
             // Find foot position in body frame to limit it in order to account for leg reachability, collision with other leg and reasonable values
@@ -1532,7 +1543,7 @@ void run_mpc() {
         double phi_desired_temp = phi_desired;
         double theta_desired_temp = theta_desired;
         double psi_desired_temp = psi_desired;
-        double omega_z_desired_temp = omega_z_desired;// - 0.02;
+        double omega_z_desired_temp = omega_z_desired - 0.001;
         
         // Update reference trajectory
         for(int i = 0; i < N; ++i) {
@@ -1544,9 +1555,9 @@ void run_mpc() {
             //     vel_y_desired_temp += 0.005;
             // }
 
-            // if (omega_z_desired_temp < 0.3) {
-            //     omega_z_desired_temp += 0.02;
-            // }
+            if (omega_z_desired_temp < 0.1) {
+                omega_z_desired_temp += 0.001;
+            }
 
             pos_x_desired_temp += vel_x_desired * dt;
             pos_y_desired_temp += vel_y_desired_temp * dt;
@@ -1695,7 +1706,7 @@ void run_mpc() {
 
             // Only change where forces are applied when in swing phase, foot cannot move while in contact
             if(swing_left) {
-                left_leg->foot_pos_world_discretization = /*pos_error_gain * (pos_vector - pos_desired_vector) +*/ hip_pos_world_left + (t_stance/2.0) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(pos_z_t) / 9.81) * vel_vector.cross(omega_desired_vector);
+                left_leg->foot_pos_world_discretization = /*pos_error_gain * (pos_vector - pos_desired_vector) +*/ hip_pos_world_left + (t_stance/2.0) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(1) / 9.81) * vel_vector.cross(omega_desired_vector);
                 
                 //TODO: Instead of using inverse, either solve the inverse symbolically in python or just ues Transpose as shown in Modern Robotics Video
                 Eigen::Matrix<double, 3, 1> left_foot_pos_body = (H_body_world.inverse() * (Eigen::Matrix<double, 4, 1>() << left_leg->foot_pos_world_discretization, 1).finished()).block<3,1>(0, 0);
@@ -1720,7 +1731,7 @@ void run_mpc() {
 
             // Only change where forces are applied when in swing phase, foot cannot move while in contact
             if(swing_right) {
-                right_leg->foot_pos_world_discretization = /*pos_error_gain * (pos_vector - pos_desired_vector) +*/ hip_pos_world_right + (t_stance/2.0) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(pos_z_t) / 9.81) * vel_vector.cross(omega_desired_vector);
+                right_leg->foot_pos_world_discretization = /*pos_error_gain * (pos_vector - pos_desired_vector) +*/ hip_pos_world_right + (t_stance/2.0) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) + 0.5 * sqrt(abs(1) / 9.81) * vel_vector.cross(omega_desired_vector);
 
                 // TODO: Instead of using inverse, either solve the inverse symbolically in Python or just use Transpose as shown in Modern Robotics Video
                 Eigen::Matrix<double, 3, 1> right_foot_pos_body = (H_body_world.inverse() * (Eigen::Matrix<double, 4, 1>() << right_leg->foot_pos_world_discretization, 1).finished()).block<3,1>(0, 0);
