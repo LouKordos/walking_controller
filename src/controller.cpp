@@ -1404,14 +1404,25 @@ void run_mpc() {
                 -sin(P_param(1, 0)), sin(P_param(0, 0))*cos(P_param(1, 0)), cos(P_param(0, 0))*cos(P_param(1, 0)), P_param(5, 0),
                 0, 0, 0, 1).finished();
 
+        // Rotation matrix from world frame to body frame
+        Eigen::Matrix<double, 2, 2> R_world_body = (Eigen::Matrix<double, 2, 2>() << cos(-P_param(2, 0)), -sin(-P_param(2, 0)),
+                                                                                    sin(-P_param(2, 0)), cos(-P_param(2, 0))).finished();
+        // Rotation matrix from body frame to world frame
+        Eigen::Matrix<double, 2, 2> R_body_world = (Eigen::Matrix<double, 2, 2>() << cos(P_param(2, 0)), -sin(P_param(2, 0)),
+                                                                                    sin(P_param(2, 0)), cos(P_param(2, 0))).finished();
+
         // Transform point in body frame to world frame to get current world position. hip_offset is the hip joint position
         Eigen::Matrix<double, 3, 1> hip_pos_world_left = (H_body_world * (Eigen::Matrix<double, 4, 1>() << -hip_offset , 0, 0, 1).finished()).block<3,1>(0, 0);
         Eigen::Matrix<double, 3, 1> hip_pos_world_right = (H_body_world * (Eigen::Matrix<double, 4, 1>() << hip_offset, 0, 0, 1).finished()).block<3, 1>(0, 0);
         
         Eigen::Matrix<double, 3, 1> vel_vector = P_param.block<3, 1>(9, 0);
         Eigen::Matrix<double, 3, 1> pos_desired_vector = (Eigen::Matrix<double, 3, 1>() << pos_x_desired, pos_y_desired, pos_z_desired).finished();
-        Eigen::Matrix<double, 3, 1> vel_desired_vector = (Eigen::Matrix<double, 3, 1>() << vel_x_desired, vel_y_desired, vel_z_desired).finished() - pos_error_gain * (P_param.block<3, 1>(3, 0) - pos_desired_vector);
+        Eigen::Matrix<double, 3, 1> vel_desired_vector = (Eigen::Matrix<double, 3, 1>() << vel_x_desired, vel_y_desired, vel_z_desired).finished();
         Eigen::Matrix<double, 3, 1> omega_desired_vector = (Eigen::Matrix<double, 3, 1>() << omega_x_desired, omega_y_desired, omega_z_desired).finished();
+
+        // Adjust for position error
+        vel_desired_vector.block<2, 1>(0, 0) -= R_body_world * (pos_error_gain.block<2, 2>(0, 0) * (R_world_body * (P_param.block<2, 1>(3, 0) - pos_desired_vector.block<2, 1>(0, 0))));
+        vel_desired_vector(2, 0) -= pos_error_gain(2, 2) * (P_param(5, 0) - pos_desired_vector(2, 0));
 
         if(vel_y_desired < 0) {
             constrain(vel_vector(1, 0), vel_y_desired, 0); // Limit velocity used for calculating desired foot position to desired velocity, preventing steps too far out that slow the robot down too much
@@ -1668,13 +1679,17 @@ void run_mpc() {
             Eigen::Matrix<double, n - 1, 1> Q_world = Q_body;
             Eigen::Matrix<double, m, 1> R_world = R_body;
 
-            Eigen::Matrix<double, 2, 2> R_z = (Eigen::Matrix<double, 2,2>() << cos(-psi_t), -sin(-psi_t),
-                                                                                sin(-psi_t), cos(-psi_t)).finished();
+            // Rotation matrix from world frame to body frame
+            Eigen::Matrix<double, 2, 2> R_world_body = (Eigen::Matrix<double, 2, 2>() << cos(-psi_t), -sin(-psi_t),
+                                                                                        sin(-psi_t), cos(-psi_t)).finished();
+            // Rotation matrix from body frame to world frame
+            Eigen::Matrix<double, 2, 2> R_body_world = (Eigen::Matrix<double, 2, 2>() << cos(psi_t), -sin(psi_t),
+                                                                                        sin(psi_t), cos(psi_t)).finished();
 
             // Cartesian position gains
-            Q_world.block<2,1>(3, 0) = (R_z.transpose() * (Eigen::Matrix<double, 2, 2>() << Q_body(3, 0), 0, 0, Q_body(4, 0)).finished() * R_z).diagonal();
+            Q_world.block<2,1>(3, 0) = (R_world_body.transpose() * (Eigen::Matrix<double, 2, 2>() << Q_body(3, 0), 0, 0, Q_body(4, 0)).finished() * R_world_body).diagonal();
             // Cartesian velocity gains
-            Q_world.block<2,1>(9, 0) = (R_z.transpose() * (Eigen::Matrix<double, 2, 2>() << Q_body(9, 0), 0, 0, Q_body(10, 0)).finished() * R_z).diagonal();
+            Q_world.block<2,1>(9, 0) = (R_world_body.transpose() * (Eigen::Matrix<double, 2, 2>() << Q_body(9, 0), 0, 0, Q_body(10, 0)).finished() * R_world_body).diagonal();
             
             // Log Q_world and body from first discretization loop iteration
             if(i == 0) {
@@ -1709,7 +1724,11 @@ void run_mpc() {
 
             Eigen::Matrix<double, 3, 1> pos_desired_vector = x_ref.block<3, 1>(3, i);
             Eigen::Matrix<double, 3, 1> omega_desired_vector = x_ref.block<3, 1>(6, i);
-            Eigen::Matrix<double, 3, 1> vel_desired_vector = x_ref.block<3, 1>(9, i) - pos_error_gain * (pos_vector - pos_desired_vector);
+            Eigen::Matrix<double, 3, 1> vel_desired_vector = x_ref.block<3, 1>(9, i);
+
+            // Adjust for position error
+            vel_desired_vector.block<2, 1>(0, 0) -= R_body_world * (pos_error_gain.block<2, 2>(0, 0) * (R_world_body * (pos_vector.block<2, 1>(0, 0) - pos_desired_vector.block<2, 1>(0, 0))));
+            vel_desired_vector(2, 0) -= pos_error_gain(2, 2) * (pos_vector(2, 0) - pos_desired_vector(2, 0));
 
             // Limit velocity used for calculating desired foot position to desired velocity, preventing steps too far out that slow the robot down too much
             // The idea of gait_gain * (vel_vector - vel_desired_vector) in foot_pos_world_desired is to get the foot in front of the torso during the first half of the contact time, 
