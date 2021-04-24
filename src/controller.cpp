@@ -1118,8 +1118,8 @@ void run_mpc() {
 
     Eigen::Matrix<double, n*(N+1)+m*N, 1> x0_solver = Eigen::ArrayXXd::Zero(n*(N+1)+m*N, 1); // Full initial solver state, containing initial model state, N future states and N control actions
     Eigen::Matrix<double, n*(N+1), 1> X_t = Eigen::ArrayXXd::Zero(n*(N+1), 1); // Maybe this is actually obsolete and only x0_solver is sufficient
-    Eigen::Matrix<double, n-1, 1> Q = (Eigen::Matrix<double, n - 1, 1>() << 2e+7, 1e+7, 1e+7, 1e+6, 2e+6, 1e+6, 1e+5, 2e+6, 1e+5, 1.5e+3, 4e+6, 4e+4).finished();
-    Eigen::Matrix<double, m, 1> R = (Eigen::Matrix<double, m, 1>() << 1, 1, 1, 1, 1, 1).finished();
+    Eigen::Matrix<double, n-1, 1> Q_body = (Eigen::Matrix<double, n - 1, 1>() << 2e+7, 1e+7, 1e+7, 1e+6, 2e+6, 1e+6, 1e+5, 2e+6, 1e+5, 1.5e+3, 4e+6, 4e+4).finished(); // Diagonal State weights represented in body frame
+    Eigen::Matrix<double, m, 1> R_body = (Eigen::Matrix<double, m, 1>() << 1, 1, 1, 1, 1, 1).finished(); // Diagonal control action weights represented in world frame
 
     static Eigen::Matrix<double, m*N, 1> U_t = Eigen::ArrayXXd::Zero(m*N, 1); // Same here
 
@@ -1231,12 +1231,6 @@ void run_mpc() {
         // Loop starts here
         auto start = high_resolution_clock::now();
         auto start_total = high_resolution_clock::now();
-
-        for(int i = 0; i < N; i++) {
-            P_param.block<6,1>(6, 1 + N + n*N + m*N + (i*m) + 1) = R.block<6,1>(0, 0); // R
-            P_param.block<6,1>(6, 1 + N + n*N + m*N + (i*m) + 2) = Q.block<6,1>(0, 0); // Q column 1 (first 6 entries)
-            P_param.block<6,1>(6, 1 + N + n*N + m*N + (i*m) + 3) = Q.block<6,1>(6, 0); // Q column 2 (second 6 entries)
-        }
 
         // while(simState->isPaused() && total_iterations > 3) {
         //     sendto(sockfd, (const char *)"0|0|0|0|0|0|0|0|0|0|0|0", strlen("0|0|0|0|0|0|0|0|0|0|0|0"), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
@@ -1620,6 +1614,9 @@ void run_mpc() {
         double foot_pos_right_discretization_update_duration = 0;
         double trajectory_target_update_duration = 0;
 
+        double Q_world_pos_x, Q_world_pos_y, Q_world_vel_x, Q_world_vel_y;
+        double Q_body_pos_x, Q_body_pos_y, Q_body_vel_x, Q_body_vel_y;
+
         // Discretization loop for Prediction Horizon
         for(int i = 0; i < N; ++i) {
             // TODO: Simplify this by just using a single discretization state vector instead of seperate variables
@@ -1667,6 +1664,18 @@ void run_mpc() {
             bool swing_left =  P_param(0, 1 + N + n * N + m * N + i * m);
             bool swing_right = P_param(3, 1 + N + n * N + m * N + i * m + 3);
 
+            // Transform Q into world frame for MPC, see see https://github.com/LouKordos/walking_controller/issues/85 for details.
+            Eigen::Matrix<double, n - 1, 1> Q_world = Q_body;
+            Eigen::Matrix<double, m, 1> R_world = R_body;
+
+            Eigen::Matrix<double, 2, 2> R_z = (Eigen::Matrix<double, 2,2>() << cos(-psi_t), -sin(-psi_t),
+                                                                                sin(-psi_t), cos(-psi_t)).finished();
+
+            // Cartesian position gains
+            Q_world.block<2,1>(3, 0) = (R_z.transpose() * (Eigen::Matrix<double, 2, 2>() << Q_body(3, 0), 0, 0, Q_body(4, 0)).finished() * R_z).diagonal();
+            // Cartesian velocity gains
+            Q_world.block<2,1>(9, 0) = (R_z.transpose() * (Eigen::Matrix<double, 2, 2>() << Q_body(9, 0), 0, 0, Q_body(10, 0)).finished() * R_z).diagonal();
+            
             // x_ref(4, i) = pos_y_t + 0.1;
 
             // See comments above, same procedure here, also ZYX order
