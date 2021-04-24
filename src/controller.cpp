@@ -1119,7 +1119,7 @@ void run_mpc() {
     Eigen::Matrix<double, n*(N+1)+m*N, 1> x0_solver = Eigen::ArrayXXd::Zero(n*(N+1)+m*N, 1); // Full initial solver state, containing initial model state, N future states and N control actions
     Eigen::Matrix<double, n*(N+1), 1> X_t = Eigen::ArrayXXd::Zero(n*(N+1), 1); // Maybe this is actually obsolete and only x0_solver is sufficient
     Eigen::Matrix<double, n-1, 1> Q_body = (Eigen::Matrix<double, n - 1, 1>() << 2e+7, 1e+7, 1e+7, 1e+6, 2e+6, 1e+6, 1e+5, 2e+6, 1e+5, 1.5e+3, 4e+6, 4e+4).finished(); // Diagonal State weights represented in body frame
-    Eigen::Matrix<double, m, 1> R_body = (Eigen::Matrix<double, m, 1>() << 1, 1, 1, 1, 1, 1).finished(); // Diagonal control action weights represented in world frame
+    Eigen::Matrix<double, m, 1> R_body = (Eigen::Matrix<double, m, 1>() << 1, 1, 1, 1, 1, 1).finished(); // Diagonal control action weights represented in body frame
 
     static Eigen::Matrix<double, m*N, 1> U_t = Eigen::ArrayXXd::Zero(m*N, 1); // Same here
 
@@ -1153,7 +1153,7 @@ void run_mpc() {
     const double gait_gain = 0.1; // Try much lower value here, rename to more accurate name
     const Eigen::Matrix<double, 3, 3> pos_error_gain = (Eigen::Matrix<double, 3, 3>() << 0.5, 0, 0,
                                                                                          0, 2.5, 0,
-                                                                                         0, 0, 0.5).finished(); // Gain for feeding back CoM / Torso position error into foot position
+                                                                                         0, 0, 0.5).finished(); // Gain for feeding back CoM / Torso position error into foot position, described in body frame
 
     const double r_x_limit = 0.1; // r_x_limit +/- hip_offset is the maximum position the feet will be allowed to move (in body frame)
 
