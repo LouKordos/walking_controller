@@ -1138,13 +1138,13 @@ void run_mpc() {
     double pos_y_desired = 0; // meters
     double pos_z_desired = 1.0; // meters
 
-    double vel_x_desired = 0.05; // m/s
-    double vel_y_desired = 0.3; // m/s
+    double vel_x_desired = 0.0; // m/s
+    double vel_y_desired = 0.0; // m/s
     double vel_z_desired = 0.0; // m/s
 
     double phi_desired = 0; // rad
     double theta_desired = 0; // rad
-    double psi_desired = -atan(vel_x_desired / vel_y_desired); // rad
+    double psi_desired = 0;
 
     double omega_x_desired = 0; // rad/s
     double omega_y_desired = 0; // rad/s
@@ -1237,11 +1237,11 @@ void run_mpc() {
         //     sleep(dt);
         // }
 
-        if (vel_x_desired < 0.3) {
-            vel_x_desired += 0.005;
-        }
+        // if (vel_x_desired < 0.3) {
+        //     vel_x_desired += 0.005;
+        // }
 
-        psi_desired = -atan(vel_x_desired / vel_y_desired);
+        // psi_desired = -atan(vel_x_desired / vel_y_desired);
 
         // if (vel_y_desired < 0.6) {
         //     vel_y_desired += 0.005;
@@ -1526,7 +1526,7 @@ void run_mpc() {
 
         double pos_x_desired_temp = pos_x_desired;
         double pos_y_desired_temp = pos_y_desired;
-        double vel_x_desired_temp = vel_x_desired - 0.005;
+        double vel_x_desired_temp = vel_x_desired;// - 0.005;
         double vel_y_desired_temp = vel_y_desired;// - 0.005;
 
         double pos_z_desired_temp = pos_z_desired;
@@ -1538,9 +1538,9 @@ void run_mpc() {
         
         // Update reference trajectory
         for(int i = 0; i < N; ++i) {
-            if (vel_x_desired_temp < 0.3) {
-                vel_x_desired_temp += 0.005;
-            }
+            // if (vel_x_desired_temp < 0.3) {
+            //     vel_x_desired_temp += 0.005;
+            // }
             
             // if (vel_y_desired_temp < 0.6) {
             //     vel_y_desired_temp += 0.005;
