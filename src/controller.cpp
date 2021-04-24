@@ -1118,7 +1118,9 @@ void run_mpc() {
 
     Eigen::Matrix<double, n*(N+1)+m*N, 1> x0_solver = Eigen::ArrayXXd::Zero(n*(N+1)+m*N, 1); // Full initial solver state, containing initial model state, N future states and N control actions
     Eigen::Matrix<double, n*(N+1), 1> X_t = Eigen::ArrayXXd::Zero(n*(N+1), 1); // Maybe this is actually obsolete and only x0_solver is sufficient
-    
+    Eigen::Matrix<double, n-1, 1> Q_body = (Eigen::Matrix<double, n - 1, 1>() << 2e+7, 1e+7, 1e+7, 1e+6, 2e+6, 1e+6, 1e+5, 2e+6, 1e+5, 1.5e+3, 4e+6, 4e+4).finished(); // Diagonal State weights represented in body frame
+    Eigen::Matrix<double, m, 1> R_body = (Eigen::Matrix<double, m, 1>() << 1, 1, 1, 1, 1, 1).finished(); // Diagonal control action weights represented in world frame
+
     static Eigen::Matrix<double, m*N, 1> U_t = Eigen::ArrayXXd::Zero(m*N, 1); // Same here
 
     static Eigen::Matrix<double, n, N> x_ref = Eigen::ArrayXXd::Zero(n, N); // N states "stacked" horizontally, containing the reference state trajectory for the prediction horizon
@@ -1208,7 +1210,7 @@ void run_mpc() {
                 << "theta_delay_compensation,full_iteration_time,prev_full_iteration_time,solver_time,state_update_time,delay_compensation_time,contact_update_time,reference_update_time,foot_pos_left_update_time,foot_pos_right_update_time,"
                 << "r_update_time,x_ref_update_time,foot_pos_left_discretization_update_time,foot_pos_right_discretization_update_time,trajectory_target_update_time,memcpy_time,solution_update_time,log_lock_time,message_wait_time,"
                 << "previous_logging_time,previous_file_write_time,"
-                << "phi_delay_compensation,predicted_contact_swap_iterations,X_t,U_t,P_param_full" << "\n" << std::flush; // Add header to csv file
+                << "phi_delay_compensation,predicted_contact_swap_iterations,X_t,U_t,P_param_full,Q_world_pos_x,Q_world_pos_y,Q_body_pos_x,Q_body_pos_y,Q_world_vel_x,Q_world_vel_y,Q_body_vel_x,Q_body_vel_y" << "\n" << std::flush; // Add header to csv file
     // data_file.close();
 
     struct timespec deadline; // timespec struct for storing time that execution thread should sleep for
@@ -1245,11 +1247,8 @@ void run_mpc() {
         //     vel_y_desired += 0.005;
         // }
 
-        // if(omega_z_desired < 0.05 && psi_desired <= 0.17) {
+        // if(omega_z_desired < 0.1) {
         //     omega_z_desired += 0.001;
-        // }
-        // else if(omega_z_desired > 0 && psi_desired > 0.17) {
-        //     omega_z_desired -= 0.001;
         // }
 
         auto message_wait_start = high_resolution_clock::now();
@@ -1535,14 +1534,7 @@ void run_mpc() {
         double phi_desired_temp = phi_desired;
         double theta_desired_temp = theta_desired;
         double psi_desired_temp = psi_desired;
-        double omega_z_desired_temp = omega_z_desired;
-
-        // if(omega_z_desired < 0.05 && psi_desired_temp <= 0.17) {
-        //     omega_z_desired_temp -= 0.001;
-        // }
-        // else if(omega_z_desired > 0 && psi_desired_temp > 0.17) {
-        //     omega_z_desired_temp += 0.001;
-        // }
+        double omega_z_desired_temp = omega_z_desired;// - 0.001;
         
         // Update reference trajectory
         for(int i = 0; i < N; ++i) {
@@ -1554,11 +1546,8 @@ void run_mpc() {
             //     vel_y_desired_temp += 0.005;
             // }
 
-            // if(omega_z_desired_temp < 0.05 && psi_desired_temp <= 0.17) {
+            // if (omega_z_desired_temp < 0.1) {
             //     omega_z_desired_temp += 0.001;
-            // }
-            // else if(omega_z_desired_temp > 0 && psi_desired_temp > 0.17) {
-            //     omega_z_desired_temp -= 0.001;
             // }
 
             pos_x_desired_temp += vel_x_desired * dt;
@@ -1625,6 +1614,9 @@ void run_mpc() {
         double foot_pos_right_discretization_update_duration = 0;
         double trajectory_target_update_duration = 0;
 
+        double Q_world_pos_x, Q_world_pos_y, Q_world_vel_x, Q_world_vel_y;
+        double Q_body_pos_x, Q_body_pos_y, Q_body_vel_x, Q_body_vel_y;
+
         // Discretization loop for Prediction Horizon
         for(int i = 0; i < N; ++i) {
             // TODO: Simplify this by just using a single discretization state vector instead of seperate variables
@@ -1671,6 +1663,35 @@ void run_mpc() {
 
             bool swing_left =  P_param(0, 1 + N + n * N + m * N + i * m);
             bool swing_right = P_param(3, 1 + N + n * N + m * N + i * m + 3);
+
+            // Transform Q into world frame for MPC, see see https://github.com/LouKordos/walking_controller/issues/85 for details.
+            Eigen::Matrix<double, n - 1, 1> Q_world = Q_body;
+            Eigen::Matrix<double, m, 1> R_world = R_body;
+
+            Eigen::Matrix<double, 2, 2> R_z = (Eigen::Matrix<double, 2,2>() << cos(-psi_t), -sin(-psi_t),
+                                                                                sin(-psi_t), cos(-psi_t)).finished();
+
+            // Cartesian position gains
+            Q_world.block<2,1>(3, 0) = (R_z.transpose() * (Eigen::Matrix<double, 2, 2>() << Q_body(3, 0), 0, 0, Q_body(4, 0)).finished() * R_z).diagonal();
+            // Cartesian velocity gains
+            Q_world.block<2,1>(9, 0) = (R_z.transpose() * (Eigen::Matrix<double, 2, 2>() << Q_body(9, 0), 0, 0, Q_body(10, 0)).finished() * R_z).diagonal();
+            
+            // Log Q_world and body from first discretization loop iteration
+            if(i == 0) {
+                Q_world_pos_x = Q_world(3, 0);
+                Q_world_pos_y = Q_world(4, 0);
+                Q_body_pos_x = Q_body(3, 0);
+                Q_body_pos_y = Q_body(4, 0);
+
+                Q_world_vel_x = Q_world(9, 0);
+                Q_world_vel_y = Q_world(10, 0);
+                Q_body_vel_x = Q_body(9, 0);
+                Q_body_vel_y = Q_body(10, 0);
+            }
+
+            P_param.block<6,1>(6, 1 + N + n*N + m*N + (i*m) + 1) = R_world.block<6,1>(0, 0); // R
+            P_param.block<6,1>(6, 1 + N + n*N + m*N + (i*m) + 2) = Q_world.block<6,1>(0, 0); // Q column 1 (first 6 entries)
+            P_param.block<6,1>(6, 1 + N + n*N + m*N + (i*m) + 3) = Q_world.block<6,1>(6, 0); // Q column 2 (second 6 entries)
 
             // x_ref(4, i) = pos_y_t + 0.1;
 
@@ -2061,6 +2082,8 @@ void run_mpc() {
                 log_entry << "|";
             }
         }
+
+        log_entry << "," << Q_world_pos_x << "," << Q_world_pos_y << "," << Q_body_pos_x << "," << Q_body_pos_y << "," << Q_world_vel_x << "," << Q_world_vel_y << "," << Q_body_vel_x << "," << Q_body_vel_y;
 
         log_entry << "\n";
 
