@@ -1210,7 +1210,7 @@ void run_mpc() {
                 << "theta_delay_compensation,full_iteration_time,prev_full_iteration_time,solver_time,state_update_time,delay_compensation_time,contact_update_time,reference_update_time,foot_pos_left_update_time,foot_pos_right_update_time,"
                 << "r_update_time,x_ref_update_time,foot_pos_left_discretization_update_time,foot_pos_right_discretization_update_time,trajectory_target_update_time,memcpy_time,solution_update_time,log_lock_time,message_wait_time,"
                 << "previous_logging_time,previous_file_write_time,"
-                << "phi_delay_compensation,predicted_contact_swap_iterations,X_t,U_t,P_param_full" << "\n" << std::flush; // Add header to csv file
+                << "phi_delay_compensation,predicted_contact_swap_iterations,X_t,U_t,P_param_full,Q_world_pos_x,Q_world_pos_y,Q_body_pos_x,Q_body_pos_y,Q_world_vel_x,Q_world_vel_y,Q_body_vel_x,Q_body_vel_y" << "\n" << std::flush; // Add header to csv file
     // data_file.close();
 
     struct timespec deadline; // timespec struct for storing time that execution thread should sleep for
@@ -1676,6 +1676,23 @@ void run_mpc() {
             // Cartesian velocity gains
             Q_world.block<2,1>(9, 0) = (R_z.transpose() * (Eigen::Matrix<double, 2, 2>() << Q_body(9, 0), 0, 0, Q_body(10, 0)).finished() * R_z).diagonal();
             
+            // Log Q_world and body from first discretization loop iteration
+            if(i == 0) {
+                Q_world_pos_x = Q_world(3, 0);
+                Q_world_pos_y = Q_world(4, 0);
+                Q_body_pos_x = Q_body(3, 0);
+                Q_body_pos_y = Q_body(4, 0);
+
+                Q_world_vel_x = Q_world(9, 0);
+                Q_world_vel_y = Q_world(10, 0);
+                Q_body_vel_x = Q_body(9, 0);
+                Q_body_vel_y = Q_body(10, 0);
+            }
+
+            P_param.block<6,1>(6, 1 + N + n*N + m*N + (i*m) + 1) = R_world.block<6,1>(0, 0); // R
+            P_param.block<6,1>(6, 1 + N + n*N + m*N + (i*m) + 2) = Q_world.block<6,1>(0, 0); // Q column 1 (first 6 entries)
+            P_param.block<6,1>(6, 1 + N + n*N + m*N + (i*m) + 3) = Q_world.block<6,1>(6, 0); // Q column 2 (second 6 entries)
+
             // x_ref(4, i) = pos_y_t + 0.1;
 
             // See comments above, same procedure here, also ZYX order
@@ -2065,6 +2082,8 @@ void run_mpc() {
                 log_entry << "|";
             }
         }
+
+        log_entry << "," << Q_world_pos_x << "," << Q_world_pos_y << "," << Q_body_pos_x << "," << Q_body_pos_y << "," << Q_world_vel_x << "," << Q_world_vel_y << "," << Q_body_vel_x << "," << Q_body_vel_y;
 
         log_entry << "\n";
 
