@@ -1251,9 +1251,9 @@ void run_mpc() {
         //     vel_y_desired += 0.005;
         // }
 
-        if(omega_z_desired < 0.1) {
-            omega_z_desired += 0.001;
-        }
+        // if(omega_z_desired < 0.1) {
+        //     omega_z_desired += 0.001;
+        // }
 
         // std::cout << "-----------------------------------------------------------------------------\nr_left at beginning of iteration: " << r_x_left << "," << r_y_left << "," << r_z_left << ", r_right at beginning of iteration: " << r_x_right << "," << r_y_right << "," << r_z_right << std::endl;
 
@@ -1303,9 +1303,6 @@ void run_mpc() {
         auto delay_compensation_end = high_resolution_clock::now();
 
         double delay_compensation_duration = duration_cast<nanoseconds>(delay_compensation_end - delay_compensation_start).count();
-
-        pos_x_desired = P_param(3, 0);
-        pos_y_desired = P_param(4, 0);
 
         if (total_iterations == 0) {
             // Give solver better guess for first iteration to reduce solver time and generate more fitting solution
@@ -1543,7 +1540,7 @@ void run_mpc() {
         double phi_desired_temp = phi_desired;
         double theta_desired_temp = theta_desired;
         double psi_desired_temp = psi_desired;
-        double omega_z_desired_temp = omega_z_desired - 0.001;
+        double omega_z_desired_temp = omega_z_desired;// - 0.001;
         
         // Update reference trajectory
         for(int i = 0; i < N; ++i) {
@@ -1555,9 +1552,9 @@ void run_mpc() {
             //     vel_y_desired_temp += 0.005;
             // }
 
-            if (omega_z_desired_temp < 0.1) {
-                omega_z_desired_temp += 0.001;
-            }
+            // if (omega_z_desired_temp < 0.1) {
+            //     omega_z_desired_temp += 0.001;
+            // }
 
             pos_x_desired_temp += vel_x_desired * dt;
             pos_y_desired_temp += vel_y_desired_temp * dt;
