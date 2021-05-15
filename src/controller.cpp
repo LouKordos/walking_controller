@@ -1551,29 +1551,32 @@ void run_mpc() {
 
         double pos_x_desired_temp = pos_x_desired;
         double pos_y_desired_temp = pos_y_desired;
-        double vel_x_desired_temp = vel_x_desired;// - 0.005;
+        double pos_z_desired_temp = pos_z_desired;
+
+        double vel_x_desired_temp = vel_x_desired;// + 0.005;
         double vel_y_desired_temp = vel_y_desired;// - 0.005;
+        double vel_z_desired_temp = vel_z_desired;
 
         double vel_forward_desired_temp = vel_forward_desired - 0.005;
 
         double phi_desired_temp = phi_desired;
         double theta_desired_temp = theta_desired;
         double psi_desired_temp = psi_desired;
-        double omega_z_desired_temp = omega_z_desired;// - 0.001;
+
+        double omega_x_desired_temp = omega_x_desired;
+        double omega_y_desired_temp = omega_y_desired;
+        double omega_z_desired_temp = omega_z_desired - 0.001;
         
         // Update reference trajectory
         for(int i = 0; i < N; ++i) {
-            // if (vel_x_desired_temp < 0.3) {
-            //     vel_x_desired_temp += 0.005;
+            // if (vel_x_desired_temp > -0.6) {
+            //     vel_x_desired_temp -= 0.005;
             // }
             
             // if (vel_y_desired_temp < 0.6) {
             //     vel_y_desired_temp += 0.005;
             // }
 
-            // if (omega_z_desired_temp < 0.1) {
-            //     omega_z_desired_temp += 0.001;
-            // }
             if(vel_forward_desired_temp < 0.3) {
                 vel_forward_desired_temp += 0.005;
             }
@@ -1585,12 +1588,12 @@ void run_mpc() {
             vel_x_desired_temp = sin(-omega_z_desired_temp * (get_time(false) + i*dt)) * vel_forward_desired_temp;
             vel_y_desired_temp = cos(-omega_z_desired_temp * (get_time(false) + i*dt)) * vel_forward_desired_temp;
 
-            pos_x_desired_temp += vel_x_desired * dt;
+            pos_x_desired_temp += vel_x_desired_temp * dt;
             pos_y_desired_temp += vel_y_desired_temp * dt;
-            pos_z_desired_temp += vel_z_desired * dt;
+            pos_z_desired_temp += vel_z_desired_temp * dt;
 
-            phi_desired_temp += omega_x_desired * dt;
-            theta_desired_temp += omega_y_desired * dt;
+            phi_desired_temp += omega_x_desired_temp * dt;
+            theta_desired_temp += omega_y_desired_temp * dt;
             psi_desired_temp += omega_z_desired_temp * dt;
 
             x_ref(0, i) = phi_desired_temp; // Roll
@@ -1599,12 +1602,12 @@ void run_mpc() {
             x_ref(3, i) = pos_x_desired_temp; // X Pos
             x_ref(4, i) = pos_y_desired_temp; // Y Pos
             x_ref(5, i) = pos_z_desired_temp; // Z Pos
-            x_ref(6, i) = omega_x_desired; // Omega_x
-            x_ref(7, i) = omega_y_desired; // Omega_y
+            x_ref(6, i) = omega_x_desired_temp; // Omega_x
+            x_ref(7, i) = omega_y_desired_temp; // Omega_y
             x_ref(8, i) = omega_z_desired_temp; // Omega_z
-            x_ref(9, i) = vel_x_desired; // X Vel
+            x_ref(9, i) = vel_x_desired_temp; // X Vel
             x_ref(10, i) = vel_y_desired_temp; // Y Vel
-            x_ref(11, i) = vel_z_desired; // Z Vel
+            x_ref(11, i) = vel_z_desired_temp; // Z Vel
             x_ref(12, i) = -9.81; // Gravity constant
         }
 
