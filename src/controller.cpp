@@ -1449,7 +1449,6 @@ void run_mpc() {
 
         // Only change where forces are applied when in swing phase, foot cannot move while in contact
         if(left_leg->get_swing_phase()) {
-            // pos_error_gain * (P_param[3:6, 0].reshape(3, 1) - np.array([[pos_x_desired], [pos_y_desired], [pos_z_desired]])
             Eigen::Matrix<double, 3, 1> foot_pos_world_desired = hip_pos_world_left + (t_stance/2.0) * vel_vector + gait_gain * (vel_vector - vel_desired_vector) 
                                                                     + 0.5 * sqrt(abs(P_param(5, 0)) / 9.81) * vel_vector.cross(omega_desired_vector);
             
@@ -1510,6 +1509,7 @@ void run_mpc() {
 
         auto r_update_start = high_resolution_clock::now();
 
+        // TODO: Move this into if statement above
         // Calculate r from foot world position
         if(left_leg->get_swing_phase()) {
             Eigen::Matrix<double, 3, 1> foot_pos_world_desired = left_leg->get_foot_pos_world_desired();
