@@ -1431,12 +1431,19 @@ void run_mpc() {
         vel_desired_vector.block<2, 1>(0, 0) -= R_body_world * (pos_error_gain.block<2, 2>(0, 0) * (R_world_body * (P_param.block<2, 1>(3, 0) - pos_desired_vector.block<2, 1>(0, 0))));
         vel_desired_vector(2, 0) -= pos_error_gain(2, 2) * (P_param(5, 0) - pos_desired_vector(2, 0));
 
-        if(vel_y_desired < 0) {
-            constrain(vel_vector(1, 0), vel_y_desired, 0); // Limit velocity used for calculating desired foot position to desired velocity, preventing steps too far out that slow the robot down too much
-        }
-        else if(vel_y_desired > 0) {
-            constrain(vel_vector(1, 0), 0, vel_y_desired); // Limit velocity used for calculating desired foot position to desired velocity, preventing steps too far out that slow the robot down too much
-        }
+        // if(vel_x_desired < 0) {
+        //     constrain(vel_vector(0, 0), vel_x_desired, 0); // Limit velocity used for calculating desired foot position to desired velocity, preventing steps too far out that slow the robot down too much
+        // }
+        // else if(vel_x_desired > 0) {
+        //     constrain(vel_vector(0, 0), 0, vel_x_desired); // Limit velocity used for calculating desired foot position to desired velocity, preventing steps too far out that slow the robot down too much
+        // }
+
+        // if(vel_y_desired < 0) {
+        //     constrain(vel_vector(1, 0), vel_y_desired, 0); // Limit velocity used for calculating desired foot position to desired velocity, preventing steps too far out that slow the robot down too much
+        // }
+        // else if(vel_y_desired > 0) {
+        //     constrain(vel_vector(1, 0), 0, vel_y_desired); // Limit velocity used for calculating desired foot position to desired velocity, preventing steps too far out that slow the robot down too much
+        // }
 
         auto foot_pos_left_update_start = high_resolution_clock::now();
 
@@ -1754,12 +1761,19 @@ void run_mpc() {
             // So using current velocity is not really accurate since the velocity when touching down (or just before, when the contact position is "decided") 
             // is probaby higher than the mean velocity, thus the foot will be placed too far ahead. 
             // It is probably higher since it has to catch up a bit after loosing some velocity when touching down
-            if(x_ref(10, i) < 0) {
-                constrain(vel_vector(1, 0), x_ref(10, i), 0);
-            }
-            else if (x_ref(10, i) > 0) {
-                constrain(vel_vector(1, 0), 0, x_ref(10, i));
-            }
+            // if(x_ref(9, i) < 0) {
+            //     constrain(vel_vector(0, 0), x_ref(9, i), 0);
+            // }
+            // else if (x_ref(9, i) > 0) {
+            //     constrain(vel_vector(0, 0), 0, x_ref(9, i));
+            // }
+            
+            // if(x_ref(10, i) < 0) {
+            //     constrain(vel_vector(1, 0), x_ref(10, i), 0);
+            // }
+            // else if (x_ref(10, i) > 0) {
+            //     constrain(vel_vector(1, 0), 0, x_ref(10, i));
+            // }
 
             auto foot_pos_left_discretization_update_start = high_resolution_clock::now();
 
