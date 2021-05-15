@@ -1713,10 +1713,13 @@ void run_mpc() {
             Eigen::Matrix<double, 2, 2> R_body_world = (Eigen::Matrix<double, 2, 2>() << cos(psi_t), -sin(psi_t),
                                                                                         sin(psi_t), cos(psi_t)).finished();
 
-            // Cartesian position gains
-            Q_world.block<2,1>(3, 0) = (R_world_body.transpose() * (Eigen::Matrix<double, 2, 2>() << Q_body(3, 0), 0, 0, Q_body(4, 0)).finished() * R_world_body).diagonal();
-            // Cartesian velocity gains
-            Q_world.block<2,1>(9, 0) = (R_world_body.transpose() * (Eigen::Matrix<double, 2, 2>() << Q_body(9, 0), 0, 0, Q_body(10, 0)).finished() * R_world_body).diagonal();
+            // TODO: Use better notation for getting the diagonal of the weights here.
+            // Cartesian position weights
+            Q_world.block<2, 1>(3, 0) = (R_world_body.transpose() * (Eigen::Matrix<double, 2, 2>() << Q_body(3, 0), 0, 0, Q_body(4, 0)).finished() * R_world_body).diagonal();
+            // Cartesian velocity weights
+            Q_world.block<2, 1>(9, 0) = (R_world_body.transpose() * (Eigen::Matrix<double, 2, 2>() << Q_body(9, 0), 0, 0, Q_body(10, 0)).finished() * R_world_body).diagonal();
+            // Angular velocity weights
+            Q_world.block<2, 1> (6, 0) = (R_world_body.transpose() * (Eigen::Matrix<double, 2, 2>() << Q_body(6, 0), 0, 0, Q_body(7, 0)).finished() * R_world_body).diagonal();
             
             // Log Q_world and body from first discretization loop iteration
             if(i == 0) {
