@@ -329,7 +329,7 @@ void calculate_left_leg_torques() {
     while(true) {
         start = high_resolution_clock::now();
 
-        //Declaring angle and angular velocity variables for updating matrices
+        // Declaring angle and angular velocity variables for updating matrices
         
         double theta1 = 0;
         double theta2 = 0;
