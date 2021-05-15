@@ -1142,6 +1142,8 @@ void run_mpc() {
     double vel_y_desired = 0.0; // m/s
     double vel_z_desired = 0.0; // m/s
 
+    double vel_forward_desired = 0.0;
+
     double phi_desired = 0; // rad
     double theta_desired = 0; // rad
     double psi_desired = 0;
@@ -1237,19 +1239,24 @@ void run_mpc() {
         //     sleep(dt);
         // }
 
-        // if (vel_x_desired < 0.3) {
-        //     vel_x_desired += 0.005;
+        // if (vel_x_desired > -0.6) {
+        //     vel_x_desired -= 0.005;
         // }
-
-        // psi_desired = -atan(vel_x_desired / vel_y_desired);
 
         // if (vel_y_desired < 0.6) {
         //     vel_y_desired += 0.005;
         // }
 
-        // if(omega_z_desired < 0.1) {
-        //     omega_z_desired += 0.001;
-        // }
+        if(vel_forward_desired < 0.3) {
+            vel_forward_desired += 0.005;
+        }
+
+        if(omega_z_desired < 0.1) {
+            omega_z_desired += 0.001;
+        }
+
+        vel_x_desired = sin(-psi_desired) * vel_forward_desired;
+        vel_y_desired = cos(-psi_desired) * vel_forward_desired;
 
         auto message_wait_start = high_resolution_clock::now();
 
@@ -1540,7 +1547,7 @@ void run_mpc() {
         double vel_x_desired_temp = vel_x_desired;// - 0.005;
         double vel_y_desired_temp = vel_y_desired;// - 0.005;
 
-        double pos_z_desired_temp = pos_z_desired;
+        double vel_forward_desired_temp = vel_forward_desired - 0.005;
 
         double phi_desired_temp = phi_desired;
         double theta_desired_temp = theta_desired;
@@ -1560,6 +1567,16 @@ void run_mpc() {
             // if (omega_z_desired_temp < 0.1) {
             //     omega_z_desired_temp += 0.001;
             // }
+            if(vel_forward_desired_temp < 0.3) {
+                vel_forward_desired_temp += 0.005;
+            }
+
+            if (omega_z_desired_temp < 0.1) {
+                omega_z_desired_temp += 0.001;
+            }
+
+            vel_x_desired_temp = sin(-omega_z_desired_temp * (get_time(false) + i*dt)) * vel_forward_desired_temp;
+            vel_y_desired_temp = cos(-omega_z_desired_temp * (get_time(false) + i*dt)) * vel_forward_desired_temp;
 
             pos_x_desired_temp += vel_x_desired * dt;
             pos_y_desired_temp += vel_y_desired_temp * dt;
