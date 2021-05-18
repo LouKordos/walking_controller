@@ -1234,11 +1234,6 @@ void run_mpc() {
         auto start = high_resolution_clock::now();
         auto start_total = high_resolution_clock::now();
 
-        // while(simState->isPaused() && total_iterations > 3) {
-        //     sendto(sockfd, (const char *)"0|0|0|0|0|0|0|0|0|0|0|0", strlen("0|0|0|0|0|0|0|0|0|0|0|0"), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
-        //     sleep(dt);
-        // }
-
         // if (vel_x_desired > -0.6) {
         //     vel_x_desired -= 0.005;
         // }
