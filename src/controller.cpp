@@ -1323,6 +1323,84 @@ void run_mpc() {
 
             set_last_contact_swap_time(get_time(false));
         }
+
+        auto x_ref_update_start = high_resolution_clock::now();
+
+        double pos_x_desired_temp = pos_x_desired;
+        double pos_y_desired_temp = pos_y_desired;
+        double pos_z_desired_temp = pos_z_desired;
+
+        double vel_x_desired_temp = vel_x_desired;// + 0.005;
+        double vel_y_desired_temp = vel_y_desired;// - 0.005;
+        double vel_z_desired_temp = vel_z_desired;
+
+        double vel_forward_desired_temp = vel_forward_desired - 0.005;
+
+        double phi_desired_temp = phi_desired;
+        double theta_desired_temp = theta_desired;
+        double psi_desired_temp = psi_desired;
+
+        double omega_x_desired_temp = omega_x_desired;
+        double omega_y_desired_temp = omega_y_desired;
+        double omega_z_desired_temp = omega_z_desired - 0.001;
+        
+        // Update reference trajectory
+        for(int i = 0; i < N; ++i) {
+            // if (vel_x_desired_temp > -0.6) {
+            //     vel_x_desired_temp -= 0.005;
+            // }
+            
+            // if (vel_y_desired_temp < 0.6) {
+            //     vel_y_desired_temp += 0.005;
+            // }
+
+            if(vel_forward_desired_temp < 0.3) {
+                vel_forward_desired_temp += 0.005;
+            }
+
+            if (omega_z_desired_temp < 0.1) {
+                omega_z_desired_temp += 0.001;
+            }
+
+            vel_x_desired_temp = sin(-omega_z_desired_temp * (get_time(false) + i*dt)) * vel_forward_desired_temp;
+            vel_y_desired_temp = cos(-omega_z_desired_temp * (get_time(false) + i*dt)) * vel_forward_desired_temp;
+
+            pos_x_desired_temp += vel_x_desired_temp * dt;
+            pos_y_desired_temp += vel_y_desired_temp * dt;
+            pos_z_desired_temp += vel_z_desired_temp * dt;
+
+            phi_desired_temp += omega_x_desired_temp * dt;
+            theta_desired_temp += omega_y_desired_temp * dt;
+            psi_desired_temp += omega_z_desired_temp * dt;
+
+            x_ref(0, i) = phi_desired_temp; // Roll
+            x_ref(1, i) = theta_desired_temp; // Pitch
+            x_ref(2, i) = psi_desired_temp; // Yaw
+            x_ref(3, i) = pos_x_desired_temp; // X Pos
+            x_ref(4, i) = pos_y_desired_temp; // Y Pos
+            x_ref(5, i) = pos_z_desired_temp; // Z Pos
+            x_ref(6, i) = omega_x_desired_temp; // Omega_x
+            x_ref(7, i) = omega_y_desired_temp; // Omega_y
+            x_ref(8, i) = omega_z_desired_temp; // Omega_z
+            x_ref(9, i) = vel_x_desired_temp; // X Vel
+            x_ref(10, i) = vel_y_desired_temp; // Y Vel
+            x_ref(11, i) = vel_z_desired_temp; // Z Vel
+            x_ref(12, i) = -9.81; // Gravity constant
+        }
+
+        P_param.block<n, N>(0, 1) = x_ref;
+
+        pos_x_desired += vel_x_desired * dt;
+        pos_y_desired += vel_y_desired * dt;
+        pos_z_desired += vel_z_desired * dt;
+
+        phi_desired += omega_x_desired * dt;
+        theta_desired += omega_y_desired * dt;
+        psi_desired += omega_z_desired * dt;
+
+        auto x_ref_update_end = high_resolution_clock::now();
+
+        double x_ref_update_duration = duration_cast<nanoseconds>(x_ref_update_end - x_ref_update_start).count();
         
         // stringstream temp;
         // temp << "x_t:" << x_t(0, 0) << "," << x_t(1, 0) << "," << x_t(2, 0) << "," << x_t(3, 0) << "," << x_t(4, 0) << "," << x_t(5, 0) << "," << x_t(6, 0) << "," << x_t(7, 0) << "," << x_t(8, 0) << "," << x_t(9, 0) << "," << x_t(10, 0) << "," << x_t(11, 0) << "," << x_t(12, 0);
@@ -1541,84 +1619,6 @@ void run_mpc() {
         auto r_update_end = high_resolution_clock::now();
 
         double r_update_duration = duration_cast<nanoseconds>(r_update_end - r_update_start).count();
-
-        auto x_ref_update_start = high_resolution_clock::now();
-
-        double pos_x_desired_temp = pos_x_desired;
-        double pos_y_desired_temp = pos_y_desired;
-        double pos_z_desired_temp = pos_z_desired;
-
-        double vel_x_desired_temp = vel_x_desired;// + 0.005;
-        double vel_y_desired_temp = vel_y_desired;// - 0.005;
-        double vel_z_desired_temp = vel_z_desired;
-
-        double vel_forward_desired_temp = vel_forward_desired - 0.005;
-
-        double phi_desired_temp = phi_desired;
-        double theta_desired_temp = theta_desired;
-        double psi_desired_temp = psi_desired;
-
-        double omega_x_desired_temp = omega_x_desired;
-        double omega_y_desired_temp = omega_y_desired;
-        double omega_z_desired_temp = omega_z_desired - 0.001;
-        
-        // Update reference trajectory
-        for(int i = 0; i < N; ++i) {
-            // if (vel_x_desired_temp > -0.6) {
-            //     vel_x_desired_temp -= 0.005;
-            // }
-            
-            // if (vel_y_desired_temp < 0.6) {
-            //     vel_y_desired_temp += 0.005;
-            // }
-
-            if(vel_forward_desired_temp < 0.3) {
-                vel_forward_desired_temp += 0.005;
-            }
-
-            if (omega_z_desired_temp < 0.1) {
-                omega_z_desired_temp += 0.001;
-            }
-
-            vel_x_desired_temp = sin(-omega_z_desired_temp * (get_time(false) + i*dt)) * vel_forward_desired_temp;
-            vel_y_desired_temp = cos(-omega_z_desired_temp * (get_time(false) + i*dt)) * vel_forward_desired_temp;
-
-            pos_x_desired_temp += vel_x_desired_temp * dt;
-            pos_y_desired_temp += vel_y_desired_temp * dt;
-            pos_z_desired_temp += vel_z_desired_temp * dt;
-
-            phi_desired_temp += omega_x_desired_temp * dt;
-            theta_desired_temp += omega_y_desired_temp * dt;
-            psi_desired_temp += omega_z_desired_temp * dt;
-
-            x_ref(0, i) = phi_desired_temp; // Roll
-            x_ref(1, i) = theta_desired_temp; // Pitch
-            x_ref(2, i) = psi_desired_temp; // Yaw
-            x_ref(3, i) = pos_x_desired_temp; // X Pos
-            x_ref(4, i) = pos_y_desired_temp; // Y Pos
-            x_ref(5, i) = pos_z_desired_temp; // Z Pos
-            x_ref(6, i) = omega_x_desired_temp; // Omega_x
-            x_ref(7, i) = omega_y_desired_temp; // Omega_y
-            x_ref(8, i) = omega_z_desired_temp; // Omega_z
-            x_ref(9, i) = vel_x_desired_temp; // X Vel
-            x_ref(10, i) = vel_y_desired_temp; // Y Vel
-            x_ref(11, i) = vel_z_desired_temp; // Z Vel
-            x_ref(12, i) = -9.81; // Gravity constant
-        }
-
-        P_param.block<n, N>(0, 1) = x_ref;
-
-        pos_x_desired += vel_x_desired * dt;
-        pos_y_desired += vel_y_desired * dt;
-        pos_z_desired += vel_z_desired * dt;
-
-        phi_desired += omega_x_desired * dt;
-        theta_desired += omega_y_desired * dt;
-        psi_desired += omega_z_desired * dt;
-
-        auto x_ref_update_end = high_resolution_clock::now();
-
-        double x_ref_update_duration = duration_cast<nanoseconds>(x_ref_update_end - x_ref_update_start).count();
 
         double r_x_left_prev = r_x_left;
         double r_x_right_prev = r_x_right;
