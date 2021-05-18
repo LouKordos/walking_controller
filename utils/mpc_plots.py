@@ -4,7 +4,12 @@ import os
 import numpy as np
 import pandas as pd
 import math
+import argparse
 from more_itertools import numeric_range # Prediction plots
+
+parser = argparse.ArgumentParser(description='Generate plots based on csv data.')
+parser.add_argument("--show-plots", help="Also show plots using plt.show after generating and saving them to file.", action="store_true")
+args = parser.parse_args()
 
 print("Starting plot generation...")
 
@@ -59,7 +64,7 @@ plot_every_predicted = 1  # Only plot in steps of plot_every_predicted, so that 
 
 delay_flag = True # Determine whether or not delay compensation is applied
 ylim_flag = False # Determines whether or not y limits are added to the plots
-show_plots = False # Determines whether or not plots should be shown interactively after having saved them
+show_plots = args.show_plots # Determines whether or not plots should be shown interactively after having saved them
 generate_prediction_plots = True
 
 # Determine params based on logs (logs should eventually include those values)
