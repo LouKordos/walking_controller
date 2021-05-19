@@ -1025,6 +1025,56 @@ double set_vel_forward_desired(const double val) {
     vel_forward_desired_mutex.unlock();
 }
 
+std::mutex omega_z_desired_mutex;
+double omega_z_desired = 0; // rad/s
+
+double get_omega_z_desired() {
+    omega_z_desired_mutex.lock();
+    double temp = omega_z_desired;
+    omega_z_desired_mutex.unlock();
+
+    return temp;
+}
+
+double set_omega_z_desired(const double val) {
+    omega_z_desired_mutex.lock();
+    omega_z_desired = val;
+    omega_z_desired_mutex.unlock();
+}
+
+std::mutex pos_z_desired_mutex;
+double pos_z_desired = 1.0; // meters
+
+double get_pos_z_desired() {
+    pos_z_desired_mutex.lock();
+    double temp = pos_z_desired;
+    pos_z_desired_mutex.unlock();
+
+    return temp;
+}
+
+void set_pos_z_desired(const double val) {
+    pos_z_desired_mutex.lock();
+    pos_z_desired = val;
+    pos_z_desired_mutex.unlock();
+}
+
+// Desired state values
+double pos_x_desired = 0; // meters
+double pos_y_desired = 0; // meters
+
+
+double vel_x_desired = 0.0; // m/s
+double vel_y_desired = 0.0; // m/s
+double vel_z_desired = 0.0; // m/s
+
+double phi_desired = 0; // rad
+double theta_desired = 0; // rad
+double psi_desired = 0;
+
+double omega_x_desired = 0; // rad/s
+double omega_y_desired = 0; // rad/s
+
 void run_mpc() {
     int sockfd;
     char buffer[udp_buffer_size];
@@ -1155,23 +1205,6 @@ void run_mpc() {
     Eigen::Matrix<double, 3, 3> I_world = Eigen::ArrayXXd::Zero(3, 3); // Body inertia in World frame
 
     static long long total_iterations = 0; // Total loop iterations
-
-    // Desired state values
-    double pos_x_desired = 0; // meters
-    double pos_y_desired = 0; // meters
-    double pos_z_desired = 1.0; // meters
-
-    double vel_x_desired = 0.0; // m/s
-    double vel_y_desired = 0.0; // m/s
-    double vel_z_desired = 0.0; // m/s
-
-    double phi_desired = 0; // rad
-    double theta_desired = 0; // rad
-    double psi_desired = 0;
-
-    double omega_x_desired = 0; // rad/s
-    double omega_y_desired = 0; // rad/s
-    double omega_z_desired = 0; // rad/s
 
     const double gait_gain = 0.1; // Try much lower value here, rename to more accurate name
     const Eigen::Matrix<double, 3, 3> pos_error_gain = (Eigen::Matrix<double, 3, 3>() << 0.5, 0, 0,
@@ -1350,7 +1383,7 @@ void run_mpc() {
 
         double pos_x_desired_temp = pos_x_desired;
         double pos_y_desired_temp = pos_y_desired;
-        double pos_z_desired_temp = pos_z_desired;
+        double pos_z_desired_temp = get_pos_z_desired();
 
         double vel_x_desired_temp = vel_x_desired;// + 0.005;
         double vel_y_desired_temp = vel_y_desired;// - 0.005;
@@ -1364,7 +1397,7 @@ void run_mpc() {
 
         double omega_x_desired_temp = omega_x_desired;
         double omega_y_desired_temp = omega_y_desired;
-        double omega_z_desired_temp = omega_z_desired;// - 0.001;
+        double omega_z_desired_temp = get_omega_z_desired();// - 0.001;
         
         // Update reference trajectory
         for(int i = 0; i < N; ++i) {
@@ -1414,11 +1447,11 @@ void run_mpc() {
 
         pos_x_desired += vel_x_desired * dt;
         pos_y_desired += vel_y_desired * dt;
-        pos_z_desired += vel_z_desired * dt;
+        set_pos_z_desired(get_pos_z_desired() + vel_z_desired * dt);
 
         phi_desired += omega_x_desired * dt;
         theta_desired += omega_y_desired * dt;
-        psi_desired += omega_z_desired * dt;
+        psi_desired += get_omega_z_desired() * dt;
 
         auto x_ref_update_end = high_resolution_clock::now();
 
@@ -1518,9 +1551,9 @@ void run_mpc() {
         Eigen::Matrix<double, 3, 1> hip_pos_world_right = (H_body_world * (Eigen::Matrix<double, 4, 1>() << hip_offset, 0, 0, 1).finished()).block<3, 1>(0, 0);
         
         Eigen::Matrix<double, 3, 1> vel_vector = P_param.block<3, 1>(9, 0);
-        Eigen::Matrix<double, 3, 1> pos_desired_vector = (Eigen::Matrix<double, 3, 1>() << pos_x_desired, pos_y_desired, pos_z_desired).finished();
+        Eigen::Matrix<double, 3, 1> pos_desired_vector = (Eigen::Matrix<double, 3, 1>() << pos_x_desired, pos_y_desired, get_pos_z_desired()).finished();
         Eigen::Matrix<double, 3, 1> vel_desired_vector = (Eigen::Matrix<double, 3, 1>() << vel_x_desired, vel_y_desired, vel_z_desired).finished();
-        Eigen::Matrix<double, 3, 1> omega_desired_vector = (Eigen::Matrix<double, 3, 1>() << omega_x_desired, omega_y_desired, omega_z_desired).finished();
+        Eigen::Matrix<double, 3, 1> omega_desired_vector = (Eigen::Matrix<double, 3, 1>() << omega_x_desired, omega_y_desired, get_omega_z_desired()).finished();
 
         // Adjust for position error
         vel_desired_vector.block<2, 1>(0, 0) -= R_body_world * (pos_error_gain.block<2, 2>(0, 0) * (R_world_body * (P_param.block<2, 1>(3, 0) - pos_desired_vector.block<2, 1>(0, 0))));
@@ -2094,7 +2127,7 @@ void run_mpc() {
 
         stringstream log_entry;
         log_entry << sim_time << "," << controller_time << "," << x_t_temp(0, 0) << "," << x_t_temp(1, 0) << "," << x_t_temp(2, 0) << "," << x_t_temp(3, 0) << "," << x_t_temp(4, 0) << "," << x_t_temp(5, 0) << "," << x_t_temp(6, 0) << "," << x_t_temp(7, 0) << "," << x_t_temp(8, 0) << "," << x_t_temp(9, 0) << "," << x_t_temp(10, 0) << "," << x_t_temp(11, 0)
-                << "," << phi_desired << "," << theta_desired << "," << psi_desired << "," << pos_x_desired << "," << pos_y_desired << "," << pos_z_desired << "," << omega_x_desired << "," << omega_y_desired << "," << omega_z_desired << "," << vel_x_desired << "," << vel_y_desired << "," << vel_z_desired
+                << "," << phi_desired << "," << theta_desired << "," << psi_desired << "," << pos_x_desired << "," << pos_y_desired << "," << get_pos_z_desired() << "," << omega_x_desired << "," << omega_y_desired << "," << get_omega_z_desired() << "," << vel_x_desired << "," << vel_y_desired << "," << vel_z_desired
                 << "," << u_t_temp(0) << "," << u_t_temp(1) << "," << u_t_temp(2) << "," << u_t_temp(3) << "," << u_t_temp(4) << "," << u_t_temp(5) 
                 << "," << r_x_left << "," << r_y_left << "," << r_z_left
                 << "," << r_x_right << "," << r_y_right << "," << r_z_right
@@ -2240,8 +2273,10 @@ void receive_controls() {
             auto json = json::parse(parsedString);
             std::cout << json["slider1"] << std::endl;
             set_vel_forward_desired(json["slider1"]);
+            set_omega_z_desired(json["slider2"]);
             left_leg->set_step_height_world(json["slider4"]);
             right_leg->set_step_height_world(json["slider4"]);
+            set_pos_z_desired(json["slider5"]);
             std::cout << "JSON: " << json << "\n";
         }
     }
