@@ -1002,6 +1002,23 @@ Eigen::Matrix<double, n, 1> step_discrete_model(Eigen::Matrix<double, n, 1> x, E
     return A_d * x + B_d * u;
 }
 
+std::mutex vel_forward_desired_mutex;
+double vel_forward_desired = 0.0;
+
+double get_vel_forward_desired() {
+    vel_forward_desired_mutex.lock();
+    double temp = vel_forward_desired;
+    vel_forward_desired_mutex.unlock();
+
+    return temp;
+}
+
+double set_vel_forward_desired(const double val) {
+    vel_forward_desired_mutex.lock();
+    vel_forward_desired = val;
+    vel_forward_desired_mutex.unlock();
+}
+
 void run_mpc() {
     int sockfd;
     char buffer[udp_buffer_size];
@@ -1142,8 +1159,6 @@ void run_mpc() {
     double vel_y_desired = 0.0; // m/s
     double vel_z_desired = 0.0; // m/s
 
-    double vel_forward_desired = 0.0;
-
     double phi_desired = 0; // rad
     double theta_desired = 0; // rad
     double psi_desired = 0;
@@ -1242,16 +1257,17 @@ void run_mpc() {
         //     vel_y_desired += 0.005;
         // }
 
-        if(vel_forward_desired < 0.3) {
-            vel_forward_desired += 0.005;
-        }
+        // if(vel_forward_desired < 0.3) {
+        //     vel_forward_desired += 0.005;
+        // }
 
-        if(omega_z_desired < 0.1) {
-            omega_z_desired += 0.001;
-        }
+        // if(omega_z_desired < 0.1) {
+        //     omega_z_desired += 0.001;
+        // }
 
-        vel_x_desired = sin(-psi_desired) * vel_forward_desired;
-        vel_y_desired = cos(-psi_desired) * vel_forward_desired;
+        double temp_temp = get_vel_forward_desired();
+        vel_x_desired = sin(-psi_desired) * temp_temp;
+        vel_y_desired = cos(-psi_desired) * temp_temp;
 
         auto message_wait_start = high_resolution_clock::now();
 
@@ -1334,7 +1350,7 @@ void run_mpc() {
         double vel_y_desired_temp = vel_y_desired;// - 0.005;
         double vel_z_desired_temp = vel_z_desired;
 
-        double vel_forward_desired_temp = vel_forward_desired - 0.005;
+        double vel_forward_desired_temp = get_vel_forward_desired();// - 0.005;
 
         double phi_desired_temp = phi_desired;
         double theta_desired_temp = theta_desired;
@@ -1342,7 +1358,7 @@ void run_mpc() {
 
         double omega_x_desired_temp = omega_x_desired;
         double omega_y_desired_temp = omega_y_desired;
-        double omega_z_desired_temp = omega_z_desired - 0.001;
+        double omega_z_desired_temp = omega_z_desired;// - 0.001;
         
         // Update reference trajectory
         for(int i = 0; i < N; ++i) {
@@ -1354,13 +1370,13 @@ void run_mpc() {
             //     vel_y_desired_temp += 0.005;
             // }
 
-            if(vel_forward_desired_temp < 0.3) {
-                vel_forward_desired_temp += 0.005;
-            }
+            // if(vel_forward_desired_temp < 0.3) {
+            //     vel_forward_desired_temp += 0.005;
+            // }
 
-            if (omega_z_desired_temp < 0.1) {
-                omega_z_desired_temp += 0.001;
-            }
+            // if (omega_z_desired_temp < 0.1) {
+            //     omega_z_desired_temp += 0.001;
+            // }
 
             vel_x_desired_temp = sin(-omega_z_desired_temp * (get_time(false) + i*dt)) * vel_forward_desired_temp;
             vel_y_desired_temp = cos(-omega_z_desired_temp * (get_time(false) + i*dt)) * vel_forward_desired_temp;
