@@ -31,6 +31,14 @@
 #include <arpa/inet.h> // defines in_addr structure
 #include <sys/socket.h> // for socket creation
 #include <netinet/in.h> //contains constants and structures needed for internet domain addresses
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h>
 
 #include <signal.h>
 #include <unistd.h>
@@ -48,8 +56,13 @@ using namespace casadi;
 #include "include/SimState.hpp" // Gazebo Simulation State, mainly to synchronize Pause State of controller and Gazebo in order to avoid force "windup"
 #include "include/async_logger.hpp"
 
+// JSON
+#include "include/json.hpp"
+
 using namespace std;
 using namespace std::chrono;
+
+using json = nlohmann::json;
 
 static const int left_leg_torque_port = 4200;
 static const int right_leg_torque_port = 4201;
@@ -83,6 +96,7 @@ std::thread left_leg_torque_thread; // Thread for updating matrices, calculating
 std::thread right_leg_torque_thread;
 std::thread mpc_thread;
 std::thread time_thread;
+std::thread web_ui_thread;
 
 Leg *left_leg;
 Leg *right_leg;
@@ -2181,6 +2195,66 @@ void run_mpc() {
     }
 }
 
+// Connect to the Web UI server in order to receive desired robot state
+void receive_controls() {
+
+    struct timeval tv;
+    tv.tv_sec = 1; 
+    tv.tv_usec = 0;
+
+    int sockfd, portno, n;
+    struct sockaddr_in serv_addr;
+    struct hostent *server;
+
+    const int buffer_size = 512;
+
+    char buffer[buffer_size];
+    portno = 420;
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfd < 0) 
+        std::cerr << "Error opening socket.\n";
+    
+    server = gethostbyname("terminator.loukordos.eu");
+    if (server == NULL) {
+        fprintf(stderr,"ERROR, no such host\n");
+        exit(0);
+    }
+
+    bzero((char *) &serv_addr, sizeof(serv_addr));
+    serv_addr.sin_family = AF_INET;
+    bcopy((char *)server->h_addr, 
+         (char *)&serv_addr.sin_addr.s_addr,
+         server->h_length);
+    serv_addr.sin_port = htons(portno);
+
+    if (connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) 
+        std::cerr << "Error connecting to server.\n";
+    
+    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
+
+    while(true) {
+        if(quit_flag.load()) {
+            break;
+        }
+        
+        bzero(buffer, buffer_size);
+        n = read(sockfd, buffer, buffer_size - 1);
+        if (n < 0) {
+            std::cout << "Error while reading from socket.\n";
+        }
+        std::string parsedString(buffer);
+        // std::cout << "parsed string:" << parsedString << std::endl;
+        if(!parsedString.empty() && parsedString[0] == '{' && parsedString.back() == '}') {
+            auto json = json::parse(parsedString);
+            std::cout << json["slider1"] << std::endl;
+            set_vel_forward_desired(json["slider1"]);
+            std::cout << "JSON: " << json << "\n";
+        }
+    }
+
+    close(sockfd);
+}
+
 void handle_exit(int) {
     quit_flag.store(true);
     std::cout << "Handled SIGINT, exiting" << std::endl;
@@ -2252,6 +2326,8 @@ int main(int _argc, char **_argv)
     mpc_thread = std::thread(std::bind(run_mpc));
     time_thread = std::thread(std::bind(update_time));
 
+    web_ui_thread = std::thread(std::bind(receive_controls));
+
     // Create a cpu_set_t object representing a set of CPUs. Clear it and mark only CPU i as set.
     // Source: https://eli.thegreenplace.net/2016/c11-threads-affinity-and-hyperthreading/
 
@@ -2313,6 +2389,7 @@ int main(int _argc, char **_argv)
     left_leg_torque_thread.join();
     right_leg_torque_thread.join();
     mpc_thread.join();
+    web_ui_thread.join();
 
     return 0;
 }
