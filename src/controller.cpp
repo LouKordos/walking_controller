@@ -2248,6 +2248,8 @@ void receive_controls() {
             auto json = json::parse(parsedString);
             std::cout << json["slider1"] << std::endl;
             set_vel_forward_desired(json["slider1"]);
+            left_leg->set_step_height_world(json["slider4"]);
+            right_leg->set_step_height_world(json["slider4"]);
             std::cout << "JSON: " << json << "\n";
         }
     }

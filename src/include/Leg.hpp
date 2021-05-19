@@ -46,7 +46,7 @@ using Eigen::MatrixXd;
 using namespace std;
 
 class Leg {
-    public: Leg(double hip_offset_x, double hip_offset_y, double hip_offset_z, int contact_state_port);
+    public: Leg(double hip_offset_x, double hip_offset_y, double hip_offset_z, const double step_height_world, int contact_state_port);
     
     public: long long iteration_counter;
 
@@ -72,7 +72,7 @@ class Leg {
     private: bool swing_phase;
     
     private: std::mutex q_mutex, q_dot_mutex, foot_pos_world_desired_mutex, lift_off_pos_mutex, lift_off_vel_mutex, foot_pos_body_frame_mutex,
-                        trajectory_start_time_mutex, foot_trajectory_mutex, next_foot_pos_world_desired_mutex, foot_pos_desired_body_frame_mutex, swing_phase_mutex;
+                        trajectory_start_time_mutex, foot_trajectory_mutex, next_foot_pos_world_desired_mutex, foot_pos_desired_body_frame_mutex, swing_phase_mutex, step_height_world_mutex;
     
     private: Eigen::Matrix<double, 5, 1> q; // Leg angle vector / Model state
     private: Eigen::Matrix<double, 5, 1> q_dot; // Leg angular velocity vector / Differentiated model state
@@ -118,6 +118,8 @@ class Leg {
 
     public: double Kp_orientation;
     public: double Kd_orientation;
+
+    private: double step_height_world;
 
     // Euler Angle definitions:
     // roll - around x - alpha - phi
@@ -171,6 +173,10 @@ class Leg {
     public: Eigen::Matrix<double, 3, 1> get_lift_off_vel();
 
     public: void set_lift_off_vel(const Eigen::Matrix<double, 3, 1> lift_off_vel);
+
+    public: void set_step_height_world(const double val);
+
+    public: double get_step_height_world();
 
     public: void update_foot_trajectory(Eigen::Matrix<double, 13, 1> &com_state, Eigen::Matrix<double, 3, 1> next_body_vel, double t_stance, double time);
 
