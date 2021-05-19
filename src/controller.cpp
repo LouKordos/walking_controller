@@ -2195,6 +2195,7 @@ int main(int _argc, char **_argv)
     log("--------------------------------", INFO);
     log("--------------------------------", INFO);
     log("--------------------------------", INFO);
+
     // is 0.065 because it's the difference between torso CoM height and Hip Actuator Center Height, negative because just think about it or calculate an example value with negative and positive z displacement. 
     // A point expressed in hip frame (i.e. [0, 0, 0]) will obviously be at negative Z in a frame that is located above the hip frame, meaning you need negative Z displacement in the transformation matrix.
     left_leg = new Leg(-0.15, 0, -0.065, left_leg_contact_state_port);
@@ -2302,9 +2303,6 @@ int main(int _argc, char **_argv)
             << "If you're running this in a docker container, make sure to use the --net=host option and set the env variable IS_DOCKER=Y when running it.\n"
             << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
     print_threadsafe(temp.str(), "main()", WARN, false);
-
-    std::cout << "left_leg omega_desired is currently: " << left_leg->omega_desired(0) << ", " << left_leg->omega_desired(1) << ", " << left_leg->omega_desired(2) << std::endl; // Print out current natural frequency
-    std::cout << std::endl;
 
     struct sigaction sa;
     memset( &sa, 0, sizeof(sa) );
