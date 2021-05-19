@@ -160,19 +160,11 @@ void update_time() {
 
         time_mutex.unlock();
 
-        // stringstream temp;
-        // temp << "time: " << get_time();
-        // print_threadsafe(temp.str(), "time_thread");
-
         end = high_resolution_clock::now();
 
         // This timed loop approach calculates the execution time of the current iteration,
         // then calculates the remaining time for the loop to run at the desired frequency and waits this duration.
         duration = duration_cast<microseconds>(end - start).count();
-
-        stringstream temp;
-        // temp << "Time thread loop duration: " << duration << "µS";
-        // log(temp.str(), INFO);
 
         long long remainder = (time_update_interval - duration) * 1e+3;
         deadline.tv_nsec = remainder;
@@ -893,7 +885,7 @@ void calculate_right_leg_torques() {
 
             auto file_write_start = high_resolution_clock::now();
 
-            // // Write plot values to csv file
+            // Write plot values to csv file
             log_stream << log_entry.str();
 
             auto file_write_end = high_resolution_clock::now();
