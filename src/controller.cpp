@@ -96,7 +96,8 @@ std::thread left_leg_torque_thread; // Thread for updating matrices, calculating
 std::thread right_leg_torque_thread;
 std::thread mpc_thread;
 std::thread time_thread;
-std::thread web_ui_thread;
+std::thread web_ui_state_thread;
+std::thread web_ui_reset_thread;
 
 Leg *left_leg;
 Leg *right_leg;
@@ -117,6 +118,7 @@ static long double current_time = 0;
 static long double time_offset = 0; // Use as synchronization offset between sim time and time thread time
 static long double last_contact_swap_time; // t_0 in gait phase formula, updated every t_stance in last_contact_swap_time_thread.
 static bool time_synced = false;
+double zero_forces_time = 0;
 
 // Setting up debugging and plotting csv file
 int largest_index = 0;
@@ -525,6 +527,12 @@ void calculate_left_leg_torques() {
 
         auto message_send_start = high_resolution_clock::now();
 
+        if(get_time(false) < zero_forces_time) {
+            for(int i = 0; i < 5; ++i) {
+                left_leg->tau_setpoint(i, 0) = 0;
+            }
+        }
+
         stringstream s;
         s << left_leg->tau_setpoint(0, 0) << "|" << left_leg->tau_setpoint(1, 0) << "|" << left_leg->tau_setpoint(2, 0) << "|" << left_leg->tau_setpoint(3, 0) << "|" << left_leg->tau_setpoint(4, 0); // Write torque setpoints to stringstream
         sendto(sockfd, (const char *)s.str().c_str(), strlen(s.str().c_str()), 
@@ -833,14 +841,14 @@ void calculate_right_leg_torques() {
         auto torque_calculation_end = high_resolution_clock::now();
 
         double torque_calculation_duration = duration_cast<nanoseconds>(torque_calculation_end - torque_calculation_start).count();
-        
-        // if(simState->isPaused()) {
-        //     right_leg->tau_setpoint = Eigen::ArrayXd::Zero(5, 1);
-        // }
-
-        // right_leg->tau_setpoint(0, 0) = 0;
 
         auto message_send_start = high_resolution_clock::now();
+
+        if(get_time(false) < zero_forces_time) {
+            for(int i = 0; i < 5; ++i) {
+                right_leg->tau_setpoint(i, 0) = 0;
+            }
+        }
 
         stringstream s;
         s << right_leg->tau_setpoint(0, 0) << "|" << right_leg->tau_setpoint(1, 0) << "|" << right_leg->tau_setpoint(2, 0) << "|" << right_leg->tau_setpoint(3, 0) << "|" << right_leg->tau_setpoint(4, 0); // Write torque setpoints to stringstream
@@ -2045,6 +2053,12 @@ void run_mpc() {
                 solution_variables(n*(N+1)+3),
                 solution_variables(n*(N+1)+4),
                 solution_variables(n*(N+1)+5);
+
+        if(get_time(false) < zero_forces_time) {
+            for(int i = 0; i < m; ++i) {
+                u_t(i, 0) = 0;
+            }
+        }
         
         // Send optimal control over UDP, along with logging info for the gazebo plugin
         stringstream s;
@@ -2284,6 +2298,80 @@ void receive_controls() {
     close(sockfd);
 }
 
+void receive_reset() {
+    struct timeval tv;
+    tv.tv_sec = 1; 
+    tv.tv_usec = 0;
+
+    int sockfd, portno, n;
+    struct sockaddr_in serv_addr;
+    struct hostent *server;
+
+    const int buffer_size = 128;
+
+    char buffer[buffer_size];
+    portno = 422;
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfd < 0) 
+        std::cerr << "Error opening socket.\n";
+    
+    server = gethostbyname("terminator.loukordos.eu");
+    if (server == NULL) {
+        fprintf(stderr,"ERROR, no such host\n");
+        exit(0);
+    }
+
+    bzero((char *) &serv_addr, sizeof(serv_addr));
+    serv_addr.sin_family = AF_INET;
+    bcopy((char *)server->h_addr, 
+         (char *)&serv_addr.sin_addr.s_addr,
+         server->h_length);
+    serv_addr.sin_port = htons(portno);
+
+    if (connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) 
+        std::cerr << "Error connecting to server.\n";
+    
+    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
+
+    while(true) {
+        if(quit_flag.load()) {
+            break;
+        }
+        
+        bzero(buffer, buffer_size);
+        n = read(sockfd, buffer, buffer_size - 1);
+        if (n < 0) {
+            std::cout << "Error while reading from socket.\n";
+        }
+        std::string parsedString(buffer);
+        
+        if(parsedString == "1") {
+            std::cout << "Reset triggered.\n";
+
+            phi_desired = 0;
+            theta_desired = 0;
+            psi_desired = 0;
+
+            pos_x_desired = 0;
+            pos_y_desired = 0;
+            set_pos_z_desired(1.0);
+
+            vel_x_desired = 0;
+            vel_y_desired = 0;
+            vel_z_desired = 0;
+            set_vel_forward_desired(0);
+            
+            omega_x_desired = 0;
+            omega_y_desired = 0;
+            set_omega_z_desired(0);
+
+            zero_forces_time = get_time(false) + 0.25 + 0.1;
+        }
+    }
+
+    close(sockfd);
+}
+
 void handle_exit(int) {
     quit_flag.store(true);
     std::cout << "Handled SIGINT, exiting" << std::endl;
@@ -2355,7 +2443,8 @@ int main(int _argc, char **_argv)
     mpc_thread = std::thread(std::bind(run_mpc));
     time_thread = std::thread(std::bind(update_time));
 
-    web_ui_thread = std::thread(std::bind(receive_controls));
+    web_ui_state_thread = std::thread(std::bind(receive_controls));
+    web_ui_reset_thread = std::thread(std::bind(receive_reset));
 
     // Create a cpu_set_t object representing a set of CPUs. Clear it and mark only CPU i as set.
     // Source: https://eli.thegreenplace.net/2016/c11-threads-affinity-and-hyperthreading/
@@ -2418,7 +2507,8 @@ int main(int _argc, char **_argv)
     left_leg_torque_thread.join();
     right_leg_torque_thread.join();
     mpc_thread.join();
-    web_ui_thread.join();
+    web_ui_state_thread.join();
+    web_ui_reset_thread.join();
 
     return 0;
 }
