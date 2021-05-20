@@ -1425,8 +1425,8 @@ void run_mpc() {
             //     omega_z_desired_temp += 0.001;
             // }
 
-            vel_x_desired_temp = sin(-omega_z_desired_temp * (get_time(false) + i*dt)) * vel_forward_desired_temp;
-            vel_y_desired_temp = cos(-omega_z_desired_temp * (get_time(false) + i*dt)) * vel_forward_desired_temp;
+            vel_x_desired_temp = sin(-psi_desired_temp) * vel_forward_desired_temp;
+            vel_y_desired_temp = cos(-psi_desired_temp) * vel_forward_desired_temp;
 
             pos_x_desired_temp += vel_x_desired_temp * dt;
             pos_y_desired_temp += vel_y_desired_temp * dt;
