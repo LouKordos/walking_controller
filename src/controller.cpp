@@ -1046,7 +1046,7 @@ double get_omega_z_desired() {
     return temp;
 }
 
-double set_omega_z_desired(const double val) {
+void set_omega_z_desired(const double val) {
     omega_z_desired_mutex.lock();
     omega_z_desired = val;
     omega_z_desired_mutex.unlock();
