@@ -1018,21 +1018,21 @@ Eigen::Matrix<double, n, 1> step_discrete_model(Eigen::Matrix<double, n, 1> x, E
     return A_d * x + B_d * u;
 }
 
-std::mutex vel_forward_desired_mutex;
-double vel_forward_desired = 0.0;
+std::mutex vel_body_desired_mutex;
+Eigen::Matrix<double, 2, 1> vel_body_desired = Eigen::ArrayXXd::Zero(2, 1); // 2D Vector describing desired velocity in body frame.
 
-double get_vel_forward_desired() {
-    vel_forward_desired_mutex.lock();
-    double temp = vel_forward_desired;
-    vel_forward_desired_mutex.unlock();
+Eigen::Matrix<double, 2, 1> get_vel_body_desired() {
+    vel_body_desired_mutex.lock();
+    Eigen::Matrix<double, 2, 1> temp = vel_body_desired;
+    vel_body_desired_mutex.unlock();
 
     return temp;
 }
 
-double set_vel_forward_desired(const double val) {
-    vel_forward_desired_mutex.lock();
-    vel_forward_desired = val;
-    vel_forward_desired_mutex.unlock();
+void set_vel_body_desired(const Eigen::Matrix<double, 2, 1> val) {
+    vel_body_desired_mutex.lock();
+    vel_body_desired = val;
+    vel_body_desired_mutex.unlock();
 }
 
 std::mutex omega_z_desired_mutex;
@@ -1314,9 +1314,6 @@ void run_mpc() {
         //     omega_z_desired += 0.001;
         // }
 
-        double temp_temp = get_vel_forward_desired();
-        vel_x_desired = sin(-psi_desired) * temp_temp;
-        vel_y_desired = cos(-psi_desired) * temp_temp;
 
         auto message_wait_start = high_resolution_clock::now();
 
@@ -1390,6 +1387,10 @@ void run_mpc() {
             set_last_contact_swap_time(get_time(false));
         }
 
+        Eigen::Matrix<double, 2, 1> vel_world_desired = get_R_body_world(-P_param(2, 0)) * get_vel_body_desired();
+        vel_x_desired = vel_world_desired(0, 0);
+        vel_y_desired = vel_world_desired(1, 0);
+
         auto x_ref_update_start = high_resolution_clock::now();
 
         double pos_x_desired_temp = pos_x_desired;
@@ -1400,7 +1401,7 @@ void run_mpc() {
         double vel_y_desired_temp = vel_y_desired;// - 0.005;
         double vel_z_desired_temp = vel_z_desired;
 
-        double vel_forward_desired_temp = get_vel_forward_desired();// - 0.005;
+        Eigen::Matrix<double, 2, 1> vel_body_desired_temp = get_vel_body_desired();
 
         double phi_desired_temp = phi_desired;
         double theta_desired_temp = theta_desired;
@@ -1428,8 +1429,22 @@ void run_mpc() {
             //     omega_z_desired_temp += 0.001;
             // }
 
-            vel_x_desired_temp = sin(-psi_desired_temp) * vel_forward_desired_temp;
-            vel_y_desired_temp = cos(-psi_desired_temp) * vel_forward_desired_temp;
+            double psi_t = 0;
+
+            if (i < N-1) {
+                psi_t = X_t(n*(i+1) + 2, 0);
+            }
+            else {
+                psi_t = X_t(n*(N-1) + 2, 0);
+            }
+
+            if(i == 0) {
+                psi_t = (double)P_param(2, 0);
+            }
+            
+            Eigen::Matrix<double, 2, 1> vel_world_desired_temp = get_R_body_world(-psi_t) * vel_body_desired_temp;
+            vel_x_desired_temp = vel_world_desired_temp(0, 0);
+            vel_y_desired_temp = vel_world_desired_temp(1, 0);
 
             pos_x_desired_temp += vel_x_desired_temp * dt;
             pos_y_desired_temp += vel_y_desired_temp * dt;
@@ -2288,8 +2303,7 @@ void receive_controls() {
         // std::cout << "parsed string:" << parsedString << std::endl;
         if(!parsedString.empty() && parsedString[0] == '{' && parsedString.back() == '}') {
             auto json = json::parse(parsedString);
-            std::cout << json["slider1"] << std::endl;
-            set_vel_forward_desired(json["slider1"]);
+            set_vel_body_desired((Eigen::Matrix<double, 2, 1>() << json["slider6"], json["slider1"]).finished());
             set_omega_z_desired(json["slider2"]);
             left_leg->set_step_height_world(json["slider4"]);
             right_leg->set_step_height_world(json["slider4"]);
