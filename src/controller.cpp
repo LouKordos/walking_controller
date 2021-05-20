@@ -357,7 +357,8 @@ void calculate_left_leg_torques() {
         auto message_wait_start = high_resolution_clock::now();
 
         if(iteration_counter > 0 && tv.tv_sec == 1e+9) {
-            tv.tv_sec = 3;
+            tv.tv_sec = 0;
+            tv.tv_usec = 100000;
             setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
         }
 
@@ -719,7 +720,8 @@ void calculate_right_leg_torques() {
         auto message_wait_start = high_resolution_clock::now();
 
         if(iteration_counter > 0 && tv.tv_sec == 1e+9) {
-            tv.tv_sec = 3;
+            tv.tv_sec = 0;
+            tv.tv_usec = 100000;
             setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
         }
 
@@ -1319,7 +1321,8 @@ void run_mpc() {
         auto message_wait_start = high_resolution_clock::now();
 
         if(total_iterations > 0 && tv.tv_sec == 1e+9) {
-            tv.tv_sec = 3;
+            tv.tv_sec = 0;
+            tv.tv_usec = 100000;
             setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
         }
 
