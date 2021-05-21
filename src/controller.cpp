@@ -1404,7 +1404,7 @@ void run_mpc() {
             set_last_contact_swap_time(get_time(false));
         }
 
-        Eigen::Matrix<double, 2, 1> vel_world_desired = get_R_body_world(-P_param(2, 0)) * get_vel_body_desired();
+        Eigen::Matrix<double, 2, 1> vel_world_desired = get_R_body_world(P_param(2, 0)) * get_vel_body_desired();
         vel_x_desired = vel_world_desired(0, 0);
         vel_y_desired = vel_world_desired(1, 0);
 
@@ -1459,7 +1459,7 @@ void run_mpc() {
                 psi_t = (double)P_param(2, 0);
             }
             
-            Eigen::Matrix<double, 2, 1> vel_world_desired_temp = get_R_body_world(-psi_t) * vel_body_desired_temp;
+            Eigen::Matrix<double, 2, 1> vel_world_desired_temp = get_R_body_world(psi_t) * vel_body_desired_temp;
             vel_x_desired_temp = vel_world_desired_temp(0, 0);
             vel_y_desired_temp = vel_world_desired_temp(1, 0);
 
