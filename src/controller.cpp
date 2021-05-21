@@ -98,7 +98,6 @@ std::thread right_leg_torque_thread;
 std::thread mpc_thread;
 std::thread time_thread;
 std::thread web_ui_state_thread;
-std::thread web_ui_reset_thread;
 
 Leg *left_leg;
 Leg *right_leg;
