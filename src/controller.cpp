@@ -2311,81 +2311,7 @@ void receive_controls() {
             left_leg->set_step_height_world(json["slider4"]);
             right_leg->set_step_height_world(json["slider4"]);
             set_pos_z_desired(json["slider5"]);
-            std::cout << "JSON: " << json << "\n";
-        }
-    }
-
-    close(sockfd);
-}
-
-void receive_reset() {
-    struct timeval tv;
-    tv.tv_sec = 1; 
-    tv.tv_usec = 0;
-
-    int sockfd, portno, n;
-    struct sockaddr_in serv_addr;
-    struct hostent *server;
-
-    const int buffer_size = 128;
-
-    char buffer[buffer_size];
-    portno = 422;
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd < 0) 
-        std::cerr << "Error opening socket.\n";
-    
-    server = gethostbyname("terminator.loukordos.eu");
-    if (server == NULL) {
-        fprintf(stderr,"ERROR, no such host\n");
-        exit(0);
-    }
-
-    bzero((char *) &serv_addr, sizeof(serv_addr));
-    serv_addr.sin_family = AF_INET;
-    bcopy((char *)server->h_addr, 
-         (char *)&serv_addr.sin_addr.s_addr,
-         server->h_length);
-    serv_addr.sin_port = htons(portno);
-
-    if (connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) 
-        std::cerr << "Error connecting to server.\n";
-    
-    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
-
-    while(true) {
-        if(quit_flag.load()) {
-            break;
-        }
-        
-        bzero(buffer, buffer_size);
-        n = read(sockfd, buffer, buffer_size - 1);
-        if (n < 0) {
-            std::cout << "Error while reading from socket.\n";
-        }
-        std::string parsedString(buffer);
-        
-        if(parsedString == "1") {
-            std::cout << "Reset triggered.\n";
-
-            phi_desired = 0;
-            theta_desired = 0;
-            psi_desired = 0;
-
-            pos_x_desired = 0;
-            pos_y_desired = 0;
-            set_pos_z_desired(1.0);
-
-            vel_x_desired = 0;
-            vel_y_desired = 0;
-            vel_z_desired = 0;
-            set_vel_forward_desired(0);
-            
-            omega_x_desired = 0;
-            omega_y_desired = 0;
-            set_omega_z_desired(0);
-
-            zero_forces_time = get_time(false) + 0.25 + 0.1;
+            // std::cout << "JSON: " << json << "\n";
         }
     }
 
@@ -2464,7 +2390,6 @@ int main(int _argc, char **_argv)
     time_thread = std::thread(std::bind(update_time));
 
     web_ui_state_thread = std::thread(std::bind(receive_controls));
-    web_ui_reset_thread = std::thread(std::bind(receive_reset));
 
     // Create a cpu_set_t object representing a set of CPUs. Clear it and mark only CPU i as set.
     // Source: https://eli.thegreenplace.net/2016/c11-threads-affinity-and-hyperthreading/
@@ -2528,7 +2453,6 @@ int main(int _argc, char **_argv)
     right_leg_torque_thread.join();
     mpc_thread.join();
     web_ui_state_thread.join();
-    web_ui_reset_thread.join();
 
     return 0;
 }
