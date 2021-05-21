@@ -1736,7 +1736,7 @@ void run_mpc() {
 
         // Discretization loop for Prediction Horizon
         for(int i = 0; i < N; ++i) {
-            // TODO: Simplify this by just using a single discretization state vector instead of seperate variables
+            // TODO: Simplify this by just using a single discretization state vector instead of separate variables
             if (i < N-1) {
                 phi_t = X_t(n*(i+1) + 0, 0);
                 theta_t = X_t(n*(i+1) + 1, 0);
