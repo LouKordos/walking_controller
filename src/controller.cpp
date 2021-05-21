@@ -83,7 +83,8 @@ double f_min_z = 0; // Min contact Force in Z direction for MPC constraint, limi
 double f_max_z = 1000; // Max contact Force in Z direction for MPC constraint, limits X and Y forces through friction constraint
 
 static const double m_value = 30.0; // Combined robot mass in kg
-const double t_stance = 1.0/3.0; // Duration that the foot will be in stance phase
+double t_stance = 0.33; // Duration that the foot will be in stance phase
+double t_stance_desired = t_stance;
 bool alternate_contacts;
 
 static Eigen::Matrix<double, n, 1> x_t = (Eigen::Matrix<double, n, 1>() << 0., 0., 0., 0, 0, 0.8, 0, 0, 0, 0, 0, 0, -9.81).finished();
@@ -1314,6 +1315,19 @@ void run_mpc() {
         //     omega_z_desired += 0.001;
         // }
 
+        if(abs(t_stance_desired - t_stance) > 0.01) {
+            if(t_stance_desired > t_stance && total_iterations % 100 == 0) {
+                t_stance += 0.01;
+            }
+            else if(t_stance_desired < t_stance && total_iterations % 100 == 0) {
+                t_stance -= 0.01;
+            }
+        }
+        else {
+            t_stance += (t_stance_desired - t_stance);
+        }
+
+        std::cout << "t_stance=" << t_stance << std::endl;
 
         auto message_wait_start = high_resolution_clock::now();
 
@@ -2308,6 +2322,7 @@ void receive_controls() {
             auto json = json::parse(parsedString);
             set_vel_body_desired((Eigen::Matrix<double, 2, 1>() << json["slider6"], json["slider1"]).finished());
             set_omega_z_desired(json["slider2"]);
+            t_stance_desired = json["slider3"];
             left_leg->set_step_height_world(json["slider4"]);
             right_leg->set_step_height_world(json["slider4"]);
             set_pos_z_desired(json["slider5"]);
