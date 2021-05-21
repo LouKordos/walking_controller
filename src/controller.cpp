@@ -1377,12 +1377,15 @@ void run_mpc() {
             // std::cout << "Time after sync: simTime=" << simState->getSimTime() << ", time_thread_time=" << current_time << ", time_offset=" << time_offset << std::endl;
             time_mutex.unlock();
 
-            while(get_time(false) > 0.1) {
+            while(abs(get_time(false) - simState->getSimTime()) > 0.01) {
                 std::cout << "For the love of tech jesus fix this!" << std::endl;
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
             }
             time_synced_mutex.lock();
             time_synced = true;
             time_synced_mutex.unlock();
+
+            std::cout << "TIME SYNCED!\n";
 
             set_last_contact_swap_time(get_time(false));
         }
