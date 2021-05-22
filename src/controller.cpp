@@ -1206,7 +1206,7 @@ void run_mpc() {
     // Improved X tracking at different stepping frequencies
     Eigen::Matrix<double, n-1, 1> Q_body = (Eigen::Matrix<double, n - 1, 1>() << 2e+7, 1e+7, 1e+7, 2.5e+6, 2e+6, 1e+6, 1e+5, 2e+6, 1e+5, 4e+4, 4e+6, 4e+4).finished(); // Diagonal State weights represented in body frame
     Eigen::Matrix<double, m, 1> R_body = (Eigen::Matrix<double, m, 1>() << 1, 1, 1, 1, 1, 1).finished(); // Diagonal control action weights represented in body frame
-
+    
     static Eigen::Matrix<double, m*N, 1> U_t = Eigen::ArrayXXd::Zero(m*N, 1); // Same here
 
     static Eigen::Matrix<double, n, N> x_ref = Eigen::ArrayXXd::Zero(n, N); // N states "stacked" horizontally, containing the reference state trajectory for the prediction horizon
