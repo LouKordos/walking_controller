@@ -63,7 +63,7 @@ while True:
 
             time.sleep(4.5)
 
-            pyautogui.moveTo(1153, 467, duration=0.1)
+            pyautogui.moveTo(738, 468, duration=0.1)
             pyautogui.click()
             time.sleep(0.1)
 
