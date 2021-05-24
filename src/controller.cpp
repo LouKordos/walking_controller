@@ -1206,7 +1206,6 @@ void run_mpc() {
     // Improved X tracking at different stepping frequencies
     Eigen::Matrix<double, n-1, 1> Q_body = (Eigen::Matrix<double, n - 1, 1>() << 2e+7, 1e+7, 1e+7, 2.5e+6, 2e+6, 1e+6, 1e+5, 2e+6, 1e+5, 4e+4, 4e+6, 4e+4).finished(); // Diagonal State weights represented in body frame
     Eigen::Matrix<double, m, 1> R_body = (Eigen::Matrix<double, m, 1>() << 1, 1, 1, 1, 1, 1).finished(); // Diagonal control action weights represented in body frame
-    
 
     static Eigen::Matrix<double, m*N, 1> U_t = Eigen::ArrayXXd::Zero(m*N, 1); // Same here
 
@@ -2322,6 +2321,8 @@ void receive_controls() {
     
     setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
 
+    double t_stance_desired_change_time = 0;
+
     while(true) {
         if(quit_flag.load()) {
             break;
@@ -2333,12 +2334,15 @@ void receive_controls() {
             std::cout << "Error while reading from socket.\n";
         }
         std::string parsedString(buffer);
-        // std::cout << "parsed string:" << parsedString << std::endl;
+        
         if(!parsedString.empty() && parsedString[0] == '{' && parsedString.back() == '}') {
             auto json = json::parse(parsedString);
             set_vel_body_desired((Eigen::Matrix<double, 2, 1>() << json["slider6"], json["slider1"]).finished());
             set_omega_z_desired(json["slider2"]);
-            t_stance_desired = json["slider3"];
+            if(get_time(false) - t_stance_desired_change_time > 1) {
+                t_stance_desired = json["slider3"];
+                t_stance_desired_change_time = get_time(false);
+            }
             left_leg->set_step_height_world(json["slider4"]);
             right_leg->set_step_height_world(json["slider4"]);
             set_pos_z_desired(json["slider5"]);
