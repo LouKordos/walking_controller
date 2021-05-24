@@ -203,8 +203,8 @@ bool get_contact(double phi) {
 
 // Contact Model Fusion for Event-Based Locomotion in Unstructured Terrains (https://www.researchgate.net/profile/Gerardo-Bledt/publication/325466467_Contact_Model_Fusion_for_Event-Based_Locomotion_in_Unstructured_Terrains/links/5b0fbfc80f7e9b1ed703c776/Contact-Model-Fusion-for-Event-Based-Locomotion-in-Unstructured-Terrains.pdf)
 // Eq. 1
-double get_contact_phase(double time) {
-    return (time - get_last_contact_swap_time()) / (t_stance * 2.0); // Multiply t_stance by 2 because the function returning a discrete contact phase base on phi already splits it up into two parts.
+double get_contact_phase(double time, double t_stance_temp) {
+    return (time - get_last_contact_swap_time()) / (t_stance_temp * 2.0); // Multiply t_stance by 2 because the function returning a discrete contact phase base on phi already splits it up into two parts.
 }
 
 Eigen::Matrix<double, 3, 1> get_next_body_vel() {
@@ -440,7 +440,7 @@ void calculate_left_leg_torques() {
         bool swing_right_temp = right_leg->get_swing_phase();
 
         // Update gait phase and lift-off position for the foot that transitioned to swing phase
-        if(swing_left_temp != !get_contact(get_contact_phase(time))) {
+        if(swing_left_temp != !get_contact(get_contact_phase(time, t_stance))) {
             // TODO: If I'm not missing anything, it should still work if reduced to only one variable, i.e. only lift_off_pos and lift_off_vel
 
             left_leg->set_trajectory_start_time(time);
@@ -462,8 +462,8 @@ void calculate_left_leg_torques() {
             // std::cout << "Contact swap event occured at iterations=" << total_iterations << std::endl;
         }
 
-        left_leg->set_swing_phase(!get_contact(get_contact_phase(get_time(false))));
-        right_leg->set_swing_phase(!get_contact(get_contact_phase(get_time(false)) + 0.5));
+        left_leg->set_swing_phase(!get_contact(get_contact_phase(get_time(false), t_stance)));
+        right_leg->set_swing_phase(!get_contact(get_contact_phase(get_time(false), t_stance) + 0.5));
 
         auto gait_update_end = high_resolution_clock::now();
         
@@ -1207,6 +1207,7 @@ void run_mpc() {
     Eigen::Matrix<double, n-1, 1> Q_body = (Eigen::Matrix<double, n - 1, 1>() << 2e+7, 1e+7, 1e+7, 2.5e+6, 2e+6, 1e+6, 1e+5, 2e+6, 1e+5, 4e+4, 4e+6, 4e+4).finished(); // Diagonal State weights represented in body frame
     Eigen::Matrix<double, m, 1> R_body = (Eigen::Matrix<double, m, 1>() << 1, 1, 1, 1, 1, 1).finished(); // Diagonal control action weights represented in body frame
     
+
     static Eigen::Matrix<double, m*N, 1> U_t = Eigen::ArrayXXd::Zero(m*N, 1); // Same here
 
     static Eigen::Matrix<double, n, N> x_ref = Eigen::ArrayXXd::Zero(n, N); // N states "stacked" horizontally, containing the reference state trajectory for the prediction horizon
@@ -1317,11 +1318,11 @@ void run_mpc() {
         //     omega_z_desired += 0.001;
         // }
 
-        if(abs(t_stance_desired - t_stance) > 0.01) {
-            if(t_stance_desired > t_stance && total_iterations % 100 == 0) {
+        if(abs(t_stance_desired - t_stance) > 0.01 && total_iterations % 50 == 0) {
+            if(t_stance_desired > t_stance) {
                 t_stance += 0.01;
             }
-            else if(t_stance_desired < t_stance && total_iterations % 100 == 0) {
+            else if(t_stance_desired < t_stance) {
                 t_stance -= 0.01;
             }
         }
@@ -1510,10 +1511,23 @@ void run_mpc() {
         auto contact_update_start = high_resolution_clock::now();
 
         double time = get_time(false) + dt;
-
-        // time += dt;
+        double t_stance_temp_temp = t_stance;
+        
         for(int k = 0; k < N; k++) {
-            double phi_predicted_left = get_contact_phase(time + dt * k);
+
+            if(abs(t_stance_desired - t_stance_temp_temp) > 0.01 && (total_iterations + k) % 50 == 0 && k != 0) {
+                if(t_stance_desired > t_stance_temp_temp) {
+                    t_stance_temp_temp += 0.01;
+                }
+                else if(t_stance_desired < t_stance) {
+                    t_stance_temp_temp -= 0.01;
+                }
+            }
+            else {
+                t_stance_temp_temp += (t_stance_desired - t_stance_temp_temp);
+            }
+
+            double phi_predicted_left = get_contact_phase(time + dt * k, t_stance_temp_temp);
             double phi_predicted_right = phi_predicted_left + 0.5;
             bool contact_left = get_contact(phi_predicted_left);
             bool contact_right = get_contact(phi_predicted_right);
