@@ -1,0 +1,53 @@
+FROM ubuntu:18.04
+
+ENV DEBIAN_FRONTEND=noninteractive TZ=Europe/Berlin
+RUN apt-get update -y && apt-get upgrade -y
+
+RUN apt-get install -y gcc g++ wget gfortran libblas3 libblas-dev git cmake liblapack-dev pkg-config libboost-all-dev --install-recommends
+RUN apt-get install -y coinor-libipopt-dev
+
+# Debugging
+RUN apt-get install -y libc6-dbg gdb valgrind vim ltrace strace
+
+# Reduce size
+RUN  rm -rf /var/lib/apt/lists/*
+
+ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
+ENV OMP_NUM_THREADS=8
+
+RUN wget https://github.com/LouKordos/metis-mirror/raw/main/metis-4.0.3.tar.gz
+RUN tar -xvf metis-4.0.3.tar.gz
+
+COPY coinhsl-2015.06.23.tar.gz /coinhsl-2015.06.23.tar.gz
+RUN tar -xvf coinhsl-2015.06.23.tar.gz
+WORKDIR /coinhsl-2015.06.23
+RUN mv ../metis-4.0.3 .
+
+RUN ./configure --prefix=/usr LIBS="-llapack" --with-blas="-L/usr/lib -lblas" CXXFLAGS="-g -O2 -fopenmp" FCFLAGS="-g -O2 -fopenmp" CFLAGS="-g -O2 -fopenmp"
+RUN make
+RUN make install
+RUN ln -s /usr/lib/libcoinhsl.so /usr/lib/libhsl.so
+
+WORKDIR /
+# Install casadi
+RUN git clone https://github.com/LouKordos/casadi.git -b master casadi --depth 1
+WORKDIR /casadi
+RUN mkdir build
+WORKDIR /casadi/build
+ENV PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/local/lib/pkgconfig/
+RUN cmake DCMAKE_BUILD_TYPE="Release" \
+    -DWITH_IPOPT=ON \
+    -DWITH_CLANG=OFF \
+    -DWITH_HSL=ON \
+    ..
+
+# One compile job for every 2GB of memory
+RUN make -j$(awk '( $1 == "MemTotal:" ) { printf "%d", $2/2/1000000 }' /proc/meminfo) && make install
+RUN ldconfig
+
+WORKDIR /
+RUN git clone https://github.com/LouKordos/eigen.git
+WORKDIR /eigen
+RUN mkdir build
+WORKDIR /eigen/build
+RUN cmake .. -DCMAKE_BUILD_TYPE=Release && make install
