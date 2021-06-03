@@ -118,7 +118,8 @@ static long double current_time = 0;
 static long double time_offset = 0; // Use as synchronization offset between sim time and time thread time
 static long double last_contact_swap_time; // t_0 in gait phase formula, updated every t_stance in last_contact_swap_time_thread.
 static bool time_synced = false;
-double zero_forces_time = 0;
+
+
 
 // Setting up debugging and plotting csv file
 int largest_index = 0;
@@ -527,12 +528,6 @@ void calculate_left_leg_torques() {
 
         auto message_send_start = high_resolution_clock::now();
 
-        if(get_time(false) < zero_forces_time) {
-            for(int i = 0; i < 5; ++i) {
-                left_leg->tau_setpoint(i, 0) = 0;
-            }
-        }
-
         stringstream s;
         s << left_leg->tau_setpoint(0, 0) << "|" << left_leg->tau_setpoint(1, 0) << "|" << left_leg->tau_setpoint(2, 0) << "|" << left_leg->tau_setpoint(3, 0) << "|" << left_leg->tau_setpoint(4, 0) << "|" << iteration_counter; // Write torque setpoints to stringstream
         sendto(sockfd, (const char *)s.str().c_str(), strlen(s.str().c_str()), 
@@ -844,12 +839,6 @@ void calculate_right_leg_torques() {
         double torque_calculation_duration = duration_cast<nanoseconds>(torque_calculation_end - torque_calculation_start).count();
 
         auto message_send_start = high_resolution_clock::now();
-
-        if(get_time(false) < zero_forces_time) {
-            for(int i = 0; i < 5; ++i) {
-                right_leg->tau_setpoint(i, 0) = 0;
-            }
-        }
 
         stringstream s;
         s << right_leg->tau_setpoint(0, 0) << "|" << right_leg->tau_setpoint(1, 0) << "|" << right_leg->tau_setpoint(2, 0) << "|" << right_leg->tau_setpoint(3, 0) << "|" << right_leg->tau_setpoint(4, 0) << "|" << iteration_counter; // Write torque setpoints to stringstream
@@ -2100,12 +2089,6 @@ void run_mpc() {
                 solution_variables(n*(N+1)+3),
                 solution_variables(n*(N+1)+4),
                 solution_variables(n*(N+1)+5);
-
-        if(get_time(false) < zero_forces_time) {
-            for(int i = 0; i < m; ++i) {
-                u_t(i, 0) = 0;
-            }
-        }
         
         // Send optimal control over UDP, along with logging info for the gazebo plugin
         stringstream s;
@@ -2380,6 +2363,8 @@ int main(int _argc, char **_argv)
     else {
         plotDataDirPath = "../.././plot_data/";
     }
+
+
     
     // Find largest index in plot_data and use the next one as file name for log files
     DIR *dir;
