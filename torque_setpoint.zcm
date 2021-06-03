@@ -1,7 +1,0 @@
-struct torque_setpoint {
-    double tau1;
-    double tau2;
-    double tau3;
-    double tau4;
-    double tau5;
-}

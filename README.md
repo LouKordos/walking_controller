@@ -105,4 +105,4 @@ gazebo --verbose ../../simplified_biped.world # This starts up GazeboSim.
 ```
 You're done!
 
-**Note: It is important that you first run the Controller first because it is the UDP Server and is waiting for Gazebo's messages about the Robot's state.**
+**Note: It is important that you run the Controller first because it is the UDP Server and is waiting for Gazebo's messages about the Robot's state.**

@@ -1,0 +1,42 @@
+FROM archlinux
+
+RUN pacman -Syu --needed --noconfirm base-devel git go ccache
+RUN git clone https://aur.archlinux.org/yay.git
+RUN sudo chmod 777 -R ./yay
+
+ENV MAKEFLAGS="-j$(nproc)"
+RUN echo 'MAKEFLAGS="-j$(nproc)"' >> /etc/makepkg.conf
+
+RUN useradd --shell=/bin/bash build && usermod -L build
+RUN echo "build ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+RUN echo "root ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+RUN mkdir /home/build
+RUN chmod -R 777 /home/build && chown -R build:build /home/build
+
+USER build
+RUN cd yay && makepkg -si --noconfirm
+RUN yay -Syu --noconfirm eigen-git
+RUN sudo pacman --noconfirm -Rcns blas lapack
+RUN yay -Syu --noconfirm openblas-lapack
+RUN mkdir /home/build/mumps5-build/
+COPY ./PKGBUILD.mumps5 home/build/mumps5-build/PKGBUILD
+RUN sudo chmod -R 777 /home/build/ && sudo chown -R build:build /home/build/mumps5-build
+WORKDIR /home/build/mumps5-build
+RUN makepkg -si --noconfirm
+RUN yay -Syu --noconfirm casadi
+USER root
+
+COPY ./src /src
+COPY ./nlp.so /
+
+WORKDIR /src
+
+RUN rm -rf ./build && mkdir ./build
+WORKDIR /src/build
+
+RUN cmake .. -DCMAKE_BUILD_TYPE=Release
+RUN make -j$(nproc)
+
+CMD "./mpc_benchmark"
+
+# Current command: sudo docker run -e "TERM=xterm-256color" -it --net=host loukordos/walking_controller

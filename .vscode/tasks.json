@@ -3,13 +3,31 @@
     "tasks": [
       {
         "type": "shell",
-        "label": "Build using CMake",
-        "command": "make",
+        "label": "Build Release using CMake",
+        "command": "cmake .. -DCMAKE_BUILD_TYPE=Release && make -j$(nproc)",
         "args": [],
         "options": {
-          "cwd": "${workspaceFolder}/build/"
+          "cwd": "${workspaceFolder}/src/build"
         },
-        "problemMatcher": ["$gcc"],
+        "problemMatcher": [
+          "$gcc"
+        ],
+        "group": {
+          "kind": "build",
+          "isDefault": true
+        }
+      },
+      {
+        "type": "shell",
+        "label": "Build Debug using CMake",
+        "command": "cmake .. -DCMAKE_BUILD_TYPE=Debug && make -j$(nproc)",
+        "args": [],
+        "options": {
+          "cwd": "${workspaceFolder}/src/build"
+        },
+        "problemMatcher": [
+          "$gcc"
+        ],
         "group": {
           "kind": "build",
           "isDefault": true

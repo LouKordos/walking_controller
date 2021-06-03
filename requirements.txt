@@ -10,3 +10,4 @@ casadi
 more-itertools
 playsound
 tqdm
+argparse

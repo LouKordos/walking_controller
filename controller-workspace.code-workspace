@@ -72,7 +72,21 @@
 			"valarray": "cpp",
 			"core": "cpp",
 			"dense": "cpp",
-			"*.ipp": "cpp"
+			"*.ipp": "cpp",
+			"bit": "cpp",
+			"compare": "cpp",
+			"concepts": "cpp",
+			"future": "cpp",
+			"ranges": "cpp",
+			"shared_mutex": "cpp",
+			"stop_token": "cpp",
+			"variant": "cpp",
+			"hash_map": "cpp",
+			"hash_set": "cpp",
+			"codecvt": "cpp",
+			"forward_list": "cpp",
+			"unordered_set": "cpp",
+			"span": "cpp"
 		}
 	}
 }
