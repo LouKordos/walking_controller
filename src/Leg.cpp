@@ -1,18 +1,19 @@
 #include "include/Leg.hpp"
 
-Leg::Leg(const double hip_offset_x, const double hip_offset_y, const double hip_offset_z, const int contact_state_port) : contactState(contact_state_port) {
+Leg::Leg(const double hip_offset_x, const double hip_offset_y, const double hip_offset_z, const double step_height_world, const int contact_state_port) : contactState(contact_state_port) {
     // Initiate damping ratio matrix, desired natural frequency, orientation gains as well as desired trajectory to avoid null pointer
     h << 0.6, 0, 0,
         0, 0.6, 0,
         0, 0, 0.6;
     
-    omega_desired << 10.0 * M_PI, 16.0 * M_PI, 10.0 * M_PI;
+    omega_desired << 10 * M_PI, 16.0 * M_PI, 10.0 * M_PI;
 
     pos_desired << 0, 0, -1.115, 0, 0; // Cartesian xyz + euler roll and pitch
     vel_desired << 0, 0, 0, 0, 0; // Cartesian xyz + euler roll and pitch
     accel_desired << 0, 0, 0; // Cartesian xyz
 
     update_foot_pos(theta1, theta2, theta3, theta4, theta5, phi, psi, foot_pos, config);
+    set_step_height_world(step_height_world);
 
     Kp_orientation = 9;
     Kd_orientation = 0.15;
@@ -80,8 +81,7 @@ void Leg::update_foot_trajectory(Eigen::Matrix<double, 13, 1> &com_state, Eigen:
     
     update_foot_pos_body_frame(com_state);
     
-    double step_height_world = 0.1 /*+ 0.4*/;
-    double step_height_body = (H_world_body * (Eigen::Matrix<double, 4, 1>() << pos_x_com, pos_y_com, step_height_world, 1).finished())(2, 0);
+    double step_height_body = (H_world_body * (Eigen::Matrix<double, 4, 1>() << pos_x_com, pos_y_com, get_step_height_world(), 1).finished())(2, 0);
     
     lift_off_pos_mutex.lock();
     lift_off_vel_mutex.lock();
@@ -89,7 +89,7 @@ void Leg::update_foot_trajectory(Eigen::Matrix<double, 13, 1> &com_state, Eigen:
     
     Eigen::Matrix<double, 3, 1> middle_pos = (lift_off_pos + foot_pos_desired_body_frame) / 2; // In World frame
     middle_pos(2, 0) = step_height_body;
-
+    
     foot_trajectory.update(lift_off_pos, middle_pos, foot_pos_desired_body_frame, -lift_off_vel, -next_body_vel, t_stance);
     
     foot_trajectory_mutex.unlock();
@@ -310,6 +310,20 @@ Eigen::Matrix<double, 3, 1> Leg::get_lift_off_vel() {
     lift_off_vel_mutex.unlock();
 
     return lift_off_vel_temp;
+}
+
+void Leg::set_step_height_world(const double val) {
+    step_height_world_mutex.lock();
+    step_height_world = val;
+    step_height_world_mutex.unlock();
+}
+
+double Leg::get_step_height_world() {
+    step_height_world_mutex.lock();
+    double temp = step_height_world;
+    step_height_world_mutex.unlock();
+
+    return temp;
 }
 
 void Leg::set_lift_off_vel(const Eigen::Matrix<double, 3, 1> lift_off_vel) {

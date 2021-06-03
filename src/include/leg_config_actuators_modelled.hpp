@@ -27,7 +27,6 @@ struct leg_config {
     double Izy_hip2 = 0;
     double Izz_hip2 = 9.250e-05 * 10;
 
-
     double Ixx_hip1 = 1.249e-04 * 10;
     double Ixy_hip1 = 0;
     double Ixz_hip1 = 0;

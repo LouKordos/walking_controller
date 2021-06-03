@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
 
 project("Biped Walking Controller")
 
-find_package (Threads)
+find_package(Threads)
 find_package(casadi)
 
 #set(COMMUNICATIONS_LIBS zcm)

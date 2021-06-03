@@ -31,6 +31,14 @@
 #include <arpa/inet.h> // defines in_addr structure
 #include <sys/socket.h> // for socket creation
 #include <netinet/in.h> //contains constants and structures needed for internet domain addresses
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h>
 
 #include <signal.h>
 #include <unistd.h>
@@ -48,8 +56,13 @@ using namespace casadi;
 #include "include/SimState.hpp" // Gazebo Simulation State, mainly to synchronize Pause State of controller and Gazebo in order to avoid force "windup"
 #include "include/async_logger.hpp"
 
+// JSON
+#include "include/json.hpp"
+
 using namespace std;
 using namespace std::chrono;
+
+using json = nlohmann::json;
 
 static const int left_leg_torque_port = 4200;
 static const int right_leg_torque_port = 4201;
@@ -70,7 +83,8 @@ double f_min_z = 0; // Min contact Force in Z direction for MPC constraint, limi
 double f_max_z = 1000; // Max contact Force in Z direction for MPC constraint, limits X and Y forces through friction constraint
 
 static const double m_value = 30.0; // Combined robot mass in kg
-const double t_stance = 1.0/3.0; // Duration that the foot will be in stance phase
+double t_stance = 0.33; // Duration that the foot will be in stance phase
+double t_stance_desired = t_stance;
 bool alternate_contacts;
 
 static Eigen::Matrix<double, n, 1> x_t = (Eigen::Matrix<double, n, 1>() << 0., 0., 0., 0, 0, 0.8, 0, 0, 0, 0, 0, 0, -9.81).finished();
@@ -83,6 +97,7 @@ std::thread left_leg_torque_thread; // Thread for updating matrices, calculating
 std::thread right_leg_torque_thread;
 std::thread mpc_thread;
 std::thread time_thread;
+std::thread web_ui_state_thread;
 
 Leg *left_leg;
 Leg *right_leg;
@@ -103,6 +118,7 @@ static long double current_time = 0;
 static long double time_offset = 0; // Use as synchronization offset between sim time and time thread time
 static long double last_contact_swap_time; // t_0 in gait phase formula, updated every t_stance in last_contact_swap_time_thread.
 static bool time_synced = false;
+double zero_forces_time = 0;
 
 // Setting up debugging and plotting csv file
 int largest_index = 0;
@@ -146,19 +162,11 @@ void update_time() {
 
         time_mutex.unlock();
 
-        // stringstream temp;
-        // temp << "time: " << get_time();
-        // print_threadsafe(temp.str(), "time_thread");
-
         end = high_resolution_clock::now();
 
         // This timed loop approach calculates the execution time of the current iteration,
         // then calculates the remaining time for the loop to run at the desired frequency and waits this duration.
         duration = duration_cast<microseconds>(end - start).count();
-
-        stringstream temp;
-        // temp << "Time thread loop duration: " << duration << "µS";
-        // log(temp.str(), INFO);
 
         long long remainder = (time_update_interval - duration) * 1e+3;
         deadline.tv_nsec = remainder;
@@ -195,8 +203,8 @@ bool get_contact(double phi) {
 
 // Contact Model Fusion for Event-Based Locomotion in Unstructured Terrains (https://www.researchgate.net/profile/Gerardo-Bledt/publication/325466467_Contact_Model_Fusion_for_Event-Based_Locomotion_in_Unstructured_Terrains/links/5b0fbfc80f7e9b1ed703c776/Contact-Model-Fusion-for-Event-Based-Locomotion-in-Unstructured-Terrains.pdf)
 // Eq. 1
-double get_contact_phase(double time) {
-    return (time - get_last_contact_swap_time()) / (t_stance * 2.0); // Multiply t_stance by 2 because the function returning a discrete contact phase base on phi already splits it up into two parts.
+double get_contact_phase(double time, double t_stance_temp) {
+    return (time - get_last_contact_swap_time()) / (t_stance_temp * 2.0); // Multiply t_stance by 2 because the function returning a discrete contact phase base on phi already splits it up into two parts.
 }
 
 Eigen::Matrix<double, 3, 1> get_next_body_vel() {
@@ -349,7 +357,8 @@ void calculate_left_leg_torques() {
         auto message_wait_start = high_resolution_clock::now();
 
         if(iteration_counter > 0 && tv.tv_sec == 1e+9) {
-            tv.tv_sec = 3;
+            tv.tv_sec = 0;
+            tv.tv_usec = 100000;
             setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
         }
 
@@ -431,7 +440,7 @@ void calculate_left_leg_torques() {
         bool swing_right_temp = right_leg->get_swing_phase();
 
         // Update gait phase and lift-off position for the foot that transitioned to swing phase
-        if(swing_left_temp != !get_contact(get_contact_phase(time))) {
+        if(swing_left_temp != !get_contact(get_contact_phase(time, t_stance))) {
             // TODO: If I'm not missing anything, it should still work if reduced to only one variable, i.e. only lift_off_pos and lift_off_vel
 
             left_leg->set_trajectory_start_time(time);
@@ -453,8 +462,8 @@ void calculate_left_leg_torques() {
             // std::cout << "Contact swap event occured at iterations=" << total_iterations << std::endl;
         }
 
-        left_leg->set_swing_phase(!get_contact(get_contact_phase(get_time(false))));
-        right_leg->set_swing_phase(!get_contact(get_contact_phase(get_time(false)) + 0.5));
+        left_leg->set_swing_phase(!get_contact(get_contact_phase(get_time(false), t_stance)));
+        right_leg->set_swing_phase(!get_contact(get_contact_phase(get_time(false), t_stance) + 0.5));
 
         auto gait_update_end = high_resolution_clock::now();
         
@@ -519,8 +528,14 @@ void calculate_left_leg_torques() {
 
         auto message_send_start = high_resolution_clock::now();
 
+        if(get_time(false) < zero_forces_time) {
+            for(int i = 0; i < 5; ++i) {
+                left_leg->tau_setpoint(i, 0) = 0;
+            }
+        }
+
         stringstream s;
-        s << left_leg->tau_setpoint(0, 0) << "|" << left_leg->tau_setpoint(1, 0) << "|" << left_leg->tau_setpoint(2, 0) << "|" << left_leg->tau_setpoint(3, 0) << "|" << left_leg->tau_setpoint(4, 0); // Write torque setpoints to stringstream
+        s << left_leg->tau_setpoint(0, 0) << "|" << left_leg->tau_setpoint(1, 0) << "|" << left_leg->tau_setpoint(2, 0) << "|" << left_leg->tau_setpoint(3, 0) << "|" << left_leg->tau_setpoint(4, 0) << "|" << iteration_counter; // Write torque setpoints to stringstream
         sendto(sockfd, (const char *)s.str().c_str(), strlen(s.str().c_str()), 
                 MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len); // Send the torque setpoint string to the simulation
 
@@ -705,7 +720,8 @@ void calculate_right_leg_torques() {
         auto message_wait_start = high_resolution_clock::now();
 
         if(iteration_counter > 0 && tv.tv_sec == 1e+9) {
-            tv.tv_sec = 3;
+            tv.tv_sec = 0;
+            tv.tv_usec = 100000;
             setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
         }
 
@@ -827,17 +843,17 @@ void calculate_right_leg_torques() {
         auto torque_calculation_end = high_resolution_clock::now();
 
         double torque_calculation_duration = duration_cast<nanoseconds>(torque_calculation_end - torque_calculation_start).count();
-        
-        // if(simState->isPaused()) {
-        //     right_leg->tau_setpoint = Eigen::ArrayXd::Zero(5, 1);
-        // }
-
-        // right_leg->tau_setpoint(0, 0) = 0;
 
         auto message_send_start = high_resolution_clock::now();
 
+        if(get_time(false) < zero_forces_time) {
+            for(int i = 0; i < 5; ++i) {
+                right_leg->tau_setpoint(i, 0) = 0;
+            }
+        }
+
         stringstream s;
-        s << right_leg->tau_setpoint(0, 0) << "|" << right_leg->tau_setpoint(1, 0) << "|" << right_leg->tau_setpoint(2, 0) << "|" << right_leg->tau_setpoint(3, 0) << "|" << right_leg->tau_setpoint(4, 0); // Write torque setpoints to stringstream
+        s << right_leg->tau_setpoint(0, 0) << "|" << right_leg->tau_setpoint(1, 0) << "|" << right_leg->tau_setpoint(2, 0) << "|" << right_leg->tau_setpoint(3, 0) << "|" << right_leg->tau_setpoint(4, 0) << "|" << iteration_counter; // Write torque setpoints to stringstream
         sendto(sockfd, (const char *)s.str().c_str(), strlen(s.str().c_str()), 
                 MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len); // Send the torque setpoint string to the simulation
 
@@ -879,7 +895,7 @@ void calculate_right_leg_torques() {
 
             auto file_write_start = high_resolution_clock::now();
 
-            // // Write plot values to csv file
+            // Write plot values to csv file
             log_stream << log_entry.str();
 
             auto file_write_end = high_resolution_clock::now();
@@ -1002,6 +1018,73 @@ Eigen::Matrix<double, n, 1> step_discrete_model(Eigen::Matrix<double, n, 1> x, E
     return A_d * x + B_d * u;
 }
 
+std::mutex vel_body_desired_mutex;
+Eigen::Matrix<double, 2, 1> vel_body_desired = Eigen::ArrayXXd::Zero(2, 1); // 2D Vector describing desired velocity in body frame.
+
+Eigen::Matrix<double, 2, 1> get_vel_body_desired() {
+    vel_body_desired_mutex.lock();
+    Eigen::Matrix<double, 2, 1> temp = vel_body_desired;
+    vel_body_desired_mutex.unlock();
+
+    return temp;
+}
+
+void set_vel_body_desired(const Eigen::Matrix<double, 2, 1> val) {
+    vel_body_desired_mutex.lock();
+    vel_body_desired = val;
+    vel_body_desired_mutex.unlock();
+}
+
+std::mutex omega_z_desired_mutex;
+double omega_z_desired = 0; // rad/s
+
+double get_omega_z_desired() {
+    omega_z_desired_mutex.lock();
+    double temp = omega_z_desired;
+    omega_z_desired_mutex.unlock();
+
+    return temp;
+}
+
+void set_omega_z_desired(const double val) {
+    omega_z_desired_mutex.lock();
+    omega_z_desired = val;
+    omega_z_desired_mutex.unlock();
+}
+
+std::mutex pos_z_desired_mutex;
+double pos_z_desired = 1.0; // meters
+
+double get_pos_z_desired() {
+    pos_z_desired_mutex.lock();
+    double temp = pos_z_desired;
+    pos_z_desired_mutex.unlock();
+
+    return temp;
+}
+
+void set_pos_z_desired(const double val) {
+    pos_z_desired_mutex.lock();
+    pos_z_desired = val;
+    pos_z_desired_mutex.unlock();
+}
+
+// Desired state values
+double pos_x_desired = 0; // meters
+double pos_y_desired = 0; // meters
+
+
+double vel_x_desired = 0.0; // m/s
+double vel_y_desired = 0.0; // m/s
+double vel_z_desired = 0.0; // m/s
+
+double phi_desired = 0; // rad
+double theta_desired = 0; // rad
+double psi_desired = 0;
+
+double omega_x_desired = 0; // rad/s
+double omega_y_desired = 0; // rad/s
+
 void run_mpc() {
     int sockfd;
     char buffer[udp_buffer_size];
@@ -1118,7 +1201,10 @@ void run_mpc() {
 
     Eigen::Matrix<double, n*(N+1)+m*N, 1> x0_solver = Eigen::ArrayXXd::Zero(n*(N+1)+m*N, 1); // Full initial solver state, containing initial model state, N future states and N control actions
     Eigen::Matrix<double, n*(N+1), 1> X_t = Eigen::ArrayXXd::Zero(n*(N+1), 1); // Maybe this is actually obsolete and only x0_solver is sufficient
-    Eigen::Matrix<double, n-1, 1> Q_body = (Eigen::Matrix<double, n - 1, 1>() << 2e+7, 1e+7, 1e+7, 1e+6, 2e+6, 1e+6, 1e+5, 2e+6, 1e+5, 1.5e+3, 4e+6, 4e+4).finished(); // Diagonal State weights represented in body frame
+    //                                                                           phi      theta    psi      p_x        p_y      p_z     omega_x  omega_y  omega_z   v_x      v_y      v_z
+    // Eigen::Matrix<double, n-1, 1> Q_body = (Eigen::Matrix<double, n - 1, 1>() << 2e+7,    1e+6,    1e+7,    2.5e+6,    2e+6,    1e+6,    1e+5,    4e+6,    1e+5,    4e+4,    4e+6,    4e+4).finished(); // Diagonal State weights represented in body frame
+    // Improved X tracking at different stepping frequencies
+    Eigen::Matrix<double, n-1, 1> Q_body = (Eigen::Matrix<double, n - 1, 1>() << 2e+7, 1e+7, 1e+7, 2.5e+6, 2e+6, 1e+6, 1e+5, 2e+6, 1e+5, 4e+4, 4e+6, 4e+4).finished(); // Diagonal State weights represented in body frame
     Eigen::Matrix<double, m, 1> R_body = (Eigen::Matrix<double, m, 1>() << 1, 1, 1, 1, 1, 1).finished(); // Diagonal control action weights represented in body frame
 
     static Eigen::Matrix<double, m*N, 1> U_t = Eigen::ArrayXXd::Zero(m*N, 1); // Same here
@@ -1132,25 +1218,6 @@ void run_mpc() {
     Eigen::Matrix<double, 3, 3> I_world = Eigen::ArrayXXd::Zero(3, 3); // Body inertia in World frame
 
     static long long total_iterations = 0; // Total loop iterations
-
-    // Desired state values
-    double pos_x_desired = 0; // meters
-    double pos_y_desired = 0; // meters
-    double pos_z_desired = 1.0; // meters
-
-    double vel_x_desired = 0.0; // m/s
-    double vel_y_desired = 0.0; // m/s
-    double vel_z_desired = 0.0; // m/s
-
-    double vel_forward_desired = 0.0;
-
-    double phi_desired = 0; // rad
-    double theta_desired = 0; // rad
-    double psi_desired = 0;
-
-    double omega_x_desired = 0; // rad/s
-    double omega_y_desired = 0; // rad/s
-    double omega_z_desired = 0; // rad/s
 
     const double gait_gain = 0.1; // Try much lower value here, rename to more accurate name
     const Eigen::Matrix<double, 3, 3> pos_error_gain = (Eigen::Matrix<double, 3, 3>() << 0.5, 0, 0,
@@ -1242,21 +1309,33 @@ void run_mpc() {
         //     vel_y_desired += 0.005;
         // }
 
-        if(vel_forward_desired < 0.3) {
-            vel_forward_desired += 0.005;
+        // if(vel_forward_desired < 0.3) {
+        //     vel_forward_desired += 0.005;
+        // }
+
+        // if(omega_z_desired < 0.1) {
+        //     omega_z_desired += 0.001;
+        // }
+
+        if(abs(t_stance_desired - t_stance) > 0.01 && total_iterations % 50 == 0) {
+            if(t_stance_desired > t_stance) {
+                t_stance += 0.01;
+            }
+            else if(t_stance_desired < t_stance) {
+                t_stance -= 0.01;
+            }
+        }
+        else {
+            t_stance += (t_stance_desired - t_stance);
         }
 
-        if(omega_z_desired < 0.1) {
-            omega_z_desired += 0.001;
-        }
-
-        vel_x_desired = sin(-psi_desired) * vel_forward_desired;
-        vel_y_desired = cos(-psi_desired) * vel_forward_desired;
+        std::cout << "t_stance=" << t_stance << std::endl;
 
         auto message_wait_start = high_resolution_clock::now();
 
         if(total_iterations > 0 && tv.tv_sec == 1e+9) {
-            tv.tv_sec = 3;
+            tv.tv_sec = 0;
+            tv.tv_usec = 100000;
             setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
         }
 
@@ -1314,27 +1393,34 @@ void run_mpc() {
             // std::cout << "Time after sync: simTime=" << simState->getSimTime() << ", time_thread_time=" << current_time << ", time_offset=" << time_offset << std::endl;
             time_mutex.unlock();
 
-            while(get_time(false) > 0.1) {
+            while(abs(get_time(false) - simState->getSimTime()) > 0.01) {
                 std::cout << "For the love of tech jesus fix this!" << std::endl;
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
             }
             time_synced_mutex.lock();
             time_synced = true;
             time_synced_mutex.unlock();
 
+            std::cout << "TIME SYNCED!\n";
+
             set_last_contact_swap_time(get_time(false));
         }
+
+        Eigen::Matrix<double, 2, 1> vel_world_desired = get_R_body_world(P_param(2, 0)) * get_vel_body_desired();
+        vel_x_desired = vel_world_desired(0, 0);
+        vel_y_desired = vel_world_desired(1, 0);
 
         auto x_ref_update_start = high_resolution_clock::now();
 
         double pos_x_desired_temp = pos_x_desired;
         double pos_y_desired_temp = pos_y_desired;
-        double pos_z_desired_temp = pos_z_desired;
+        double pos_z_desired_temp = get_pos_z_desired();
 
         double vel_x_desired_temp = vel_x_desired;// + 0.005;
         double vel_y_desired_temp = vel_y_desired;// - 0.005;
         double vel_z_desired_temp = vel_z_desired;
 
-        double vel_forward_desired_temp = vel_forward_desired - 0.005;
+        Eigen::Matrix<double, 2, 1> vel_body_desired_temp = get_vel_body_desired();
 
         double phi_desired_temp = phi_desired;
         double theta_desired_temp = theta_desired;
@@ -1342,7 +1428,7 @@ void run_mpc() {
 
         double omega_x_desired_temp = omega_x_desired;
         double omega_y_desired_temp = omega_y_desired;
-        double omega_z_desired_temp = omega_z_desired - 0.001;
+        double omega_z_desired_temp = get_omega_z_desired();// - 0.001;
         
         // Update reference trajectory
         for(int i = 0; i < N; ++i) {
@@ -1354,16 +1440,30 @@ void run_mpc() {
             //     vel_y_desired_temp += 0.005;
             // }
 
-            if(vel_forward_desired_temp < 0.3) {
-                vel_forward_desired_temp += 0.005;
+            // if(vel_forward_desired_temp < 0.3) {
+            //     vel_forward_desired_temp += 0.005;
+            // }
+
+            // if (omega_z_desired_temp < 0.1) {
+            //     omega_z_desired_temp += 0.001;
+            // }
+
+            double psi_t = 0;
+
+            if (i < N-1) {
+                psi_t = X_t(n*(i+1) + 2, 0);
+            }
+            else {
+                psi_t = X_t(n*(N-1) + 2, 0);
             }
 
-            if (omega_z_desired_temp < 0.1) {
-                omega_z_desired_temp += 0.001;
+            if(i == 0) {
+                psi_t = (double)P_param(2, 0);
             }
-
-            vel_x_desired_temp = sin(-omega_z_desired_temp * (get_time(false) + i*dt)) * vel_forward_desired_temp;
-            vel_y_desired_temp = cos(-omega_z_desired_temp * (get_time(false) + i*dt)) * vel_forward_desired_temp;
+            
+            Eigen::Matrix<double, 2, 1> vel_world_desired_temp = get_R_body_world(psi_t) * vel_body_desired_temp;
+            vel_x_desired_temp = vel_world_desired_temp(0, 0);
+            vel_y_desired_temp = vel_world_desired_temp(1, 0);
 
             pos_x_desired_temp += vel_x_desired_temp * dt;
             pos_y_desired_temp += vel_y_desired_temp * dt;
@@ -1392,11 +1492,11 @@ void run_mpc() {
 
         pos_x_desired += vel_x_desired * dt;
         pos_y_desired += vel_y_desired * dt;
-        pos_z_desired += vel_z_desired * dt;
+        set_pos_z_desired(get_pos_z_desired() + vel_z_desired * dt);
 
         phi_desired += omega_x_desired * dt;
         theta_desired += omega_y_desired * dt;
-        psi_desired += omega_z_desired * dt;
+        psi_desired += get_omega_z_desired() * dt;
 
         auto x_ref_update_end = high_resolution_clock::now();
 
@@ -1410,10 +1510,23 @@ void run_mpc() {
         auto contact_update_start = high_resolution_clock::now();
 
         double time = get_time(false) + dt;
-
-        // time += dt;
+        double t_stance_temp_temp = t_stance;
+        
         for(int k = 0; k < N; k++) {
-            double phi_predicted_left = get_contact_phase(time + dt * k);
+
+            if(abs(t_stance_desired - t_stance_temp_temp) > 0.01 && (total_iterations + k) % 50 == 0 && k != 0) {
+                if(t_stance_desired > t_stance_temp_temp) {
+                    t_stance_temp_temp += 0.01;
+                }
+                else if(t_stance_desired < t_stance) {
+                    t_stance_temp_temp -= 0.01;
+                }
+            }
+            else {
+                t_stance_temp_temp += (t_stance_desired - t_stance_temp_temp);
+            }
+
+            double phi_predicted_left = get_contact_phase(time + dt * k, t_stance_temp_temp);
             double phi_predicted_right = phi_predicted_left + 0.5;
             bool contact_left = get_contact(phi_predicted_left);
             bool contact_right = get_contact(phi_predicted_right);
@@ -1496,9 +1609,9 @@ void run_mpc() {
         Eigen::Matrix<double, 3, 1> hip_pos_world_right = (H_body_world * (Eigen::Matrix<double, 4, 1>() << hip_offset, 0, 0, 1).finished()).block<3, 1>(0, 0);
         
         Eigen::Matrix<double, 3, 1> vel_vector = P_param.block<3, 1>(9, 0);
-        Eigen::Matrix<double, 3, 1> pos_desired_vector = (Eigen::Matrix<double, 3, 1>() << pos_x_desired, pos_y_desired, pos_z_desired).finished();
+        Eigen::Matrix<double, 3, 1> pos_desired_vector = (Eigen::Matrix<double, 3, 1>() << pos_x_desired, pos_y_desired, get_pos_z_desired()).finished();
         Eigen::Matrix<double, 3, 1> vel_desired_vector = (Eigen::Matrix<double, 3, 1>() << vel_x_desired, vel_y_desired, vel_z_desired).finished();
-        Eigen::Matrix<double, 3, 1> omega_desired_vector = (Eigen::Matrix<double, 3, 1>() << omega_x_desired, omega_y_desired, omega_z_desired).finished();
+        Eigen::Matrix<double, 3, 1> omega_desired_vector = (Eigen::Matrix<double, 3, 1>() << omega_x_desired, omega_y_desired, get_omega_z_desired()).finished();
 
         // Adjust for position error
         vel_desired_vector.block<2, 1>(0, 0) -= R_body_world * (pos_error_gain.block<2, 2>(0, 0) * (R_world_body * (P_param.block<2, 1>(3, 0) - pos_desired_vector.block<2, 1>(0, 0))));
@@ -1652,7 +1765,7 @@ void run_mpc() {
 
         // Discretization loop for Prediction Horizon
         for(int i = 0; i < N; ++i) {
-            // TODO: Simplify this by just using a single discretization state vector instead of seperate variables
+            // TODO: Simplify this by just using a single discretization state vector instead of separate variables
             if (i < N-1) {
                 phi_t = X_t(n*(i+1) + 0, 0);
                 theta_t = X_t(n*(i+1) + 1, 0);
@@ -1990,6 +2103,12 @@ void run_mpc() {
                 solution_variables(n*(N+1)+3),
                 solution_variables(n*(N+1)+4),
                 solution_variables(n*(N+1)+5);
+
+        if(get_time(false) < zero_forces_time) {
+            for(int i = 0; i < m; ++i) {
+                u_t(i, 0) = 0;
+            }
+        }
         
         // Send optimal control over UDP, along with logging info for the gazebo plugin
         stringstream s;
@@ -2072,7 +2191,7 @@ void run_mpc() {
 
         stringstream log_entry;
         log_entry << sim_time << "," << controller_time << "," << x_t_temp(0, 0) << "," << x_t_temp(1, 0) << "," << x_t_temp(2, 0) << "," << x_t_temp(3, 0) << "," << x_t_temp(4, 0) << "," << x_t_temp(5, 0) << "," << x_t_temp(6, 0) << "," << x_t_temp(7, 0) << "," << x_t_temp(8, 0) << "," << x_t_temp(9, 0) << "," << x_t_temp(10, 0) << "," << x_t_temp(11, 0)
-                << "," << phi_desired << "," << theta_desired << "," << psi_desired << "," << pos_x_desired << "," << pos_y_desired << "," << pos_z_desired << "," << omega_x_desired << "," << omega_y_desired << "," << omega_z_desired << "," << vel_x_desired << "," << vel_y_desired << "," << vel_z_desired
+                << "," << phi_desired << "," << theta_desired << "," << psi_desired << "," << pos_x_desired << "," << pos_y_desired << "," << get_pos_z_desired() << "," << omega_x_desired << "," << omega_y_desired << "," << get_omega_z_desired() << "," << vel_x_desired << "," << vel_y_desired << "," << vel_z_desired
                 << "," << u_t_temp(0) << "," << u_t_temp(1) << "," << u_t_temp(2) << "," << u_t_temp(3) << "," << u_t_temp(4) << "," << u_t_temp(5) 
                 << "," << r_x_left << "," << r_y_left << "," << r_z_left
                 << "," << r_x_right << "," << r_y_right << "," << r_z_right
@@ -2165,6 +2284,75 @@ void run_mpc() {
     }
 }
 
+// Connect to the Web UI server in order to receive desired robot state
+void receive_controls() {
+
+    struct timeval tv;
+    tv.tv_sec = 1; 
+    tv.tv_usec = 0;
+
+    int sockfd, portno, n;
+    struct sockaddr_in serv_addr;
+    struct hostent *server;
+
+    const int buffer_size = 512;
+
+    char buffer[buffer_size];
+    portno = 420;
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfd < 0) 
+        std::cerr << "Error opening socket.\n";
+    
+    server = gethostbyname("terminator.loukordos.eu");
+    if (server == NULL) {
+        fprintf(stderr,"ERROR, no such host\n");
+        exit(0);
+    }
+
+    bzero((char *) &serv_addr, sizeof(serv_addr));
+    serv_addr.sin_family = AF_INET;
+    bcopy((char *)server->h_addr, 
+         (char *)&serv_addr.sin_addr.s_addr,
+         server->h_length);
+    serv_addr.sin_port = htons(portno);
+
+    if (connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) 
+        std::cerr << "Error connecting to server.\n";
+    
+    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
+
+    double t_stance_desired_change_time = 0;
+
+    while(true) {
+        if(quit_flag.load()) {
+            break;
+        }
+        
+        bzero(buffer, buffer_size);
+        n = read(sockfd, buffer, buffer_size - 1);
+        if (n < 0) {
+            std::cout << "Error while reading from socket.\n";
+        }
+        std::string parsedString(buffer);
+        
+        if(!parsedString.empty() && parsedString[0] == '{' && parsedString.back() == '}') {
+            auto json = json::parse(parsedString);
+            set_vel_body_desired((Eigen::Matrix<double, 2, 1>() << json["slider6"], json["slider1"]).finished());
+            set_omega_z_desired(json["slider2"]);
+            if(get_time(false) - t_stance_desired_change_time > 1) {
+                t_stance_desired = json["slider3"];
+                t_stance_desired_change_time = get_time(false);
+            }
+            left_leg->set_step_height_world(json["slider4"]);
+            right_leg->set_step_height_world(json["slider4"]);
+            set_pos_z_desired(json["slider5"]);
+            // std::cout << "JSON: " << json << "\n";
+        }
+    }
+
+    close(sockfd);
+}
+
 void handle_exit(int) {
     quit_flag.store(true);
     std::cout << "Handled SIGINT, exiting" << std::endl;
@@ -2179,15 +2367,16 @@ int main(int _argc, char **_argv)
     log("--------------------------------", INFO);
     log("--------------------------------", INFO);
     log("--------------------------------", INFO);
+
     // is 0.065 because it's the difference between torso CoM height and Hip Actuator Center Height, negative because just think about it or calculate an example value with negative and positive z displacement. 
     // A point expressed in hip frame (i.e. [0, 0, 0]) will obviously be at negative Z in a frame that is located above the hip frame, meaning you need negative Z displacement in the transformation matrix.
-    left_leg = new Leg(-0.15, 0, -0.065, left_leg_contact_state_port);
-    right_leg = new Leg(0.15, 0, -0.065, right_leg_contact_state_port);
+    left_leg = new Leg(-0.15, 0, -0.065, 0.1, left_leg_contact_state_port);
+    right_leg = new Leg(0.15, 0, -0.065, 0.1, right_leg_contact_state_port);
 
     simState = new SimState(sim_state_port);
 
     char* is_docker;
-    is_docker = getenv ("IS_DOCKER");
+    is_docker = getenv("IS_DOCKER");
     if (is_docker == "Y" || is_docker == "YES") {
         plotDataDirPath = "/plot_data/";
     }
@@ -2234,6 +2423,8 @@ int main(int _argc, char **_argv)
     
     mpc_thread = std::thread(std::bind(run_mpc));
     time_thread = std::thread(std::bind(update_time));
+
+    web_ui_state_thread = std::thread(std::bind(receive_controls));
 
     // Create a cpu_set_t object representing a set of CPUs. Clear it and mark only CPU i as set.
     // Source: https://eli.thegreenplace.net/2016/c11-threads-affinity-and-hyperthreading/
@@ -2287,9 +2478,6 @@ int main(int _argc, char **_argv)
             << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
     print_threadsafe(temp.str(), "main()", WARN, false);
 
-    std::cout << "left_leg omega_desired is currently: " << left_leg->omega_desired(0) << ", " << left_leg->omega_desired(1) << ", " << left_leg->omega_desired(2) << std::endl; // Print out current natural frequency
-    std::cout << std::endl;
-
     struct sigaction sa;
     memset( &sa, 0, sizeof(sa) );
     sa.sa_handler = handle_exit;
@@ -2299,6 +2487,7 @@ int main(int _argc, char **_argv)
     left_leg_torque_thread.join();
     right_leg_torque_thread.join();
     mpc_thread.join();
+    web_ui_state_thread.join();
 
     return 0;
 }
