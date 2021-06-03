@@ -105,9 +105,9 @@ Leg *right_leg;
 SimState *simState;
 
 // Should be running at 1kHz but communication overhead is adding ~80µS, that's why it's reduced a bit
-static const double state_update_interval = 960.0; // Interval for fetching and parsing the leg state from gazebosim in microseconds
-static const double torque_calculation_interval = 960.0; // Interval for calculating and sending the torque setpoint to gazebosim in microseconds
-static const double time_update_interval = 1000.0;
+static const double state_update_interval = 250.0; // Interval for fetching and parsing the leg state from gazebosim in microseconds
+static const double torque_calculation_interval = 250.0; // Interval for calculating and sending the torque setpoint to gazebosim in microseconds
+static const double time_update_interval = 250.0;
         
 std::mutex x_mutex, u_mutex,
             next_body_vel_mutex,
