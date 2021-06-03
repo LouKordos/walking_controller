@@ -105,8 +105,8 @@ Leg *right_leg;
 SimState *simState;
 
 // Should be running at 1kHz but communication overhead is adding ~80µS, that's why it's reduced a bit
-static const double state_update_interval = 250.0; // Interval for fetching and parsing the leg state from gazebosim in microseconds
-static const double torque_calculation_interval = 250.0; // Interval for calculating and sending the torque setpoint to gazebosim in microseconds
+static double state_update_interval = 250.0; // Interval for fetching and parsing the leg state from gazebosim in microseconds
+static double torque_calculation_interval = 250.0; // Interval for calculating and sending the torque setpoint to gazebosim in microseconds
 static const double time_update_interval = 250.0;
         
 std::mutex x_mutex, u_mutex,
@@ -119,7 +119,7 @@ static long double time_offset = 0; // Use as synchronization offset between sim
 static long double last_contact_swap_time; // t_0 in gait phase formula, updated every t_stance in last_contact_swap_time_thread.
 static bool time_synced = false;
 
-
+double real_time_factor = 1.0;
 
 // Setting up debugging and plotting csv file
 int largest_index = 0;
@@ -159,7 +159,7 @@ void update_time() {
 
         time_mutex.lock();
 
-        current_time = (duration_cast<milliseconds> (system_clock::now().time_since_epoch()).count() - start_time) / 1000.0 + time_offset;
+        current_time = (duration_cast<milliseconds> (system_clock::now().time_since_epoch()).count() - start_time) / 1000.0 * real_time_factor + time_offset;
 
         time_mutex.unlock();
 
@@ -592,7 +592,6 @@ void calculate_left_leg_torques() {
         // then calculates the remaining time for the loop to run at the desired frequency and waits this duration.
         duration = duration_cast<microseconds>(end - start).count();
 
-
         // stringstream temp;
         // temp << "Left leg torque thread loop duration: " << duration << "µS";
         // log(temp.str(), INFO);
@@ -601,7 +600,7 @@ void calculate_left_leg_torques() {
         long long remainder = (torque_calculation_interval - duration) * 1e+03;
         deadline.tv_nsec = remainder;
         deadline.tv_sec = 0;
-        // clock_nanosleep(CLOCK_REALTIME, 0, &deadline, NULL);
+        clock_nanosleep(CLOCK_REALTIME, 0, &deadline, NULL);
     }
 }
 
@@ -905,10 +904,10 @@ void calculate_right_leg_torques() {
         // log(temp.str(), INFO);
 
         // std::cout << "Loop duration: " << duration << "µS, iteration_counter: " << iteration_counter - 1 << std::endl;
-        long long remainder = (torque_calculation_interval - duration) * 1e+03;
+        long long remainder = (torque_calculation_interval - duration) * 1e+03 ;
         deadline.tv_nsec = remainder;
         deadline.tv_sec = 0;
-        // clock_nanosleep(CLOCK_REALTIME, 0, &deadline, NULL);
+        clock_nanosleep(CLOCK_REALTIME, 0, &deadline, NULL);
     }
 }
 
@@ -2256,7 +2255,7 @@ void run_mpc() {
 
         previous_full_iteration_duration = full_iteration_duration = duration_cast<microseconds> (end_total - start_total).count();
 
-        long long remainder = (dt * 1e+6 - full_iteration_duration) * 1e+3;
+        long long remainder = (dt * 1e+6 * 1/real_time_factor - full_iteration_duration) * 1e+3;
         //std::cout << "Remainder: " << remainder << " microseconds" << std::endl;
         deadline.tv_nsec = remainder;
         deadline.tv_sec = 0;
@@ -2364,8 +2363,14 @@ int main(int _argc, char **_argv)
         plotDataDirPath = "../.././plot_data/";
     }
 
-
+    real_time_factor = atof(getenv("RTF"));
+    std::cout << "Real-time-factor=" << real_time_factor << std::endl;
     
+    // t_stance *= 1/real_time_factor;
+
+    torque_calculation_interval *= 1 / real_time_factor;
+    state_update_interval *= 1 / real_time_factor;
+
     // Find largest index in plot_data and use the next one as file name for log files
     DIR *dir;
     struct dirent *ent;
