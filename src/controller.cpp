@@ -120,6 +120,7 @@ static long double last_contact_swap_time; // t_0 in gait phase formula, updated
 static bool time_synced = false;
 
 double real_time_factor = 1.0;
+double runtime_limit = -1;
 
 // Setting up debugging and plotting csv file
 int largest_index = 0;
@@ -1302,6 +1303,10 @@ void run_mpc() {
         //     omega_z_desired += 0.001;
         // }
 
+        if(get_time(false) > runtime_limit) {
+            quit_flag.store(true);
+        }
+
         if(abs(t_stance_desired - t_stance) > 0.01 && total_iterations % 50 == 0) {
             if(t_stance_desired > t_stance) {
                 t_stance += 0.01;
@@ -2366,8 +2371,13 @@ int main(int _argc, char **_argv)
     real_time_factor = atof(getenv("RTF"));
     std::cout << "Real-time-factor=" << real_time_factor << std::endl;
     
-    // t_stance *= 1/real_time_factor;
-
+    if(getenv("RUNTIME_LIMIT") != NULL) {
+        runtime_limit = atof(getenv("RUNTIME_LIMIT"));
+        stringstream temp;
+        temp << "Runtime limit specified: " << runtime_limit << " seconds" << std::endl;
+        print_threadsafe(temp.str(), "main()", INFO);
+    }
+    
     torque_calculation_interval *= 1 / real_time_factor;
     state_update_interval *= 1 / real_time_factor;
 
