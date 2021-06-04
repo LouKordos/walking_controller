@@ -127,7 +127,8 @@ int largest_index = 0;
 std::string filename;
 std::string plotDataDirPath;
 
-std::atomic<bool> quit_flag(false);    // Exit signal flag
+std::atomic<bool> quit_flag(false); // Exit signal flag
+std::atomic<bool> use_web_ui(true);
 
 double get_time(bool simTime) {
     if(simTime) {
@@ -1304,6 +1305,7 @@ void run_mpc() {
         // }
 
         if(get_time(false) > runtime_limit) {
+            print_threadsafe("Runtime limit reached, quitting...", "run_mpc()", INFO);
             quit_flag.store(true);
         }
 
@@ -2377,6 +2379,11 @@ int main(int _argc, char **_argv)
         temp << "Runtime limit specified: " << runtime_limit << " seconds" << std::endl;
         print_threadsafe(temp.str(), "main()", INFO);
     }
+
+    if(getenv("DISABLE_WEB_UI") != NULL) {
+        use_web_ui.store(false);
+        print_threadsafe("Web UI disabled by environment variable", "main()", INFO);
+    }
     
     torque_calculation_interval *= 1 / real_time_factor;
     state_update_interval *= 1 / real_time_factor;
@@ -2421,7 +2428,9 @@ int main(int _argc, char **_argv)
     mpc_thread = std::thread(std::bind(run_mpc));
     time_thread = std::thread(std::bind(update_time));
 
-    web_ui_state_thread = std::thread(std::bind(receive_controls));
+    if(use_web_ui.load()) {
+        web_ui_state_thread = std::thread(std::bind(receive_controls));
+    }
 
     if(getenv("SKIP_PINNING") != NULL) {
         print_threadsafe("Skipping CPU pinning.", "main()", INFO);
