@@ -1320,7 +1320,7 @@ void run_mpc() {
             t_stance += (t_stance_desired - t_stance);
         }
 
-        std::cout << "t_stance=" << t_stance << std::endl;
+        // std::cout << "t_stance=" << t_stance << std::endl;
 
         auto message_wait_start = high_resolution_clock::now();
 
