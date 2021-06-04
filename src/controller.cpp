@@ -1062,7 +1062,6 @@ void set_pos_z_desired(const double val) {
 double pos_x_desired = 0; // meters
 double pos_y_desired = 0; // meters
 
-
 double vel_x_desired = 0.0; // m/s
 double vel_y_desired = 0.0; // m/s
 double vel_z_desired = 0.0; // m/s
