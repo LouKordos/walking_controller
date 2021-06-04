@@ -19,5 +19,5 @@ jobs:
     - run: docker run -v /home/runner/work/plot_data:/plot_data -e "RTF=0.3" -e "TERM=xterm-256color" -e "SKIP_PINNING=" -e "DISABLE_WEB_UI=" -e "RUNTIME_LIMIT=30" -d --net=host loukordos/walking-controller:develop-ubuntu
     - run: docker -v /home/runner/work/plot_data/:/plot_data --net=host -e "RTF=0.3" -d --name biped-sim loukordos/biped-sim:develop-ubuntu
     - run: sleep 30 && docker kill $(docker ps --quiet)
-    - run: cat /plot_data/state.log | curl -F 'clbin=<-' https://clbin.com
-    - run: cat /plot_data/1_mpc_log.csv | curl -F 'clbin=<-' https://clbin.com
+    - run: cat /home/runner/work/plot_data/state.log | curl -F 'clbin=<-' https://clbin.com
+    - run: cat /home/runner/work/plot_data/1_mpc_log.csv | curl -F 'clbin=<-' https://clbin.com
