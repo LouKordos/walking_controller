@@ -16,6 +16,6 @@ jobs:
         ref: refs/heads/develop
     - run: time docker build -f Dockerfile.ubuntu-plugin -t loukordos/biped-sim:develop-ubuntu .
     - run: mkdir /home/runner/work/plot_data
-    - run: docker run -v home/runner/work/plot_data:/plot_data -e "RTF=0.3" -e "TERM=xterm-256color" -e "SKIP_PINNING=" -e "DISABLE_WEB_UI=" -e "RUNTIME_LIMIT=30" -d --net=host loukordos/walking-controller:develop-ubuntu
+    - run: docker run -v /home/runner/work/plot_data:/plot_data -e "RTF=0.3" -e "TERM=xterm-256color" -e "SKIP_PINNING=" -e "DISABLE_WEB_UI=" -e "RUNTIME_LIMIT=30" -d --net=host loukordos/walking-controller:develop-ubuntu
     - run: docker run -d --net=host -e "RTF=0.3" --name biped-sim loukordos/biped-sim:develop-ubuntu
     - run: sleep 30 && docker kill $(docker ps --quiet)
