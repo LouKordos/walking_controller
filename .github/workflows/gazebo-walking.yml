@@ -1,0 +1,17 @@
+name: gazebo-walking-0.3mps
+on: [push]
+
+jobs:
+    run_controller:
+        runs-on: ubuntu-20.04
+        steps:
+        - name: Check out repository code
+        uses: actions/checkout@v2
+        - run: time docker build -t loukordos/walking-controller:develop-ubuntu -f Dockerfile.ubuntu .
+        - run: docker run -v $HOME/dev/walking_controller/plot_data:/plot_data -e "RTF=0.3" -e "TERM=xterm-256color" -e "SKIP_PINNING=" -e "RUNTIME_LIMIT=30" -d --net=host loukordos/walking-controller:develop-ubuntu
+        - uses: actions/checkout@master
+        with:
+            name: LouKordos/simplified_biped
+            ref: refs/heads/develop
+        - run: time docker build -f Dockerfile.ubuntu-plugin -t loukordos/biped-sim:develop-ubuntu .
+        - run: timeout 30 docker run -it --net=host -e "RTF=0.3" loukordos/biped-sim:develop-ubuntu
