@@ -1,5 +1,7 @@
 FROM loukordos/walking-controller-base-image
 
+ENV IS_DOCKER Y
+
 COPY ./src /src
 
 WORKDIR /src
