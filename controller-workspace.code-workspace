@@ -86,7 +86,10 @@
 			"codecvt": "cpp",
 			"forward_list": "cpp",
 			"unordered_set": "cpp",
-			"span": "cpp"
+			"span": "cpp",
+			"source_location": "cpp",
+			"numbers": "cpp",
+			"semaphore": "cpp"
 		}
 	}
 }
