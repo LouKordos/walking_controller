@@ -2413,57 +2413,54 @@ int main(int _argc, char **_argv)
 
     web_ui_state_thread = std::thread(std::bind(receive_controls));
 
-    // Create a cpu_set_t object representing a set of CPUs. Clear it and mark only CPU i as set.
-    // Source: https://eli.thegreenplace.net/2016/c11-threads-affinity-and-hyperthreading/
+    if(getenv("SKIP_PINNING") != NULL) {
+        print_threadsafe("Skipping CPU pinning.", "main()", INFO);
+        // Create a cpu_set_t object representing a set of CPUs. Clear it and mark only CPU i as set.
+        // Source: https://eli.thegreenplace.net/2016/c11-threads-affinity-and-hyperthreading/
 
-    int mpc_cpu = 6, left_leg_cpu = 7, right_leg_cpu = 19, time_cpu = 19;
+        int mpc_cpu = 6, left_leg_cpu = 7, right_leg_cpu = 19, time_cpu = 19;
 
-    // Extra scope to avoid redeclaration error
-    {
-        cpu_set_t cpuset;
-        CPU_ZERO(&cpuset);
-        CPU_SET(mpc_cpu, &cpuset);
-        int rc = pthread_setaffinity_np(mpc_thread.native_handle(), sizeof(cpu_set_t), &cpuset);
-        if (rc != 0) {
-            std::cerr << "Error calling pthread_setaffinity_np while trying to set MPC thread to CPU" << mpc_cpu <<": " << rc << "\n";
+        // Extra scope to avoid redeclaration error
+        {
+            cpu_set_t cpuset;
+            CPU_ZERO(&cpuset);
+            CPU_SET(mpc_cpu, &cpuset);
+            int rc = pthread_setaffinity_np(mpc_thread.native_handle(), sizeof(cpu_set_t), &cpuset);
+            if (rc != 0) {
+                std::cerr << "Error calling pthread_setaffinity_np while trying to set MPC thread to CPU" << mpc_cpu <<": " << rc << "\n";
+            }
+        }
+        // Extra scopes to avoid redeclaration error
+        {
+            cpu_set_t cpuset;
+            CPU_ZERO(&cpuset);
+            CPU_SET(left_leg_cpu, &cpuset);
+            int rc = pthread_setaffinity_np(left_leg_torque_thread.native_handle(), sizeof(cpu_set_t), &cpuset);
+            if (rc != 0) {
+                std::cerr << "Error calling pthread_setaffinity_np while trying to set left leg impedance control thread to CPU" << left_leg_cpu << ": " << rc << "\n";
+            }
+        }
+        // Extra scope to avoid redeclaration error
+        {
+            cpu_set_t cpuset;
+            CPU_ZERO(&cpuset);
+            CPU_SET(right_leg_cpu, &cpuset);
+            int rc = pthread_setaffinity_np(right_leg_torque_thread.native_handle(), sizeof(cpu_set_t), &cpuset);
+            if (rc != 0) {
+                std::cerr << "Error calling pthread_setaffinity_np while trying to set right leg impedance control thread to CPU" << right_leg_cpu << ": " << rc << "\n";
+            }
+        }
+        // Extra scope to avoid redeclaration error
+        {
+            cpu_set_t cpuset;
+            CPU_ZERO(&cpuset);
+            CPU_SET(time_cpu, &cpuset);
+            int rc = pthread_setaffinity_np(time_thread.native_handle(), sizeof(cpu_set_t), &cpuset);
+            if (rc != 0) {
+                std::cerr << "Error calling pthread_setaffinity_np while trying to set time thread to CPU" << time_cpu << ": " << rc << "\n";
+            }
         }
     }
-    // Extra scopes to avoid redeclaration error
-    {
-        cpu_set_t cpuset;
-        CPU_ZERO(&cpuset);
-        CPU_SET(left_leg_cpu, &cpuset);
-        int rc = pthread_setaffinity_np(left_leg_torque_thread.native_handle(), sizeof(cpu_set_t), &cpuset);
-        if (rc != 0) {
-            std::cerr << "Error calling pthread_setaffinity_np while trying to set left leg impedance control thread to CPU" << left_leg_cpu << ": " << rc << "\n";
-        }
-    }
-    // Extra scope to avoid redeclaration error
-    {
-        cpu_set_t cpuset;
-        CPU_ZERO(&cpuset);
-        CPU_SET(right_leg_cpu, &cpuset);
-        int rc = pthread_setaffinity_np(right_leg_torque_thread.native_handle(), sizeof(cpu_set_t), &cpuset);
-        if (rc != 0) {
-            std::cerr << "Error calling pthread_setaffinity_np while trying to set right leg impedance control thread to CPU" << right_leg_cpu << ": " << rc << "\n";
-        }
-    }
-    // Extra scope to avoid redeclaration error
-    {
-        cpu_set_t cpuset;
-        CPU_ZERO(&cpuset);
-        CPU_SET(time_cpu, &cpuset);
-        int rc = pthread_setaffinity_np(time_thread.native_handle(), sizeof(cpu_set_t), &cpuset);
-        if (rc != 0) {
-            std::cerr << "Error calling pthread_setaffinity_np while trying to set time thread to CPU" << time_cpu << ": " << rc << "\n";
-        }
-    }
-    
-    stringstream temp;
-    temp << "\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
-            << "If you're running this in a docker container, make sure to use the --net=host option and set the env variable IS_DOCKER=Y when running it.\n"
-            << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
-    print_threadsafe(temp.str(), "main()", WARN, false);
 
     struct sigaction sa;
     memset( &sa, 0, sizeof(sa) );
