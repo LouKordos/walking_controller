@@ -7,6 +7,7 @@ jobs:
     steps:
     - name: Checkout walking controller repo
       uses: actions/checkout@v2
+    - run: pwd
     - run: time docker build -t loukordos/walking-controller:develop-ubuntu -f Dockerfile.ubuntu .
     - run: cd /home/runner/work/
     - name: Checkout biped sim repo
