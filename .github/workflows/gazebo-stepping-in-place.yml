@@ -24,7 +24,7 @@ jobs:
       with:
         name: logs
         path: /home/runner/work/plot_data/*
-    - run: cd /home/runner/work/walking_controller/utils
+    - run: cd /home/runner/work/walking_controller/walking_controller/utils
     - run: python -m pip install -r ../requirements.txt
     - run: python check_energy_used.py 0 10000
     - run: python check_torso_height.py 0.9 1.1
