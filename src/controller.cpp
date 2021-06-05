@@ -2489,9 +2489,10 @@ int main(int _argc, char **_argv)
     left_leg_torque_thread.join();
     right_leg_torque_thread.join();
     mpc_thread.join();
+    time_thread.detach();
     if(use_web_ui.load()) {
         web_ui_state_thread.join();
     }
 
-    return 0;
+    exit(0);
 }
