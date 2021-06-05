@@ -1303,7 +1303,7 @@ void run_mpc() {
         //     omega_z_desired += 0.001;
         // }
 
-        if(get_time(false) > runtime_limit) {
+        if(get_time(false) > runtime_limit && runtime_limit != -1) {
             print_threadsafe("Runtime limit reached, quitting...", "run_mpc()", INFO);
             quit_flag.store(true);
         }
