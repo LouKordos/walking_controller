@@ -9,6 +9,7 @@ jobs:
       uses: actions/checkout@v2
     - run: time docker build -t loukordos/walking-controller:develop-ubuntu -f Dockerfile.ubuntu .
     - run: cd /home/runner/work/
+    - run: pwd
     - run: git clone https://github.com/LouKordos/simplified_biped.git -b develop
     - run: pwd && tree
     - run: cd /home/runner/work/simplified_biped
