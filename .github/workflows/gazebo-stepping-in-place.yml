@@ -7,14 +7,10 @@ jobs:
     steps:
     - name: Checkout walking controller repo
       uses: actions/checkout@v2
-    - run: pwd
     - run: time docker build -t loukordos/walking-controller:develop-ubuntu -f Dockerfile.ubuntu .
     - run: cd /home/runner/work/
-    - name: Checkout biped sim repo
-      uses: actions/checkout@master
-      with:
-        repository: LouKordos/simplified_biped
-        ref: refs/heads/develop
+    - run: git clone https://github.com/LouKordos/simplified_biped.git -b develop
+    - run: cd simplified_biped
     - run: time docker build -f Dockerfile.ubuntu-plugin -t loukordos/biped-sim:develop-ubuntu .
     - run: mkdir /home/runner/work/plot_data
     - run: docker run -v /home/runner/work/plot_data:/plot_data -d -e "RTF=0.3" -e "TERM=xterm-256color" -e "SKIP_PINNING=" -e "DISABLE_WEB_UI=" -e "RUNTIME_LIMIT=3" --net=host --name controller loukordos/walking-controller:develop-ubuntu
