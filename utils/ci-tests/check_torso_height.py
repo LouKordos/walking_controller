@@ -11,6 +11,8 @@ print("Checking if all recorded torso heights are >", min_allowed_torso_height, 
 
 for i in range(len(mpc_log["t_sim"])):
     if mpc_log["pos_z"][i] < min_allowed_torso_height or mpc_log["pos_z"][i] > max_allowed_torso_height:
+        print("Torso height with value", mpc_log["pos_z"][i], "outside bounds, exiting with error code 1.")
         sys.exit(1)
 
+print("All Torso height values within bounds, test passed.")
 sys.exit(0)

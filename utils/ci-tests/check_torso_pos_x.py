@@ -9,8 +9,9 @@ max_allowed_torso_pos_x = float(sys.argv[2])
 
 print("Check if last recorded Torso X position is >", min_allowed_torso_pos_x, "and <", max_allowed_torso_pos_x)
 
-for i in range(len(mpc_log["t_sim"])):
-    if mpc_log["pos_x"] < min_allowed_torso_pos_x or mpc_log["pos_x"] > max_allowed_torso_pos_x:
-        sys.exit(1)
+if mpc_log["pos_x"][-1] < min_allowed_torso_pos_x or mpc_log["pos_x"][-1] > max_allowed_torso_pos_x:
+    print("Torso Pos X with value", mpc_log["pos_X"][-1], "outside bounds, exiting with error code 1.")
+    sys.exit(1)
 
+print("Last Pos X within bounds, test passed.")
 sys.exit(0)
