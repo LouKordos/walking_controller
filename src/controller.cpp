@@ -2485,7 +2485,7 @@ int main(int _argc, char **_argv)
     sa.sa_handler = handle_exit;
     sigfillset(&sa.sa_mask);
     sigaction(SIGINT,&sa,NULL);
-
+    
     left_leg_torque_thread.join();
     right_leg_torque_thread.join();
     mpc_thread.join();
