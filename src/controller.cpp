@@ -2432,7 +2432,6 @@ int main(int _argc, char **_argv)
     }
 
     if(getenv("SKIP_PINNING") == NULL) {
-        print_threadsafe("Skipping CPU pinning.", "main()", INFO);
         // Create a cpu_set_t object representing a set of CPUs. Clear it and mark only CPU i as set.
         // Source: https://eli.thegreenplace.net/2016/c11-threads-affinity-and-hyperthreading/
 
@@ -2478,6 +2477,9 @@ int main(int _argc, char **_argv)
                 std::cerr << "Error calling pthread_setaffinity_np while trying to set time thread to CPU" << time_cpu << ": " << rc << "\n";
             }
         }
+    }
+    else {
+        print_threadsafe("Skipping CPU pinning.", "main()", INFO);
     }
 
     struct sigaction sa;
