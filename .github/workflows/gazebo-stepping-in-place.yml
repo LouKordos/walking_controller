@@ -8,12 +8,11 @@ jobs:
     - name: Checkout walking controller repo
       uses: actions/checkout@v2
     - run: time docker build -t loukordos/walking-controller:develop-ubuntu -f Dockerfile.ubuntu .
-    - run: cd /home/runner/work/
-    - run: pwd
-    - run: git clone https://github.com/LouKordos/simplified_biped.git -b develop
-    - run: pwd && tree
-    - run: cd /home/runner/work/simplified_biped
-    - run: pwd && ls
+    - name: Checkout biped sim repo
+      uses: actions/checkout@master
+      with:
+        repository: LouKordos/simplified_biped
+        ref: refs/heads/develop
     - run: time docker build -f Dockerfile.ubuntu-plugin -t loukordos/biped-sim:develop-ubuntu .
     - run: mkdir /home/runner/work/plot_data
     - run: docker run -v /home/runner/work/plot_data:/plot_data -d -e "RTF=0.3" -e "TERM=xterm-256color" -e "SKIP_PINNING=" -e "DISABLE_WEB_UI=" -e "RUNTIME_LIMIT=3" --net=host --name controller loukordos/walking-controller:develop-ubuntu
@@ -24,7 +23,9 @@ jobs:
       with:
         name: logs
         path: /home/runner/work/plot_data/*
-    - run: cd /home/runner/work/walking_controller/walking_controller/utils
+    - name: Checkout walking controller repo
+      uses: actions/checkout@v2
+    - run: cd utils
     - run: python -m pip install -r ../requirements.txt
     - run: python check_energy_used.py 0 10000
     - run: python check_torso_height.py 0.9 1.1
