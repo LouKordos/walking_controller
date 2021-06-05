@@ -18,7 +18,9 @@ jobs:
     - run: mkdir /home/runner/work/plot_data
     - run: docker run -v /home/runner/work/plot_data/:/plot_data -d --net=host -e "RTF=0.1" --name biped-sim loukordos/biped-sim:develop-ubuntu
     - run: docker run -v /home/runner/work/plot_data:/plot_data -e "RTF=0.1" -e "TERM=xterm-256color" -e "SKIP_PINNING=" -e "DISABLE_WEB_UI=" -e "RUNTIME_LIMIT=30" --net=host --name controller loukordos/walking-controller:develop-ubuntu
-    - run: sleep 35 && docker kill $(docker ps --quiet)
-    - run: cat /home/runner/work/plot_data/state.log | curl -X POST -d 'api_dev_key=73huPJB9MLhEpDwkbdEs6NVfWpfyZN8-' -d "api_paste_code=$(</dev/stdin)" -d 'api_option=paste' "https://pastebin.com/api/api_post.php"
-    - run: cat /home/runner/work/plot_data/1_mpc_log.csv | curl -X POST -d 'api_dev_key=73huPJB9MLhEpDwkbdEs6NVfWpfyZN8-' -d "api_paste_code=$(</dev/stdin)" -d 'api_option=paste' "https://pastebin.com/api/api_post.php"
-    - run: docker logs controller
+    - run: docker kill $(docker ps --quiet)
+    - name: Upload controller and gazebo logs
+        uses: actions/upload-artifact@v2
+        with:
+          name: logs
+          path: /home/runner/work/plot_data/*
