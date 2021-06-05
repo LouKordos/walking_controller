@@ -2431,7 +2431,7 @@ int main(int _argc, char **_argv)
         web_ui_state_thread = std::thread(std::bind(receive_controls));
     }
 
-    if(getenv("SKIP_PINNING") != NULL) {
+    if(getenv("SKIP_PINNING") == NULL) {
         print_threadsafe("Skipping CPU pinning.", "main()", INFO);
         // Create a cpu_set_t object representing a set of CPUs. Clear it and mark only CPU i as set.
         // Source: https://eli.thegreenplace.net/2016/c11-threads-affinity-and-hyperthreading/
@@ -2485,7 +2485,7 @@ int main(int _argc, char **_argv)
     sa.sa_handler = handle_exit;
     sigfillset(&sa.sa_mask);
     sigaction(SIGINT,&sa,NULL);
-    
+
     left_leg_torque_thread.join();
     right_leg_torque_thread.join();
     mpc_thread.join();
