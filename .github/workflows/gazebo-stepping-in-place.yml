@@ -27,7 +27,7 @@ jobs:
       uses: actions/checkout@v2
     - run: pwd && tree
     - run: python -m pip install -r /home/runner/work/walking_controller/walking_controller/requirements.txt
-    - run: python ./utils/check_energy_used.py 0 10000
-    - run: python ./utils/check_torso_height.py 0.9 1.1
-    - run: python ./utils/check_torso_pos_x.py -0.1 0.1
-    - run: python ./utils/check_torso_pos_y.py -0.1 0.1
+    - run: python ./utils/ci-tests/check_energy_used.py 0 10000
+    - run: python ./utils/ci-tests/check_torso_height.py 0.9 1.1
+    - run: python ./utils/ci-tests/check_torso_pos_x.py -0.1 0.1
+    - run: python ./utils/ci-tests/check_torso_pos_y.py -0.1 0.1
