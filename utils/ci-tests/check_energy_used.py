@@ -5,8 +5,8 @@ import sys
 min_allowed_energy = float(sys.argv[1])
 max_allowed_energy = float(sys.argv[2])
 
-left_leg_log = pd.read_csv("/plot_data/1_left.csv")
-right_leg_log = pd.read_csv("/plot_data/1_right.csv")
+left_leg_log = pd.read_csv("/home/runner/work/plot_data/1_left.csv")
+right_leg_log = pd.read_csv("/home/runner/work/plot_data/1_right.csv")
 
 data_length = int(len(left_leg_log["t_sim"]))
 

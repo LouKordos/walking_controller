@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import sys
 
-mpc_log = pd.read_csv("/plot_data/1_mpc_log.csv")
+mpc_log = pd.read_csv("/home/runner/work/plot_data/1_mpc_log.csv")
 
 min_allowed_torso_height = float(sys.argv[1])
 max_allowed_torso_height = float(sys.argv[2])
