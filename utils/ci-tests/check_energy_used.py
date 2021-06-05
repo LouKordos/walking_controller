@@ -22,7 +22,7 @@ print("Average power consumption of both legs:", np.mean(combined_power), "[W]")
 
 total_energy = np.sum(combined_power) * (1.0/1000.0) / 3600.0
 
-print("Total energy consumed by leg in", left_leg_log['t_sim'][-1], "seconds:", total_energy, "[Wh]")
+print("Total energy consumed by leg in", left_leg_log['t_sim'][data_length], "seconds:", total_energy, "[Wh]")
 
 if total_energy > max_allowed_energy or total_energy < min_allowed_energy:
     print("Energy consumption outside allowed range.")
