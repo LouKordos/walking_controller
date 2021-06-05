@@ -10,6 +10,7 @@ jobs:
     - run: time docker build -t loukordos/walking-controller:develop-ubuntu -f Dockerfile.ubuntu .
     - run: cd /home/runner/work/
     - run: git clone https://github.com/LouKordos/simplified_biped.git -b develop
+    - run: pwd && tree
     - run: cd /home/runner/work/simplified_biped
     - run: pwd && ls
     - run: time docker build -f Dockerfile.ubuntu-plugin -t loukordos/biped-sim:develop-ubuntu .
