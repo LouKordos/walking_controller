@@ -5,6 +5,7 @@ jobs:
   run_controller:
     runs-on: ubuntu-20.04
     steps:
+    - run: sudo chown runner:docker /var/run/docker.sock
     - name: Checkout walking controller repo
       uses: actions/checkout@v2
     - run: time docker build -t loukordos/walking-controller:develop-ubuntu -f Dockerfile.ubuntu .
