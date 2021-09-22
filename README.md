@@ -1,6 +1,17 @@
-# walking_controller
+# Walking Controller
 
 This repository contains the main code for making a Bipedal Robot walk and set up everything necessary for development while it's at it, including Jupyter Notebooks for deriving the model etc.
+
+To get it running, just run `docker run -e "TERM=xterm-256color" -e "DISABLE_WEB_UI=" -it --net=host loukordos/walking_controller:develop-ubuntu` in one terminal.
+Then, if you want GUI (`gzclient`), clone the simulation repo and run the simulation from there:
+```
+git clone https://github.com/LouKordos/simplified_biped.git -b develop
+cd simplified_biped
+./run-sim
+```
+or if not, just run `docker run -it --net=host loukordos/biped-sim:develop-ubuntu`.
+And that's it! The images should be updated on each commit, but if not, just `git clone https://github.com/LouKordos/walking_controller.git -b develop` and run `docker build ...` inside the repo directory.
+### Disclaimer: Everything below is the old way of setting this repo up and is only kept here because I spent way too much time on it. Use the Docker approach above to get it running more quickly.
 
 A `setup.sh` script is included that sets up almost everything on your OS for easy testing and development. (Keep in mind that the script will add some lines to `~/.bashrc`)
 Currently, only Ubuntu / Pop! OS 18.04 LTS and 20.04 LTS have been tested successfully, but feel free to test other distros and suggest changes!
