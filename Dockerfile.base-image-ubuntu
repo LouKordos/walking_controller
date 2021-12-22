@@ -3,7 +3,7 @@ FROM ubuntu:18.04
 ENV DEBIAN_FRONTEND=noninteractive TZ=Europe/Berlin
 RUN apt-get update -y && apt-get upgrade -y
 
-RUN apt-get install -y gcc g++ wget gfortran libblas3 libblas-dev git cmake liblapack-dev pkg-config libboost-all-dev --install-recommends
+RUN apt-get update -y && apt-get install -y gcc g++ wget gfortran libblas3 libblas-dev git cmake liblapack-dev pkg-config libboost-all-dev --install-recommends
 RUN apt-get install -y coinor-libipopt-dev
 
 # Debugging
