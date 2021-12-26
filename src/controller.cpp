@@ -2435,7 +2435,14 @@ int main(int _argc, char **_argv)
         // Create a cpu_set_t object representing a set of CPUs. Clear it and mark only CPU i as set.
         // Source: https://eli.thegreenplace.net/2016/c11-threads-affinity-and-hyperthreading/
 
-        int mpc_cpu = 6, left_leg_cpu = 7, right_leg_cpu = 19, time_cpu = 19;
+        int mpc_cpu, left_leg_cpu, right_leg_cpu, time_cpu;
+
+        if(getenv("IS_LAPTOP") != NULL) {
+            mpc_cpu = 3, left_leg_cpu = 9, right_leg_cpu = 9, time_cpu = 9;
+        }
+        else {
+            mpc_cpu = 6, left_leg_cpu = 7, right_leg_cpu = 19, time_cpu = 19;
+        }
 
         // Extra scope to avoid redeclaration error
         {
@@ -2444,10 +2451,10 @@ int main(int _argc, char **_argv)
             CPU_SET(mpc_cpu, &cpuset);
             int rc = pthread_setaffinity_np(mpc_thread.native_handle(), sizeof(cpu_set_t), &cpuset);
             if (rc != 0) {
-                std::cerr << "Error calling pthread_setaffinity_np while trying to set MPC thread to CPU" << mpc_cpu <<": " << rc << "\n";
+                std::cerr << "Error calling pthread_setaffinity_np while trying to set MPC thread to CPU" << mpc_cpu << ": " << rc << "\n";
             }
         }
-        // Extra scopes to avoid redeclaration error
+        // Extra scope to avoid redeclaration error
         {
             cpu_set_t cpuset;
             CPU_ZERO(&cpuset);
