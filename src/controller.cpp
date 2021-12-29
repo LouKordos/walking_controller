@@ -1350,7 +1350,6 @@ void run_mpc() {
         x_mutex.lock();
         for(int i = 0; i < n; ++i) {
             x_t(i, 0) = atof(com_state[i].c_str());
-            // P_param(i,0) = x_t(i, 0);
         }
         x_mutex.unlock();
 
@@ -1358,13 +1357,10 @@ void run_mpc() {
 
         double state_update_duration = duration_cast<nanoseconds>(state_update_end - state_update_start).count();
         
-        // P_param.block<n,1>(0, 0) = x_t;
-        
         auto delay_compensation_start = high_resolution_clock::now();
 
         // Step the model one timestep and use the resulting state as the initial state for the solver. This compensates for the roughly 1 sample delay due to the solver time
         P_param.block<n,1>(0, 0) = step_discrete_model(x_t, u_t, r_x_left, r_x_right, r_y_left, r_y_right, r_z_left, r_z_right);
-        // P_param(7, 0) = x_t(7, 0);
 
         auto delay_compensation_end = high_resolution_clock::now();
 
@@ -1492,11 +1488,6 @@ void run_mpc() {
         auto x_ref_update_end = high_resolution_clock::now();
 
         double x_ref_update_duration = duration_cast<nanoseconds>(x_ref_update_end - x_ref_update_start).count();
-        
-        // stringstream temp;
-        // temp << "x_t:" << x_t(0, 0) << "," << x_t(1, 0) << "," << x_t(2, 0) << "," << x_t(3, 0) << "," << x_t(4, 0) << "," << x_t(5, 0) << "," << x_t(6, 0) << "," << x_t(7, 0) << "," << x_t(8, 0) << "," << x_t(9, 0) << "," << x_t(10, 0) << "," << x_t(11, 0) << "," << x_t(12, 0);
-        // log(temp.str(), INFO);
-        // print_threadsafe(temp.str(), "mpc_thread", INFO, true);
         
         auto contact_update_start = high_resolution_clock::now();
 
