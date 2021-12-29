@@ -1,0 +1,8 @@
+#!/bin/bash
+
+if [ "$1" == "laptop" ] || [ "$1" == "l" ]
+then
+	time docker build -t loukordos/walking-controller:develop-ubuntu -f Dockerfile.ubuntu . && docker run -v $HOME/dev/walking_controller/plot_data:/plot_data -e "RTF=1.0" -e "DISABLE_WEB_UI=" -e "IS_LAPTOP=" -e "TERM=xterm-256color" -it --net=host loukordos/walking-controller:develop-ubuntu
+else
+	time docker build -t loukordos/walking-controller:develop-ubuntu -f Dockerfile.ubuntu . && docker run -v $HOME/dev/walking_controller/plot_data:/plot_data -e "RTF=1.0" -e "DISABLE_WEB_UI=" -e "TERM=xterm-256color" -it --net=host loukordos/walking-controller:develop-ubuntu
+fi
