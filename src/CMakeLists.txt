@@ -7,7 +7,7 @@ find_package(casadi)
 
 #set(COMMUNICATIONS_LIBS zcm)
 
-add_compile_options(-std=c++17 -Wpedantic -L /usr/local/lib)
+add_compile_options(-std=c++17 -Wpedantic -L /usr/local/lib -DEIGEN_STACK_ALLOCATION_LIMIT=10000000)
 # set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
 set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
 
