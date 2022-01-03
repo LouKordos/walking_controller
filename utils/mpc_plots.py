@@ -28,10 +28,11 @@ for name in filenames:
 		print("Invalid parse with filename:", name)
 
 filename = "../plot_data/" + str(largest_index) + "_mpc_log.csv"
-# filename = "./plot_data/699_mpc_log.csv"
 print("filename:", filename)
 
-plot_image_dir = home_dir + "/Pictures/matplotlib_plots/mpc_log/"
+os.mkdir(home_dir + "/Pictures/matplotlib_plots/mpc_log/{}".format(largest_index))
+
+plot_image_dir = home_dir + "/Pictures/matplotlib_plots/mpc_log/{}/".format(largest_index)
 
 dataframe = pd.read_csv(filename)
 
@@ -391,6 +392,32 @@ force_ax.set_xlabel("Time [s]", fontsize=14)
 force_ax.legend(loc='upper right')
 force_ax.grid()
 
+kf_error_fig = plt.figure(figsize=force_fig_size, dpi=save_dpi)
+kf_error_ax = kf_error_fig.add_subplot(111)
+
+kf_error_ax.plot(dataframe["t_sim"], dataframe["kf_error_phi"], label=r"kf_error_phi", linewidth=linewidth)
+kf_error_ax.plot(dataframe["t_sim"], dataframe["kf_error_theta"], label=r"kf_error_theta", linewidth=linewidth)
+kf_error_ax.plot(dataframe["t_sim"], dataframe["kf_error_psi"], label=r"kf_error_psi", linewidth=linewidth)
+
+kf_error_ax.plot(dataframe["t_sim"], dataframe["kf_error_pos_x"], label=r"kf_error_pos_x", linewidth=linewidth)
+kf_error_ax.plot(dataframe["t_sim"], dataframe["kf_error_pos_y"], label=r"kf_error_pos_y", linewidth=linewidth)
+kf_error_ax.plot(dataframe["t_sim"], dataframe["kf_error_pos_z"], label=r"kf_error_pos_z", linewidth=linewidth)
+
+kf_error_ax.plot(dataframe["t_sim"], dataframe["kf_error_omega_x"], label=r"kf_error_omega_x", linewidth=linewidth)
+kf_error_ax.plot(dataframe["t_sim"], dataframe["kf_error_omega_y"], label=r"kf_error_omega_y", linewidth=linewidth)
+kf_error_ax.plot(dataframe["t_sim"], dataframe["kf_error_omega_z"], label=r"kf_error_omega_z", linewidth=linewidth)
+
+kf_error_ax.plot(dataframe["t_sim"], dataframe["kf_error_vel_x"], label=r"kf_error_vel_x", linewidth=linewidth)
+kf_error_ax.plot(dataframe["t_sim"], dataframe["kf_error_vel_y"], label=r"kf_error_vel_y", linewidth=linewidth)
+kf_error_ax.plot(dataframe["t_sim"], dataframe["kf_error_vel_z"], label=r"kf_error_vel_z", linewidth=linewidth)
+
+kf_error_ax.set_title("Kalman Filter Error")
+kf_error_ax.set_ylabel("Kalman Filter Error", fontsize=14)
+
+kf_error_ax.set_xlabel("Time [s]", fontsize=14)
+kf_error_ax.legend(loc='upper right')
+kf_error_ax.grid()
+
 print("Max full iteration time excluding first iteration (fix that!):", max(dataframe['full_iteration_time'][1:]), "[ms]")
 print("Average full iteration time excluding first iteration (fix that!):", np.mean(dataframe['full_iteration_time'][1:]), "[ms]")
 
@@ -399,6 +426,7 @@ print("Saving plots to pdf in dir:", plot_image_dir)
 # Save plots
 angle_fig.savefig(plot_image_dir + "angles.pdf", dpi=save_dpi, bbox_inches='tight')
 force_fig.savefig(plot_image_dir + "forces.pdf", dpi=save_dpi, bbox_inches='tight')
+kf_error_fig.savefig(plot_image_dir + "kf_errors.pdf", dpi=save_dpi, bbox_inches='tight')
 pos_fig.savefig(plot_image_dir + "position.pdf", dpi=save_dpi, bbox_inches='tight')
 
 if generate_prediction_plots:
@@ -433,7 +461,28 @@ rms_dataframe = pd.DataFrame([tuple(rms_error_vector)], columns=["phi", "theta",
 
 print(rms_dataframe)
 
-print("RMS Error Vector:", rms_error_vector)
+print("RMS Error Vector x_ref - x_actual:", rms_error_vector)
+
+rms_error_vector = np.zeros((n-1, 1))
+
+actual_states = dataframe.iloc[:, range(2, 2+12)].values # Rows are iterations, columns are states
+kf_states = dataframe.iloc[:, range(109, 109+12)].values
+
+# print(kf_states)
+
+for t_index in range(data_length):
+    for state_index in range(n-1):
+        rms_error_vector[state_index] += (actual_states[t_index, state_index] - kf_states[t_index, state_index])**2
+
+rms_error_vector /= data_length
+
+rms_error_vector = [math.sqrt(x) for x in rms_error_vector]
+
+rms_dataframe = pd.DataFrame([tuple(rms_error_vector)], columns=["phi", "theta", "psi", "pos_x", "pos_y", "pos_z", "omega_x", "omega_y", "omega_z", "vel_x", "vel_y", "vel_z"])
+
+print(rms_dataframe)
+
+print("RMS Error Vector x_actual - x_kf:", rms_error_vector)
 
 if show_plots:
     print("Showing plots.")
