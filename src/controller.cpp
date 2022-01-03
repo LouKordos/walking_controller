@@ -89,6 +89,7 @@ bool alternate_contacts;
 
 static Eigen::Matrix<double, n, 1> x_t = (Eigen::Matrix<double, n, 1>() << 0., 0., 0., 0, 0, 0.8, 0, 0, 0, 0, 0, 0, -9.81).finished();
 static Eigen::Matrix<double, m, 1> u_t = (Eigen::Matrix<double, m, 1>() << 0, 0, m_value*9.81 / 2, 0, 0, m_value*9.81/2).finished();
+static Eigen::Matrix<double, m, 1> u_t_prev = u_t;
 
 static Eigen::Matrix<double, 3, 1> next_body_vel = Eigen::ArrayXd::Zero(3, 1);
 
@@ -105,8 +106,8 @@ Leg *right_leg;
 SimState *simState;
 
 // Should be running at 1kHz but communication overhead is adding ~80µS, that's why it's reduced a bit
-static double state_update_interval = 250.0; // Interval for fetching and parsing the leg state from gazebosim in microseconds
-static double torque_calculation_interval = 250.0; // Interval for calculating and sending the torque setpoint to gazebosim in microseconds
+static double state_update_interval = 1000.0; // Interval for fetching and parsing the leg state from gazebosim in microseconds
+static double torque_calculation_interval = 1000.0; // Interval for calculating and sending the torque setpoint to gazebosim in microseconds
 static const double time_update_interval = 250.0;
         
 std::mutex x_mutex, u_mutex,
@@ -942,9 +943,7 @@ void discretize_state_space_matrices(Eigen::Matrix<double, n, n> &A_c_temp, Eige
     B_d_temp = e_A_B.block<n, m>(0, n);
 }
 
-// Step the discretized model. This calls discretize_state_space_matrices and applies control u to the model with current state x in the form of x_{t+1} = A * x_t + B * u_t
-Eigen::Matrix<double, n, 1> step_discrete_model(Eigen::Matrix<double, n, 1> x, Eigen::Matrix<double, m, 1> u, double r_x_left, double r_x_right, double r_y_left, double r_y_right, double r_z_left, double r_z_right) {
-
+void get_discretized_state_space_matrices(Eigen::Matrix<double, n ,n> &A_d, Eigen::Matrix<double, n, m> &B_d, Eigen::Matrix<double, n, 1> x, Eigen::Matrix<double, m, 1> u, double r_x_left, double r_x_right, double r_y_left, double r_y_right, double r_z_left, double r_z_right) {
     double phi_t = x(0, 0);
     double theta_t = x(1, 0);
     double psi_t = x(2, 0);
@@ -955,14 +954,14 @@ Eigen::Matrix<double, n, 1> step_discrete_model(Eigen::Matrix<double, n, 1> x, E
                 (sin(phi_t)*sin(psi_t) + sin(theta_t)*cos(phi_t)*cos(psi_t))*(Ixz*sin(psi_t)*cos(theta_t) + Iyz*(sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t)) + Izz*(-sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t))) + (sin(phi_t)*sin(theta_t)*cos(psi_t) - sin(psi_t)*cos(phi_t))*(Ixy*(-sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t)) + Ixy*sin(psi_t)*cos(theta_t) + Iyy*(sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t))) + (Ixx*sin(psi_t)*cos(theta_t) + Iyx*(sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t)) + Izx*(-sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t)))*cos(psi_t)*cos(theta_t), (-sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t))*(Ixz*sin(psi_t)*cos(theta_t) + Iyz*(sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t)) + Izz*(-sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t))) + (sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t))*(Ixy*(-sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t)) + Ixy*sin(psi_t)*cos(theta_t) + Iyy*(sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t))) + (Ixx*sin(psi_t)*cos(theta_t) + Iyx*(sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t)) + Izx*(-sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t)))*sin(psi_t)*cos(theta_t), (Ixy*(-sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t)) + Ixy*sin(psi_t)*cos(theta_t) + Iyy*(sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t)))*sin(phi_t)*cos(theta_t) - (Ixx*sin(psi_t)*cos(theta_t) + Iyx*(sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t)) + Izx*(-sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t)))*sin(theta_t) + (Ixz*sin(psi_t)*cos(theta_t) + Iyz*(sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t)) + Izz*(-sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t)))*cos(phi_t)*cos(theta_t),
                 (sin(phi_t)*sin(psi_t) + sin(theta_t)*cos(phi_t)*cos(psi_t))*(-Ixz*sin(theta_t) + Iyz*sin(phi_t)*cos(theta_t) + Izz*cos(phi_t)*cos(theta_t)) + (sin(phi_t)*sin(theta_t)*cos(psi_t) - sin(psi_t)*cos(phi_t))*(-Ixy*sin(theta_t) + Ixy*cos(phi_t)*cos(theta_t) + Iyy*sin(phi_t)*cos(theta_t)) + (-Ixx*sin(theta_t) + Iyx*sin(phi_t)*cos(theta_t) + Izx*cos(phi_t)*cos(theta_t))*cos(psi_t)*cos(theta_t), (-sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t))*(-Ixz*sin(theta_t) + Iyz*sin(phi_t)*cos(theta_t) + Izz*cos(phi_t)*cos(theta_t)) + (sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t))*(-Ixy*sin(theta_t) + Ixy*cos(phi_t)*cos(theta_t) + Iyy*sin(phi_t)*cos(theta_t)) + (-Ixx*sin(theta_t) + Iyx*sin(phi_t)*cos(theta_t) + Izx*cos(phi_t)*cos(theta_t))*sin(psi_t)*cos(theta_t), -(-Ixx*sin(theta_t) + Iyx*sin(phi_t)*cos(theta_t) + Izx*cos(phi_t)*cos(theta_t))*sin(theta_t) + (-Ixy*sin(theta_t) + Ixy*cos(phi_t)*cos(theta_t) + Iyy*sin(phi_t)*cos(theta_t))*sin(phi_t)*cos(theta_t) + (-Ixz*sin(theta_t) + Iyz*sin(phi_t)*cos(theta_t) + Izz*cos(phi_t)*cos(theta_t))*cos(phi_t)*cos(theta_t);
 
-    Eigen::Matrix<double, 3, 3> r_left_skew_symmetric_test = Eigen::ArrayXXd::Zero(3, 3);
-    Eigen::Matrix<double, 3, 3> r_right_skew_symmetric_test = Eigen::ArrayXXd::Zero(3, 3);
+    Eigen::Matrix<double, 3, 3> r_left_skew_symmetric = Eigen::ArrayXXd::Zero(3, 3);
+    Eigen::Matrix<double, 3, 3> r_right_skew_symmetric = Eigen::ArrayXXd::Zero(3, 3);
 
-    r_left_skew_symmetric_test << 0, -r_z_left, r_y_left,
+    r_left_skew_symmetric << 0, -r_z_left, r_y_left,
                                 r_z_left, 0, -r_x_left,
                                 -r_y_left, r_x_left, 0;
             
-    r_right_skew_symmetric_test << 0, -r_z_right, r_y_right,
+    r_right_skew_symmetric << 0, -r_z_right, r_y_right,
                                 r_z_right, 0, -r_x_right,
                                 -r_y_right, r_x_right, 0;
 
@@ -993,7 +992,67 @@ Eigen::Matrix<double, n, 1> step_discrete_model(Eigen::Matrix<double, n, 1> x, E
         0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0,   
-        I_world.inverse() * r_left_skew_symmetric_test, I_world.inverse() * r_right_skew_symmetric_test,
+        I_world.inverse() * r_left_skew_symmetric, I_world.inverse() * r_right_skew_symmetric,
+        1/m_value, 0, 0, 1/m_value, 0, 0,
+        0, 1/m_value, 0, 0, 1/m_value, 0,
+        0, 0, 1/m_value, 0, 0, 1/m_value,
+        0, 0, 0, 0, 0, 0;
+
+    discretize_state_space_matrices(A_c, B_c, dt, A_d, B_d);
+}
+
+// Step the discretized model. This calls discretize_state_space_matrices and applies control u to the model with current state x in the form of x_{t+1} = A * x_t + B * u_t
+Eigen::Matrix<double, n, 1> step_discrete_model(Eigen::Matrix<double, n, 1> x, Eigen::Matrix<double, m, 1> u, double r_x_left, double r_x_right, double r_y_left, double r_y_right, double r_z_left, double r_z_right) {
+
+    double phi_t = x(0, 0);
+    double theta_t = x(1, 0);
+    double psi_t = x(2, 0);
+
+    Eigen::Matrix<double, 3, 3> I_world = Eigen::ArrayXXd::Zero(3, 3);
+
+    I_world << (sin(phi_t)*sin(psi_t) + sin(theta_t)*cos(phi_t)*cos(psi_t))*(Ixz*cos(psi_t)*cos(theta_t) + Iyz*(sin(phi_t)*sin(theta_t)*cos(psi_t) - sin(psi_t)*cos(phi_t)) + Izz*(sin(phi_t)*sin(psi_t) + sin(theta_t)*cos(phi_t)*cos(psi_t))) + (sin(phi_t)*sin(theta_t)*cos(psi_t) - sin(psi_t)*cos(phi_t))*(Ixy*(sin(phi_t)*sin(psi_t) + sin(theta_t)*cos(phi_t)*cos(psi_t)) + Ixy*cos(psi_t)*cos(theta_t) + Iyy*(sin(phi_t)*sin(theta_t)*cos(psi_t) - sin(psi_t)*cos(phi_t))) + (Ixx*cos(psi_t)*cos(theta_t) + Iyx*(sin(phi_t)*sin(theta_t)*cos(psi_t) - sin(psi_t)*cos(phi_t)) + Izx*(sin(phi_t)*sin(psi_t) + sin(theta_t)*cos(phi_t)*cos(psi_t)))*cos(psi_t)*cos(theta_t), (-sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t))*(Ixz*cos(psi_t)*cos(theta_t) + Iyz*(sin(phi_t)*sin(theta_t)*cos(psi_t) - sin(psi_t)*cos(phi_t)) + Izz*(sin(phi_t)*sin(psi_t) + sin(theta_t)*cos(phi_t)*cos(psi_t))) + (sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t))*(Ixy*(sin(phi_t)*sin(psi_t) + sin(theta_t)*cos(phi_t)*cos(psi_t)) + Ixy*cos(psi_t)*cos(theta_t) + Iyy*(sin(phi_t)*sin(theta_t)*cos(psi_t) - sin(psi_t)*cos(phi_t))) + (Ixx*cos(psi_t)*cos(theta_t) + Iyx*(sin(phi_t)*sin(theta_t)*cos(psi_t) - sin(psi_t)*cos(phi_t)) + Izx*(sin(phi_t)*sin(psi_t) + sin(theta_t)*cos(phi_t)*cos(psi_t)))*sin(psi_t)*cos(theta_t), (Ixy*(sin(phi_t)*sin(psi_t) + sin(theta_t)*cos(phi_t)*cos(psi_t)) + Ixy*cos(psi_t)*cos(theta_t) + Iyy*(sin(phi_t)*sin(theta_t)*cos(psi_t) - sin(psi_t)*cos(phi_t)))*sin(phi_t)*cos(theta_t) - (Ixx*cos(psi_t)*cos(theta_t) + Iyx*(sin(phi_t)*sin(theta_t)*cos(psi_t) - sin(psi_t)*cos(phi_t)) + Izx*(sin(phi_t)*sin(psi_t) + sin(theta_t)*cos(phi_t)*cos(psi_t)))*sin(theta_t) + (Ixz*cos(psi_t)*cos(theta_t) + Iyz*(sin(phi_t)*sin(theta_t)*cos(psi_t) - sin(psi_t)*cos(phi_t)) + Izz*(sin(phi_t)*sin(psi_t) + sin(theta_t)*cos(phi_t)*cos(psi_t)))*cos(phi_t)*cos(theta_t),
+                (sin(phi_t)*sin(psi_t) + sin(theta_t)*cos(phi_t)*cos(psi_t))*(Ixz*sin(psi_t)*cos(theta_t) + Iyz*(sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t)) + Izz*(-sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t))) + (sin(phi_t)*sin(theta_t)*cos(psi_t) - sin(psi_t)*cos(phi_t))*(Ixy*(-sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t)) + Ixy*sin(psi_t)*cos(theta_t) + Iyy*(sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t))) + (Ixx*sin(psi_t)*cos(theta_t) + Iyx*(sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t)) + Izx*(-sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t)))*cos(psi_t)*cos(theta_t), (-sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t))*(Ixz*sin(psi_t)*cos(theta_t) + Iyz*(sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t)) + Izz*(-sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t))) + (sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t))*(Ixy*(-sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t)) + Ixy*sin(psi_t)*cos(theta_t) + Iyy*(sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t))) + (Ixx*sin(psi_t)*cos(theta_t) + Iyx*(sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t)) + Izx*(-sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t)))*sin(psi_t)*cos(theta_t), (Ixy*(-sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t)) + Ixy*sin(psi_t)*cos(theta_t) + Iyy*(sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t)))*sin(phi_t)*cos(theta_t) - (Ixx*sin(psi_t)*cos(theta_t) + Iyx*(sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t)) + Izx*(-sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t)))*sin(theta_t) + (Ixz*sin(psi_t)*cos(theta_t) + Iyz*(sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t)) + Izz*(-sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t)))*cos(phi_t)*cos(theta_t),
+                (sin(phi_t)*sin(psi_t) + sin(theta_t)*cos(phi_t)*cos(psi_t))*(-Ixz*sin(theta_t) + Iyz*sin(phi_t)*cos(theta_t) + Izz*cos(phi_t)*cos(theta_t)) + (sin(phi_t)*sin(theta_t)*cos(psi_t) - sin(psi_t)*cos(phi_t))*(-Ixy*sin(theta_t) + Ixy*cos(phi_t)*cos(theta_t) + Iyy*sin(phi_t)*cos(theta_t)) + (-Ixx*sin(theta_t) + Iyx*sin(phi_t)*cos(theta_t) + Izx*cos(phi_t)*cos(theta_t))*cos(psi_t)*cos(theta_t), (-sin(phi_t)*cos(psi_t) + sin(psi_t)*sin(theta_t)*cos(phi_t))*(-Ixz*sin(theta_t) + Iyz*sin(phi_t)*cos(theta_t) + Izz*cos(phi_t)*cos(theta_t)) + (sin(phi_t)*sin(psi_t)*sin(theta_t) + cos(phi_t)*cos(psi_t))*(-Ixy*sin(theta_t) + Ixy*cos(phi_t)*cos(theta_t) + Iyy*sin(phi_t)*cos(theta_t)) + (-Ixx*sin(theta_t) + Iyx*sin(phi_t)*cos(theta_t) + Izx*cos(phi_t)*cos(theta_t))*sin(psi_t)*cos(theta_t), -(-Ixx*sin(theta_t) + Iyx*sin(phi_t)*cos(theta_t) + Izx*cos(phi_t)*cos(theta_t))*sin(theta_t) + (-Ixy*sin(theta_t) + Ixy*cos(phi_t)*cos(theta_t) + Iyy*sin(phi_t)*cos(theta_t))*sin(phi_t)*cos(theta_t) + (-Ixz*sin(theta_t) + Iyz*sin(phi_t)*cos(theta_t) + Izz*cos(phi_t)*cos(theta_t))*cos(phi_t)*cos(theta_t);
+
+    Eigen::Matrix<double, 3, 3> r_left_skew_symmetric = Eigen::ArrayXXd::Zero(3, 3);
+    Eigen::Matrix<double, 3, 3> r_right_skew_symmetric = Eigen::ArrayXXd::Zero(3, 3);
+
+    r_left_skew_symmetric << 0, -r_z_left, r_y_left,
+                                r_z_left, 0, -r_x_left,
+                                -r_y_left, r_x_left, 0;
+            
+    r_right_skew_symmetric << 0, -r_z_right, r_y_right,
+                                r_z_right, 0, -r_x_right,
+                                -r_y_right, r_x_right, 0;
+
+    Eigen::Matrix<double, n, n> A_c = Eigen::ArrayXXd::Zero(n, n);
+    Eigen::Matrix<double, n, m> B_c = Eigen::ArrayXXd::Zero(n, m);
+
+    A_c << 0, 0, 0, 0, 0, 0, cos(psi_t) / cos(theta_t), sin(psi_t) / cos(theta_t), 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, -sin(psi_t), cos(psi_t), 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, cos(psi_t) * tan(theta_t), sin(psi_t)*tan(theta_t), 1, 0, 0, 0, 0,
+            
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
+            
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+            
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+
+    B_c << 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0,   
+        I_world.inverse() * r_left_skew_symmetric, I_world.inverse() * r_right_skew_symmetric,
         1/m_value, 0, 0, 1/m_value, 0, 0,
         0, 1/m_value, 0, 0, 1/m_value, 0,
         0, 0, 1/m_value, 0, 0, 1/m_value,
@@ -1265,7 +1324,9 @@ void run_mpc() {
                 << "theta_delay_compensation,full_iteration_time,prev_full_iteration_time,solver_time,state_update_time,delay_compensation_time,contact_update_time,reference_update_time,foot_pos_left_update_time,foot_pos_right_update_time,"
                 << "r_update_time,x_ref_update_time,foot_pos_left_discretization_update_time,foot_pos_right_discretization_update_time,trajectory_target_update_time,memcpy_time,solution_update_time,log_lock_time,message_wait_time,"
                 << "previous_logging_time,previous_file_write_time,"
-                << "phi_delay_compensation,predicted_contact_swap_iterations,X_t,U_t,P_param_full,Q_world_pos_x,Q_world_pos_y,Q_body_pos_x,Q_body_pos_y,Q_world_vel_x,Q_world_vel_y,Q_body_vel_x,Q_body_vel_y" << "\n" << std::flush; // Add header to csv file
+                << "phi_delay_compensation,predicted_contact_swap_iterations,X_t,U_t,P_param_full,Q_world_pos_x,Q_world_pos_y,"
+                << "Q_body_pos_x,Q_body_pos_y,Q_world_vel_x,Q_world_vel_y,Q_body_vel_x,Q_body_vel_y,"
+                << "kf_error_phi,kf_error_theta,kf_error_psi,kf_error_pos_x,kf_error_pos_y,kf_error_pos_z,kf_error_omega_x,kf_error_omega_y,kf_error_omega_z,kf_error_vel_x,kf_error_vel_y,kf_error_vel_z,kf_duration" << "\n" << std::flush; // Add header to csv file
     // data_file.close();
 
     struct timespec deadline; // timespec struct for storing time that execution thread should sleep for
@@ -1282,6 +1343,97 @@ void run_mpc() {
     tv.tv_usec = 0;
     setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
 
+    const int num_observed_states = 9;
+
+    Eigen::Matrix<double, n-1, 1> x_t_kf = x_t.block<n-1, 1>(0, 0);
+    Eigen::Matrix<double, n-1, 1> x_predicted_kf = x_t.block<n-1, 1>(0, 0);
+    Eigen::Matrix<double, n-1, n-1> P = Eigen::ArrayXXd::Zero(n-1, n-1); // Process covariance matrix (error in the estimate / process)
+    Eigen::Matrix<double, n-1, n-1> Q = Eigen::ArrayXXd::Zero(n-1, n-1); // Process noise covariance matrix
+    Eigen::Matrix<double, n-1, num_observed_states> K_kf = Eigen::ArrayXXd::Zero(n-1, num_observed_states); // Kalman gain to determine how to weigh measurements and predictions
+    Eigen::Matrix<double, num_observed_states, n-1> C = Eigen::ArrayXXd::Zero(num_observed_states, n-1); // Observation matrix
+    Eigen::Matrix<double, num_observed_states, 1> Y = Eigen::ArrayXXd::Zero(num_observed_states, 1); // Measurement vector
+    Eigen::Matrix<double, num_observed_states, num_observed_states> R = Eigen::ArrayXXd::Zero(num_observed_states, num_observed_states); // Measurement / sensor noise
+
+    if(num_observed_states != n-1) {
+        // Observe angles and angular velocities, estimate the rest
+        C << 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+             0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+             0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+             0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+             0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+             0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
+             0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
+             0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0,
+             0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0;
+    }
+    else {
+        C = Eigen::MatrixXd::Identity(num_observed_states, num_observed_states);
+    }
+
+    P << 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+         0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+         0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+         0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+         0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+         0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
+         0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
+         0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0,
+         0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0,
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1;
+
+    Q << pow(0.004161180715889759, 2), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+         0, pow(0.003916202511373314, 2), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+         0, 0, pow(0.0017975797699006288, 2), 0, 0, 0, 0, 0, 0, 0, 0, 0,
+         0, 0, 0, pow(0.000918071117811462, 2), 0, 0, 0, 0, 0, 0, 0, 0,
+         0, 0, 0, 0, pow(0.0007012468776818719, 2), 0, 0, 0, 0, 0, 0, 0,
+         0, 0, 0, 0, 0, pow(0.0005769302171018148, 2), 0, 0, 0, 0, 0, 0,
+         0, 0, 0, 0, 0, 0, pow(0.35067298742686576, 2), 0, 0, 0, 0, 0,
+         0, 0, 0, 0, 0, 0, 0, pow(0.28451156506014064, 2), 0, 0, 0, 0,
+         0, 0, 0, 0, 0, 0, 0, 0, pow(0.10851033671539016, 2), 0, 0, 0,
+         0, 0, 0, 0, 0, 0, 0, 0, 0, pow(0.01600513707900323, 2), 0, 0,
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, pow(0.028318843927496885, 2), 0,
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, pow(0.030832163166488798, 2);
+
+    R << pow(0.01, 2), 0, 0, 0, 0, 0, 0, 0, 0,
+         0, pow(0.01, 2), 0, 0, 0, 0, 0, 0, 0,
+         0, 0, pow(0.01, 2), 0, 0, 0, 0, 0, 0,
+         0, 0, 0, pow(0.01, 2), 0, 0, 0, 0, 0,
+         0, 0, 0, 0, pow(0.01, 2), 0, 0, 0, 0,
+         0, 0, 0, 0, 0, pow(0.01, 2), 0, 0, 0,
+         0, 0, 0, 0, 0, 0, pow(0.01, 2), 0, 0,
+         0, 0, 0, 0, 0, 0, 0, pow(0.01, 2), 0,
+         0, 0, 0, 0, 0, 0, 0, 0, pow(0.01, 2);
+
+    std::cout << P << std::endl << Q << std::endl << R << std::endl;
+
+    const double mean = 0.0;
+    const double stddev = 0.01;
+    const int num_samples = 10000;
+
+    Eigen::Matrix<double, n-1, num_samples> noise_matrix = Eigen::ArrayXXd::Zero(n-1, num_samples);
+
+    for(int i = 0; i < n-1; i++) {
+        std::default_random_engine generator;
+        std::normal_distribution<double> dist(mean, stddev);
+
+        for(int j = 0; j < num_samples; j++) {
+            noise_matrix(i, j) = dist(generator);
+        }
+    }
+
+    ofstream noise_file;
+    noise_file.open(plotDataDirPath + "noise_file.csv");
+
+    for(int i = 0; i < num_samples; i++) {
+        noise_file << noise_matrix(0, i);
+
+        if (i < num_samples - 1) {
+        noise_file << "\n";
+        }
+    }
+
     while(true) {
         // Loop starts here
         auto start = high_resolution_clock::now();
@@ -1291,8 +1443,8 @@ void run_mpc() {
         //     vel_x_desired -= 0.005;
         // }
 
-        // if (vel_y_desired < 0.6) {
-        //     vel_y_desired += 0.005;
+        // if (get_vel_body_desired()(1, 0) < 0.5) {
+        //         set_vel_body_desired((Eigen::Matrix<double, 2, 1>() << 0, get_vel_body_desired()(1, 0) + 0.005).finished());
         // }
 
         // if(vel_forward_desired < 0.3) {
@@ -1319,8 +1471,6 @@ void run_mpc() {
         else {
             t_stance += (t_stance_desired - t_stance);
         }
-
-        // std::cout << "t_stance=" << t_stance << std::endl;
 
         auto message_wait_start = high_resolution_clock::now();
 
@@ -1352,14 +1502,47 @@ void run_mpc() {
             x_t(i, 0) = atof(com_state[i].c_str());
         }
         x_mutex.unlock();
-
+        
         auto state_update_end = high_resolution_clock::now();
 
         double state_update_duration = duration_cast<nanoseconds>(state_update_end - state_update_start).count();
+
+        auto kf_start = high_resolution_clock::now();
+
+        x_predicted_kf = step_discrete_model((Eigen::Matrix<double, n, 1>() << x_t_kf, -9.81).finished(), u_t_prev, r_x_left, r_x_right, r_y_left, r_y_right, r_z_left, r_z_right).block<n-1, 1>(0, 0);
+
+        Eigen::Matrix<double, n, n> A_d_kf = Eigen::ArrayXXd::Zero(n, n);
+        Eigen::Matrix<double, n, m> B_d_kf = Eigen::ArrayXXd::Zero(n, m);
+        get_discretized_state_space_matrices(A_d_kf, B_d_kf, (Eigen::Matrix<double, n, 1>() << x_t_kf, -9.81).finished(), u_t_prev, r_x_left, r_x_right, r_y_left, r_y_right, r_z_left, r_z_right);
+
+        P = A_d_kf.block<n-1, n-1>(0, 0) * P * A_d_kf.block<n-1, n-1>(0, 0).transpose() + Q;
+
+        // Get measurements (in a real scenario only the measured values would be received and thus this calculation is obsolete.)
+        Y = C * x_t.block<n-1, 1>(0, 0) /*+ noise_matrix.block<num_observed_states, 1>(0, total_iterations)*/;
+
+        // Update kalman gain (calculated as \frac{P*C.T}{C*P*C.T + R}
+        K_kf = (P * C.transpose()) * (C * P * C.transpose() + R).inverse();
+
+        // Calculate final weighed state estimate
+        x_t_kf = x_predicted_kf + K_kf * (Y - C * x_predicted_kf);
+
+        // Previous becomes currenanosecondsnt: Update P accordingly
+        P = (Eigen::MatrixXd::Identity(n-1, num_observed_states) - K_kf * C) * P;
+
+        Eigen::Matrix<double, n-1, 1> x_kf_error = x_t.block<n-1, 1>(0, 0) - x_t_kf;
+
+        u_t_prev = u_t;
+
+        auto kf_end = high_resolution_clock::now();
+
+        double kf_duration = duration_cast<nanoseconds>(kf_end - kf_start).count();
+
+        std::cout << "KF duration: " << kf_duration * 1e+3 << "uS" << std::endl; 
         
         auto delay_compensation_start = high_resolution_clock::now();
 
         // Step the model one timestep and use the resulting state as the initial state for the solver. This compensates for the roughly 1 sample delay due to the solver time
+        // P_param.block<n,1>(0, 0) = step_discrete_model((Eigen::Matrix<double, n, 1>() << x_t_kf, -9.81).finished(), u_t, r_x_left, r_x_right, r_y_left, r_y_right, r_z_left, r_z_right);
         P_param.block<n,1>(0, 0) = step_discrete_model(x_t, u_t, r_x_left, r_x_right, r_y_left, r_y_right, r_z_left, r_z_right);
 
         auto delay_compensation_end = high_resolution_clock::now();
@@ -1423,7 +1606,7 @@ void run_mpc() {
             //     vel_x_desired_temp -= 0.005;
             // }
             
-            // if (vel_y_desired_temp < 0.6) {
+            // if (vel_y_desired_temp < 0.5) {
             //     vel_y_desired_temp += 0.005;
             // }
 
@@ -1488,7 +1671,7 @@ void run_mpc() {
         auto x_ref_update_end = high_resolution_clock::now();
 
         double x_ref_update_duration = duration_cast<nanoseconds>(x_ref_update_end - x_ref_update_start).count();
-        
+
         auto contact_update_start = high_resolution_clock::now();
 
         double time = get_time(false) + dt;
@@ -1670,10 +1853,6 @@ void run_mpc() {
         auto foot_pos_right_update_end = high_resolution_clock::now();
 
         double foot_pos_right_update_duration = duration_cast<nanoseconds>(foot_pos_right_update_end - foot_pos_right_update_start).count();
-
-        // stringstream temp;
-        // temp << "left_foot_pos_world_desired: " << left_foot_pos_world(0, 0) << "," << left_foot_pos_world(1, 0) << "," << left_foot_pos_world(2, 0);
-        // print_threadsafe(temp.str(), "mpc_thread", INFO);
 
         auto r_update_start = high_resolution_clock::now();
 
@@ -2231,6 +2410,17 @@ void run_mpc() {
 
         log_entry << "," << Q_world_pos_x << "," << Q_world_pos_y << "," << Q_body_pos_x << "," << Q_body_pos_y << "," << Q_world_vel_x << "," << Q_world_vel_y << "," << Q_body_vel_x << "," << Q_body_vel_y;
 
+        log_entry << ",";
+
+        for(int i = 0; i < n - 1; i++) {
+            log_entry << x_kf_error(i, 0);
+            if (i < n - 1 - 1) {
+                log_entry << ",";
+            }
+        }
+
+        log_entry << "," << kf_duration;
+
         log_entry << "\n";
 
         auto logging_end = high_resolution_clock::now();
@@ -2239,11 +2429,7 @@ void run_mpc() {
 
         auto file_write_start = high_resolution_clock::now();
 
-        // Log data to csv file
-        // ofstream data_file;
-        // data_file.open(plotDataDirPath + filename + "_mpc_log.csv", ios::app); // Open csv file in append mode
         log_stream << log_entry.str();
-        // data_file.close(); // Close csv file again. This way thread abort should (almost) never leave file open.
         
         // Update full iteration time after logging
         end_total = high_resolution_clock::now();
