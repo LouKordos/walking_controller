@@ -932,18 +932,18 @@ static const double Izy = I_body(2, 1);
 static const double Izz = I_body(2, 2);
 
 // Discretize the set of continuous state space matrices with a given timestep length based on https://en.wikipedia.org/wiki/Discretization#Discretization_of_linear_state_space_models
-void discretize_state_space_matrices(Eigen::Matrix<double, n, n> &A_c_temp, Eigen::Matrix<double, n, m> &B_c_temp, const double &dt, Eigen::Matrix<double, n, n> &A_d_temp, Eigen::Matrix<double, n, m> &B_d_temp) {
+void discretize_state_space_matrices(Eigen::Matrix<double, n, n> &A_c_temp, Eigen::Matrix<double, n, m> &B_c_temp, const double &dt_temp, Eigen::Matrix<double, n, n> &A_d_temp, Eigen::Matrix<double, n, m> &B_d_temp) {
     Eigen::Matrix<double, n+m, n+m> A_B = Eigen::ArrayXXd::Zero(n+m, n+m);
     // See linked wikipedia article
     A_B.block<n, n>(0, 0) = A_c_temp;
     A_B.block<n, m>(0, n) = B_c_temp;
-    Eigen::MatrixXd e_A_B = (A_B * dt).exp();
+    Eigen::MatrixXd e_A_B = (A_B * dt_temp).exp();
 
     A_d_temp = e_A_B.block<n, n>(0, 0);
     B_d_temp = e_A_B.block<n, m>(0, n);
 }
 
-void get_discretized_state_space_matrices(Eigen::Matrix<double, n ,n> &A_d, Eigen::Matrix<double, n, m> &B_d, Eigen::Matrix<double, n, 1> x, Eigen::Matrix<double, m, 1> u, double r_x_left, double r_x_right, double r_y_left, double r_y_right, double r_z_left, double r_z_right) {
+void get_discretized_state_space_matrices(Eigen::Matrix<double, n ,n> &A_d, Eigen::Matrix<double, n, m> &B_d, Eigen::Matrix<double, n, 1> x, Eigen::Matrix<double, m, 1> u, double r_x_left, double r_x_right, double r_y_left, double r_y_right, double r_z_left, double r_z_right, double dt_temp) {
     double phi_t = x(0, 0);
     double theta_t = x(1, 0);
     double psi_t = x(2, 0);
@@ -998,11 +998,11 @@ void get_discretized_state_space_matrices(Eigen::Matrix<double, n ,n> &A_d, Eige
         0, 0, 1/m_value, 0, 0, 1/m_value,
         0, 0, 0, 0, 0, 0;
 
-    discretize_state_space_matrices(A_c, B_c, dt, A_d, B_d);
+    discretize_state_space_matrices(A_c, B_c, dt_temp, A_d, B_d);
 }
 
 // Step the discretized model. This calls discretize_state_space_matrices and applies control u to the model with current state x in the form of x_{t+1} = A * x_t + B * u_t
-Eigen::Matrix<double, n, 1> step_discrete_model(Eigen::Matrix<double, n, 1> x, Eigen::Matrix<double, m, 1> u, double r_x_left, double r_x_right, double r_y_left, double r_y_right, double r_z_left, double r_z_right) {
+Eigen::Matrix<double, n, 1> step_discrete_model(Eigen::Matrix<double, n, 1> x, Eigen::Matrix<double, m, 1> u, double r_x_left, double r_x_right, double r_y_left, double r_y_right, double r_z_left, double r_z_right, double dt_temp) {
 
     double phi_t = x(0, 0);
     double theta_t = x(1, 0);
@@ -1061,7 +1061,7 @@ Eigen::Matrix<double, n, 1> step_discrete_model(Eigen::Matrix<double, n, 1> x, E
     Eigen::Matrix<double, n, n> A_d = Eigen::ArrayXXd::Zero(n, n);
     Eigen::Matrix<double, n, m> B_d = Eigen::ArrayXXd::Zero(n, m);
 
-    discretize_state_space_matrices(A_c, B_c, dt, A_d, B_d);
+    discretize_state_space_matrices(A_c, B_c, dt_temp, A_d, B_d);
 
     return A_d * x + B_d * u;
 }
@@ -1509,11 +1509,11 @@ void run_mpc() {
 
         auto kf_start = high_resolution_clock::now();
 
-        x_predicted_kf = step_discrete_model((Eigen::Matrix<double, n, 1>() << x_t_kf, -9.81).finished(), u_t_prev, r_x_left, r_x_right, r_y_left, r_y_right, r_z_left, r_z_right).block<n-1, 1>(0, 0);
+        x_predicted_kf = step_discrete_model((Eigen::Matrix<double, n, 1>() << x_t_kf, -9.81).finished(), u_t_prev, r_x_left, r_x_right, r_y_left, r_y_right, r_z_left, r_z_right, total_iterations < 2 ? dt : max(dt, previous_full_iteration_duration * 1e-6)).block<n-1, 1>(0, 0);
 
         Eigen::Matrix<double, n, n> A_d_kf = Eigen::ArrayXXd::Zero(n, n);
         Eigen::Matrix<double, n, m> B_d_kf = Eigen::ArrayXXd::Zero(n, m);
-        get_discretized_state_space_matrices(A_d_kf, B_d_kf, (Eigen::Matrix<double, n, 1>() << x_t_kf, -9.81).finished(), u_t_prev, r_x_left, r_x_right, r_y_left, r_y_right, r_z_left, r_z_right);
+        get_discretized_state_space_matrices(A_d_kf, B_d_kf, (Eigen::Matrix<double, n, 1>() << x_t_kf, -9.81).finished(), u_t_prev, r_x_left, r_x_right, r_y_left, r_y_right, r_z_left, r_z_right, total_iterations < 2 ? dt : max(dt, previous_full_iteration_duration * 1e-6));
 
         P = A_d_kf.block<n-1, n-1>(0, 0) * P * A_d_kf.block<n-1, n-1>(0, 0).transpose() + Q;
 
@@ -1542,8 +1542,8 @@ void run_mpc() {
         auto delay_compensation_start = high_resolution_clock::now();
 
         // Step the model one timestep and use the resulting state as the initial state for the solver. This compensates for the roughly 1 sample delay due to the solver time
-        // P_param.block<n,1>(0, 0) = step_discrete_model((Eigen::Matrix<double, n, 1>() << x_t_kf, -9.81).finished(), u_t, r_x_left, r_x_right, r_y_left, r_y_right, r_z_left, r_z_right);
-        P_param.block<n,1>(0, 0) = step_discrete_model(x_t, u_t, r_x_left, r_x_right, r_y_left, r_y_right, r_z_left, r_z_right);
+        P_param.block<n,1>(0, 0) = step_discrete_model((Eigen::Matrix<double, n, 1>() << x_t_kf, -9.81).finished(), u_t, r_x_left, r_x_right, r_y_left, r_y_right, r_z_left, r_z_right, total_iterations < 2 ? dt : max(dt, previous_full_iteration_duration * 1e-6));
+        // P_param.block<n,1>(0, 0) = step_discrete_model(x_t, u_t, r_x_left, r_x_right, r_y_left, r_y_right, r_z_left, r_z_right, total_iterations < 2 ? dt : max(dt, previous_full_iteration_duration * 1e-6));
 
         auto delay_compensation_end = high_resolution_clock::now();
 
