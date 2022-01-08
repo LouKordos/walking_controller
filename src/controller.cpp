@@ -1334,7 +1334,7 @@ void run_mpc() {
     long predicted_contact_swap_iterations = 0;
     bool alternate_flag = false; // Temporary flag for waiting a bit before activating the gait
 
-    double previous_full_iteration_duration = 0;
+    double previous_full_iteration_duration = 1.0/50.0;
     double previous_logging_duration = 0;
     double previous_file_write_duration = 0;
 
