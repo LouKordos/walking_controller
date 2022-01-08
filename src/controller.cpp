@@ -1536,8 +1536,6 @@ void run_mpc() {
         auto kf_end = high_resolution_clock::now();
 
         double kf_duration = duration_cast<nanoseconds>(kf_end - kf_start).count();
-
-        std::cout << "KF duration: " << kf_duration * 1e+3 << "uS" << std::endl; 
         
         auto delay_compensation_start = high_resolution_clock::now();
 
