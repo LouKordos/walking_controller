@@ -5,9 +5,11 @@ project("Biped Walking Controller")
 find_package(Threads)
 find_package(casadi)
 
-#set(COMMUNICATIONS_LIBS zcm)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-add_compile_options(-std=c++17 -Wpedantic -L /usr/local/lib -DEIGEN_STACK_ALLOCATION_LIMIT=10000000)
+add_compile_options(-Wpedantic -L /usr/local/lib -DEIGEN_STACK_ALLOCATION_LIMIT=10000000)
 # set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
 set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
 
