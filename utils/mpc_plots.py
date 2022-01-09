@@ -20,12 +20,13 @@ filenames = os.listdir(home_dir + "/dev/walking_controller/plot_data/")
 largest_index = 0
 
 for name in filenames:
-	try:
-		index = int(name.split('.')[0].replace('_left', '').replace('_right', ''))
-		if index > largest_index:
-			largest_index = index
-	except:
-		print("Invalid parse with filename:", name)
+    try:
+        index = int(name.split('.')[0].replace('_left', '').replace('_right', ''))
+        if index > largest_index:
+            largest_index = index
+    except:
+        pass
+		# print("Invalid parse with filename:", name)
 
 filename = "../plot_data/" + str(largest_index) + "_mpc_log.csv"
 print("filename:", filename)
