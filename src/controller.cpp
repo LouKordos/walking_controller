@@ -122,6 +122,8 @@ static bool time_synced = false;
 
 double real_time_factor = 1.0;
 double runtime_limit = -1;
+bool skip_pinning = false;
+bool is_laptop = false;
 
 // Setting up debugging and plotting csv file
 int largest_index = 0;
@@ -2544,7 +2546,9 @@ int main(int _argc, char **_argv)
         plotDataDirPath = "../.././plot_data/";
     }
 
-    real_time_factor = atof(getenv("RTF"));
+    if(getenv("RTF") != NULL) {
+        real_time_factor = atof(getenv("RTF"));
+    }
     std::cout << "Real-time-factor=" << real_time_factor << std::endl;
     
     if(getenv("RUNTIME_LIMIT") != NULL) {
@@ -2554,9 +2558,16 @@ int main(int _argc, char **_argv)
         print_threadsafe(temp.str(), "main()", INFO);
     }
 
-    if(getenv("DISABLE_WEB_UI") != NULL) {
-        use_web_ui.store(false);
-        print_threadsafe("Web UI disabled by environment variable", "main()", INFO);
+    if(getenv("USE_WEB_UI") != NULL) {
+        use_web_ui.store(atoi(getenv("USE_WEB_UI")));
+    }
+
+    if(getenv("IS_LAPTOP") != NULL) {
+        is_laptop = atoi(getenv("IS_LAPTOP"));
+    }
+
+    if(getenv("SKIP_PINNING") != NULL) {
+        skip_pinning = atoi(getenv("SKIP_PINNING"));
     }
     
     torque_calculation_interval *= 1 / real_time_factor;
@@ -2606,13 +2617,13 @@ int main(int _argc, char **_argv)
         web_ui_state_thread = std::thread(std::bind(receive_controls));
     }
 
-    if(getenv("SKIP_PINNING") == NULL) {
+    if(!skip_pinning) {
         // Create a cpu_set_t object representing a set of CPUs. Clear it and mark only CPU i as set.
         // Source: https://eli.thegreenplace.net/2016/c11-threads-affinity-and-hyperthreading/
 
         int mpc_cpu, left_leg_cpu, right_leg_cpu, time_cpu;
 
-        if(getenv("IS_LAPTOP") != NULL) {
+        if(is_laptop) {
             mpc_cpu = 3, left_leg_cpu = 9, right_leg_cpu = 9, time_cpu = 9;
         }
         else {
