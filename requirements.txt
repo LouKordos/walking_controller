@@ -6,8 +6,10 @@ jupyter
 pandas
 sympy
 nose
-casadi
 more-itertools
 playsound
 tqdm
 argparse
+ipympl
+ipykernel
+casadi
