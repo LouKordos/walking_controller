@@ -1414,6 +1414,8 @@ void run_mpc() {
     const double stddev = 0.01;
     const int num_samples = 10000;
 
+    const bool noise_enabled = true;
+
     Eigen::Matrix<double, n-1, num_samples> noise_matrix = Eigen::ArrayXXd::Zero(n-1, num_samples);
 
     for(int i = 0; i < n-1; i++) {
@@ -1520,7 +1522,12 @@ void run_mpc() {
         P = A_d_kf.block<n-1, n-1>(0, 0) * P * A_d_kf.block<n-1, n-1>(0, 0).transpose() + Q;
 
         // Get measurements (in a real scenario only the measured values would be received and thus this calculation is obsolete.)
-        Y = C * x_t.block<n-1, 1>(0, 0) /*+ noise_matrix.block<num_observed_states, 1>(0, total_iterations)*/;
+        if(noise_enabled) {
+            Y = C * x_t.block<n-1, 1>(0, 0) + noise_matrix.block<num_observed_states, 1>(0, total_iterations);
+        }
+        else {
+            Y = C * x_t.block<n-1, 1>(0, 0) /*+ noise_matrix.block<num_observed_states, 1>(0, total_iterations)*/;
+        }
 
         // Update kalman gain (calculated as \frac{P*C.T}{C*P*C.T + R}
         K_kf = (P * C.transpose()) * (C * P * C.transpose() + R).inverse();
@@ -2522,6 +2529,7 @@ void handle_exit(int) {
 
 int main(int _argc, char **_argv)
 {
+
     log("--------------------------------", INFO);
     log("--------------------------------", INFO);
     log("--------------------------------", INFO);
@@ -2529,7 +2537,7 @@ int main(int _argc, char **_argv)
     log("--------------------------------", INFO);
     log("--------------------------------", INFO);
     log("--------------------------------", INFO);
-
+    
     // is 0.065 because it's the difference between torso CoM height and Hip Actuator Center Height, negative because just think about it or calculate an example value with negative and positive z displacement. 
     // A point expressed in hip frame (i.e. [0, 0, 0]) will obviously be at negative Z in a frame that is located above the hip frame, meaning you need negative Z displacement in the transformation matrix.
     left_leg = new Leg(-0.15, 0, -0.065, 0.1, left_leg_contact_state_port);
