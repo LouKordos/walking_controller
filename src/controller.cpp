@@ -1414,7 +1414,7 @@ void run_mpc() {
     const double stddev = 0.01;
     const int num_samples = 10000;
 
-    const bool noise_enabled = true;
+    const bool noise_enabled = false;
 
     Eigen::Matrix<double, n-1, num_samples> noise_matrix = Eigen::ArrayXXd::Zero(n-1, num_samples);
 
