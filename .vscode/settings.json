@@ -64,5 +64,7 @@
         "cfenv": "cpp",
         "typeindex": "cpp",
         "typeinfo": "cpp"
-    }
+    },
+    "python.pythonPath": "/usr/bin/python",
+    "cmake.sourceDirectory": "${workspaceFolder}/src"
 }
