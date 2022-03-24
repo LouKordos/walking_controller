@@ -15,7 +15,7 @@ print("Starting plot generation...")
 
 home_dir = os.environ['HOME']
 
-filenames = os.listdir(home_dir + "/dev/walking_controller/plot_data/")
+filenames = os.listdir(home_dir + "/Nextcloud/dev/walking_controller/plot_data/")
 
 largest_index = 0
 
