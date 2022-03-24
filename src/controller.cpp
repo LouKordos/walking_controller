@@ -487,21 +487,72 @@ void calculate_left_leg_torques() {
         auto torque_calculation_start = high_resolution_clock::now();
 
         // If swing, leg trajectory should be followed, if not, foot is in contact with the ground and MPC forces should be converted into torques and applied
-        if(left_leg->get_swing_phase() /*&& !left_leg->contactState.hasContact()*/) {
-            double current_trajectory_time = get_time(false) - left_leg->get_trajectory_start_time();
+        if(true /*&& !left_leg->contactState.hasContact()*/) {
+            // double current_trajectory_time = get_time(false) - left_leg->get_trajectory_start_time();
 
-            current_traj_time_temp = current_trajectory_time;
+            // current_traj_time_temp = current_trajectory_time;
 
-            if(current_trajectory_time > t_stance) {
-                std::cout << "WARNING!!!! Desired trajectory time exceeds gait phase duration by " << current_trajectory_time - t_stance << "s" << std::endl;
-            }
+            // if(current_trajectory_time > t_stance) {
+            //     std::cout << "WARNING!!!! Desired trajectory time exceeds gait phase duration by " << current_trajectory_time - t_stance << "s" << std::endl;
+            // }
 
-            // Due to the impedance control running at a much higher frequency than the MPC, the time might exceed t_stance because the MPC only updates the start time after 1/50s (worst case), which would be 50 iterations for the impedance control
-            constrain(current_trajectory_time, 0, t_stance);
+            // // Due to the impedance control running at a much higher frequency than the MPC, the time might exceed t_stance because the MPC only updates the start time after 1/50s (worst case), which would be 50 iterations for the impedance control
+            // constrain(current_trajectory_time, 0, t_stance);
 
-            left_leg->pos_desired << (left_leg->H_hip_body.inverse() * (Eigen::Matrix<double, 4, 1>() << left_leg->foot_trajectory.get_position(current_trajectory_time), 1).finished()).block<3, 1>(0, 0), 0, 0;
-            left_leg->vel_desired << left_leg->foot_trajectory.get_velocity(current_trajectory_time), 0, 0;
-            left_leg->accel_desired << left_leg->foot_trajectory.get_acceleration(current_trajectory_time);
+            // left_leg->pos_desired << (left_leg->H_hip_body.inverse() * (Eigen::Matrix<double, 4, 1>() << left_leg->foot_trajectory.get_position(current_trajectory_time), 1).finished()).block<3, 1>(0, 0), 0, 0;
+            // left_leg->vel_desired << left_leg->foot_trajectory.get_velocity(current_trajectory_time), 0, 0;
+            // left_leg->accel_desired << left_leg->foot_trajectory.get_acceleration(current_trajectory_time);
+
+            // left_leg->pos_desired << 0, 0, -0.7, 0, 0;
+            // left_leg->vel_desired << 0, 0, 0, 0, 0;
+            // left_leg->accel_desired << 0, 0, 0;
+
+            double x_pos_t = 0; // Current desired cartesian x position
+            double x_vel_t = 0; // Current desired cartesian x velocity
+            double x_accel_t = 0; // Current desired cartesian x acceleration
+
+            double y_pos_t = 0; // Current desired cartesian y position
+            double y_vel_t = 0; // Current desired cartesian y velocity
+            double y_accel_t = 0; // Current desired cartesian y acceleration
+
+            double z_pos_t = 0; // Current desired cartesian z position
+            double z_vel_t = 0; // Current desired cartesian z velocity
+            double z_accel_t = 0; // Current desired cartesain z acceleration
+
+            double phi_t = 0; // Current desired roll orientation for the foot described as an Euler Angle
+            double phi_dot_t = 0; // Current desired roll angular velocity for the foot described as an Euler Angle
+
+            double psi_t = 0; // Current desired yaw orientation for the foot described as an Euler Angle
+            double psi_dot_t = 0; // Current desired yaw angular velocity for the foot described as an Euler Angle
+
+            x_pos_t = 0;
+            x_vel_t = 0;
+            x_accel_t = 0;
+            
+            double omega = 12.0; // Frequency for sinusoidal Trajectory in rad/s
+
+            // X:
+
+            //x_pos_t = 0.200000000000000011102L*cosl(2*t);
+            x_pos_t = 0;
+            x_vel_t = 0;
+            x_accel_t = 0;
+
+            // Y:
+
+            y_pos_t = 0.100000000000000011102L*cosl(omega*get_time(false));
+            y_vel_t = -0.100000000000000011102L*omega*sinl(omega*get_time(false));
+            y_accel_t = -0.100000000000000011102L*powl(omega, 2)*cosl(omega*get_time(false));
+
+            // Z:
+
+            z_pos_t = 0.100000000000000005551L*sinl(omega*get_time(false)) - 0.900000000000000044409L;
+            z_vel_t = 0.100000000000000005551L*omega*cosl(omega*get_time(false));
+            z_accel_t = -0.100000000000000005551L*powl(omega, 2)*sinl(omega*get_time(false));
+
+            left_leg->pos_desired << x_pos_t, y_pos_t, z_pos_t, phi_t, psi_t;
+            left_leg->vel_desired<< x_vel_t, y_vel_t, z_vel_t, psi_t, psi_dot_t;
+            left_leg->accel_desired << x_accel_t, y_accel_t, z_accel_t;
 
             left_leg->update_torque_setpoint();
         }
@@ -795,21 +846,73 @@ void calculate_right_leg_torques() {
         auto torque_calculation_start = high_resolution_clock::now();
 
         // If swing, leg trajectory should be followed, if not, foot is in contact with the ground and MPC forces should be converted into torques and applied
-        if(right_leg->get_swing_phase() /*&& !right_leg->contactState.hasContact()*/) {
-            double current_trajectory_time = get_time(false) - right_leg->get_trajectory_start_time();
+        if(true /*&& !right_leg->contactState.hasContact()*/) {
+            // double current_trajectory_time = get_time(false) - right_leg->get_trajectory_start_time();
 
-            current_traj_time_temp = current_trajectory_time;
+            // current_traj_time_temp = current_trajectory_time;
 
-            if(current_trajectory_time > t_stance) {
-                std::cout << "WARNING!!!! Desired trajectory time exceeds gait phase duration by " << current_trajectory_time - t_stance << "s" << std::endl;
-            }
+            // if(current_trajectory_time > t_stance) {
+            //     std::cout << "WARNING!!!! Desired trajectory time exceeds gait phase duration by " << current_trajectory_time - t_stance << "s" << std::endl;
+            // }
 
-            // Due to the impedance control running at a much higher frequency than the MPC, the time might exceed t_stance because the MPC only updates the start time after 1/50s (worst case), which would be 50 iterations for the impedance control
-            constrain(current_trajectory_time, 0, t_stance);
+            // // Due to the impedance control running at a much higher frequency than the MPC, the time might exceed t_stance because the MPC only updates the start time after 1/50s (worst case), which would be 50 iterations for the impedance control
+            // constrain(current_trajectory_time, 0, t_stance);
 
-            right_leg->pos_desired << (right_leg->H_hip_body.inverse() * (Eigen::Matrix<double, 4, 1>() << right_leg->foot_trajectory.get_position(current_trajectory_time), 1).finished()).block<3, 1>(0, 0), 0, 0;
-            right_leg->vel_desired << right_leg->foot_trajectory.get_velocity(current_trajectory_time), 0, 0;
-            right_leg->accel_desired << right_leg->foot_trajectory.get_acceleration(current_trajectory_time);
+            // right_leg->pos_desired << (right_leg->H_hip_body.inverse() * (Eigen::Matrix<double, 4, 1>() << right_leg->foot_trajectory.get_position(current_trajectory_time), 1).finished()).block<3, 1>(0, 0), 0, 0;
+            // right_leg->vel_desired << right_leg->foot_trajectory.get_velocity(current_trajectory_time), 0, 0;
+            // right_leg->accel_desired << right_leg->foot_trajectory.get_acceleration(current_trajectory_time);
+
+            // right_leg->pos_desired << 0, 0, -0.7, 0, 0;
+            // right_leg->vel_desired << 0, 0, 0, 0, 0;
+            // right_leg->accel_desired << 0, 0, 0;
+
+            double x_pos_t = 0; // Current desired cartesian x position
+            double x_vel_t = 0; // Current desired cartesian x velocity
+            double x_accel_t = 0; // Current desired cartesian x acceleration
+
+            double y_pos_t = 0; // Current desired cartesian y position
+            double y_vel_t = 0; // Current desired cartesian y velocity
+            double y_accel_t = 0; // Current desired cartesian y acceleration
+
+            double z_pos_t = 0; // Current desired cartesian z position
+            double z_vel_t = 0; // Current desired cartesian z velocity
+            double z_accel_t = 0; // Current desired cartesain z acceleration
+
+            double phi_t = 0; // Current desired roll orientation for the foot described as an Euler Angle
+            double phi_dot_t = 0; // Current desired roll angular velocity for the foot described as an Euler Angle
+
+            double psi_t = 0; // Current desired yaw orientation for the foot described as an Euler Angle
+            double psi_dot_t = 0; // Current desired yaw angular velocity for the foot described as an Euler Angle
+
+            x_pos_t = 0;
+            x_vel_t = 0;
+            x_accel_t = 0;
+            
+            double omega = 12.0; // Frequency for sinusoidal Trajectory in rad/s
+
+            // X:
+
+            //x_pos_t = 0.200000000000000011102L*cosl(2*t);
+            x_pos_t = 0;
+            x_vel_t = 0;
+            x_accel_t = 0;
+
+            // Y:
+
+            y_pos_t = 0.100000000000000011102L*cosl(omega*get_time(false));
+            y_vel_t = -0.100000000000000011102L*omega*sinl(omega*get_time(false));
+            y_accel_t = -0.100000000000000011102L*powl(omega, 2)*cosl(omega*get_time(false));
+
+            // Z:
+
+            z_pos_t = 0.100000000000000005551L*sinl(omega*get_time(false)) - 0.900000000000000044409L;
+            z_vel_t = 0.100000000000000005551L*omega*cosl(omega*get_time(false));
+            z_accel_t = -0.100000000000000005551L*powl(omega, 2)*sinl(omega*get_time(false));
+
+            right_leg->pos_desired << x_pos_t, y_pos_t, z_pos_t, phi_t, psi_t;
+            right_leg->vel_desired<< x_vel_t, y_vel_t, z_vel_t, psi_t, psi_dot_t;
+            right_leg->accel_desired << x_accel_t, y_accel_t, z_accel_t;
+
 
             right_leg->update_torque_setpoint();
         }
@@ -2611,8 +2714,9 @@ int main(int _argc, char **_argv)
     right_leg->set_foot_pos_world_desired((Eigen::Matrix<double, 3, 1>() << 0.15, 0, 0).finished());
 
     // Inverted because swap will occur at iteration 0, so set opposite contact state of what you want here
-    alternate_contacts = true;
-    left_leg->set_swing_phase(true);    
+    alternate_contacts = false;
+    left_leg->set_swing_phase(true);
+    right_leg->set_swing_phase(true);
     // Bind functions to threads
     // left_leg_state_thread = std::thread(std::bind(update_left_leg_state));
     left_leg_torque_thread = std::thread(std::bind(calculate_left_leg_torques));
