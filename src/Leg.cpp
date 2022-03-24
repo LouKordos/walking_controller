@@ -6,7 +6,7 @@ Leg::Leg(const double hip_offset_x, const double hip_offset_y, const double hip_
         0, 0.6, 0,
         0, 0, 0.6;
     
-    omega_desired << 10 * M_PI, 16.0 * M_PI, 10.0 * M_PI;
+    omega_desired << 8.0 * M_PI, 12.0 * M_PI, 8.0 * M_PI;
 
     pos_desired << 0, 0, -1.115, 0, 0; // Cartesian xyz + euler roll and pitch
     vel_desired << 0, 0, 0, 0, 0; // Cartesian xyz + euler roll and pitch
