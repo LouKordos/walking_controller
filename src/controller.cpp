@@ -546,7 +546,7 @@ void calculate_left_leg_torques() {
 
             // Z:
 
-            z_pos_t = 0.100000000000000005551L*sinl(omega*get_time(false)) - 0.900000000000000044409L;
+            z_pos_t = 0.100000000000000005551L*sinl(omega*get_time(false)) - 0.850000000000000044409L;
             z_vel_t = 0.100000000000000005551L*omega*cosl(omega*get_time(false));
             z_accel_t = -0.100000000000000005551L*powl(omega, 2)*sinl(omega*get_time(false));
 
@@ -905,7 +905,7 @@ void calculate_right_leg_torques() {
 
             // Z:
 
-            z_pos_t = 0.100000000000000005551L*sinl(omega*get_time(false)) - 0.900000000000000044409L;
+            z_pos_t = 0.100000000000000005551L*sinl(omega*get_time(false)) - 0.850000000000000044409L;
             z_vel_t = 0.100000000000000005551L*omega*cosl(omega*get_time(false));
             z_accel_t = -0.100000000000000005551L*powl(omega, 2)*sinl(omega*get_time(false));
 
