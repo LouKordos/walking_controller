@@ -90,21 +90,22 @@ struct leg_config {
     double m_ll = 0.5;
     double m_foot = 0.1;
 
-// Distances from joint to joint (l1 is 0 because bas frame is at the same place as hip3 so there is only rotation) in m
-
-    double l1_x_com = 0;
-    double l1_y_com = 0;
-    double l1_z_com = 0;
+    // Distances in transformation matrices. lx_com is from the previous joint frame to the next CoM frame.
+    // l1 (transformation from base link to uppermost hip3 actuator) is 0 because the joint frame is identical to base frame.
     double l1_x = 0;
     double l1_y = 0;
     double l1_z = 0;
-
-    double l2_x_com = 0;
-    double l2_y_com = -0.12;
-    double l2_z_com = 0;
+    double l1_x_com = 0;
+    double l1_y_com = 0;
+    double l1_z_com = 0;
+    
+    // Distance from the uppermost hip actuator to the one below, _com refers to where the CoM is.
     double l2_x = 0;
     double l2_y = -0.12;
     double l2_z = 0.117;
+    double l2_x_com = 0;
+    double l2_y_com = -0.12;
+    double l2_z_com = 0;
 
     double l3_x = 0;
     double l3_y = 0.12;
