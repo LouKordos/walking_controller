@@ -100,16 +100,16 @@ double l5_x = 0;
 double l6_x = 0;
 
 double l1_y = 0;
-double l2_y = -0.15;
-double l3_y = 0.15;
+double l2_y = -0.12;
+double l3_y = 0.12;
 double l4_y = 0;
 double l5_y = 0;
 double l6_y = 0;
 
 double l1_z = 0;
-double l2_z = 0.15;
+double l2_z = 0.117;
 double l3_z = 0;
-double l4_z = 0.41;
+double l4_z = 0.42;
 double l5_z = 0.4;
 double l6_z = 0.04;
 
@@ -123,8 +123,8 @@ double l5_x_com = 0;
 double l6_x_com = 0;
 
 double l1_y_com = 0;
-double l2_y_com = -0.15;
-double l3_y_com = 0.15;
+double l2_y_com = -0.12;
+double l3_y_com = 0.12;
 double l4_y_com = 0;
 double l5_y_com = 0;
 double l6_y_com = 0;
