@@ -38,8 +38,8 @@ knee_upper_limit = 0 # in rad
 
 gear_ratio = 1/8 # planetary gearbox ratio
 
-plt.ion()
-plt.show()
+# plt.ion()
+# plt.show()
 
 data = []
 
