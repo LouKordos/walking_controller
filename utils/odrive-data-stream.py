@@ -43,6 +43,9 @@ plt.show()
 
 data = []
 
+def out_of_bounds(lower, upper, angle):
+    return angle < lower or angle > upper
+
 while True:
     theta1_raw = hip_3_servo.axis0.pos_vel_mapper.pos_rel
     theta2_raw = hip_2_servo.axis0.pos_vel_mapper.pos_rel
@@ -59,11 +62,38 @@ while True:
     theta3 = 2 * math.pi * gear_ratio * (hip_1_zero_offset - theta3_raw)
     theta4 = 2 * math.pi * gear_ratio * (knee_zero_offset - theta4_raw)
 
-    print("Hip3:", theta1, ", Hip2:", theta2, ", Hip1:", theta3, ", Knee:", theta4)
-    # data.append(gear_ratio * 1 * (hip_1_zero_offset - hip_1_servo.encoder_estimator0.pos_estimate))
-    data.append(theta4)
-    plt.clf()
-    plt.plot(data)
-    plt.draw()
-    plt.pause(0.01)
-    time.sleep(0.01)
+    sock.sendto("{theta1}|{theta2}|{theta3}|{theta4}|0|{theta1dot}|{theta2dot}|{theta3dot}|{theta4dot}|0".format(theta1=theta1, theta2=theta2, theta3=theta3, theta4=theta4, theta1dot=theta1dot, theta2dot=theta2dot, theta3dot=theta3dot, theta4dot=theta4dot).encode(), (UDP_IP, UDP_PORT))
+    print("after send")
+    # data, addr = sock.recvfrom(4096) # buffer size is 1024 bytes
+    # print("received message: %s" % data)
+
+
+    if out_of_bounds(hip_3_lower_limit, hip_3_upper_limit, theta1) or out_of_bounds(hip_2_lower_limit, hip_2_upper_limit, theta2) or out_of_bounds(hip_1_lower_limit, hip_1_upper_limit, theta3) or out_of_bounds(knee_lower_limit, knee_upper_limit, theta4):
+        # print("hip3 before axis idle:", hip_3_servo.axis0.pos_vel_mapper.pos_rel)
+        if hip_3_servo.axis0.current_state != AXIS_STATE_IDLE:
+            hip_3_servo.axis0.requested_state = AXIS_STATE_IDLE
+
+        if hip_2_servo.axis0.current_state != AXIS_STATE_IDLE:
+            hip_2_servo.axis0.requested_state = AXIS_STATE_IDLE
+
+        if hip_1_servo.axis0.current_state != AXIS_STATE_IDLE:
+            hip_1_servo.axis0.requested_state = AXIS_STATE_IDLE
+
+        if knee_servo.axis0.current_state != AXIS_STATE_IDLE:
+            knee_servo.axis0.requested_state = AXIS_STATE_IDLE
+
+        # hip_3_servo.axis0.requested_state = hip_2_servo.axis0.requested_state = hip_1_servo.axis0.requested_state = knee_servo.axis0.requested_state = AXIS_STATE_IDLE
+        # print("hip3 after axis idle:", hip_3_servo.axis0.pos_vel_mapper.pos_rel)
+
+        print("Angles out of safe bounds, deactivating all servos!")
+
+    # print("Hip3:", theta1, ", Hip2:", theta2, ", Hip1:", theta3, ", Knee:", theta4)
+    # print("Hip3_raw:", theta1_raw, ", Hip2_raw:", theta2_raw, ", Hip1_raw:", theta3_raw, ", Knee_raw:", theta4_raw)
+    # print("Hip3:", math.degrees(theta1), ", Hip2:", math.degrees(theta2), ", Hip1:", math.degrees(theta3), ", Knee:", math.degrees(theta4))
+
+    # data.append(theta1_raw)
+    # plt.clf()
+    # plt.plot(data)
+    # plt.draw()
+    # plt.pause(0.01)
+    time.sleep(0.001)
