@@ -6,6 +6,16 @@ from odrive.utils import dump_errors
 import math
 import matplotlib.pyplot as plt
 import signal,sys,time
+import socket
+
+UDP_IP = "127.0.0.1"
+UDP_PORT = 42068
+
+sock = socket.socket(socket.AF_INET, # Internet
+                     socket.SOCK_DGRAM) # UDP
+
+sock.bind((UDP_IP, UDP_PORT))
+
 terminate = False
 
 def signal_handling(signum,frame):
