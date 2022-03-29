@@ -1,9 +1,18 @@
 #!/usr/bin/env python3
 
 import odrive
-import time
+from odrive.enums import *
+from odrive.utils import dump_errors
 import math
 import matplotlib.pyplot as plt
+import signal,sys,time
+terminate = False
+
+def signal_handling(signum,frame):
+    global terminate
+    terminate = True
+
+signal.signal(signal.SIGINT,signal_handling)
 
 print("Waiting for Hip3 servo to be connected...")
 hip_3_servo = odrive.find_any(serial_number=str(hex(56449684681264).split('x')[-1]).upper()) # Uppermost hip (Hip 3)
@@ -21,20 +30,30 @@ print("Waiting for Knee servo to be connected...")
 knee_servo = odrive.find_any(serial_number=str(hex(56557058142768).split('x')[-1]).upper()) # Knee
 print("Knee connected.")
 
-hip_3_zero_offset = 0.1792331486940384 # in turns
-hip_2_zero_offset = 0.13275079429149628 # in turns
-hip_1_zero_offset = 0.9866976141929626 # in turns
-knee_zero_offset = 0.26936811208724976 # in turns
+hip_3_zero_offset = 0.2002742886543274 # in turns
+hip_2_zero_offset = -0.457975834608078 # in turns
+hip_1_zero_offset = -0.016931354999542236 # in turns
+knee_zero_offset = -0.04928791522979736 # in turns
 
-hip_3_lower_limit = 0 # in rad
-hip_2_lower_limit = 0 # in rad
-hip_1_lower_limit = 0 # in rad
-knee_lower_limit = 0 # in rad
+hip_3_servo.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+hip_2_servo.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+hip_1_servo.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+knee_servo.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
 
-hip_3_upper_limit = 0 # in rad
-hip_2_upper_limit = 0 # in rad
-hip_1_upper_limit = 0 # in rad
-knee_upper_limit = 0 # in rad
+hip_3_servo.axis0.controller.input_pos = hip_3_zero_offset
+hip_2_servo.axis0.controller.input_pos = hip_2_zero_offset
+hip_1_servo.axis0.controller.input_pos = hip_1_zero_offset
+knee_servo.axis0.controller.input_pos = knee_zero_offset
+
+hip_3_lower_limit = -0.48 # in rad
+hip_2_lower_limit = -0.8 # in rad
+hip_1_lower_limit = -0.4 # in rad
+knee_lower_limit = -1.2 # in rad
+
+hip_3_upper_limit = 0.48 # in rad
+hip_2_upper_limit = 0.25 # in rad
+hip_1_upper_limit = 1.4 # in rad
+knee_upper_limit = 1.2 # in rad
 
 gear_ratio = 1/8 # planetary gearbox ratio
 
@@ -47,6 +66,11 @@ def out_of_bounds(lower, upper, angle):
     return angle < lower or angle > upper
 
 while True:
+    if terminate:
+        print("CTRL + C detected, deactivating servos and exiting...")
+        hip_3_servo.axis0.requested_state = hip_2_servo.axis0.requested_state = hip_1_servo.axis0.requested_state = knee_servo.axis0.requested_state = AXIS_STATE_IDLE
+        break
+
     theta1_raw = hip_3_servo.axis0.pos_vel_mapper.pos_rel
     theta2_raw = hip_2_servo.axis0.pos_vel_mapper.pos_rel
     theta3_raw = hip_1_servo.axis0.pos_vel_mapper.pos_rel
