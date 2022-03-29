@@ -81,6 +81,11 @@ while True:
     theta3dot_raw = hip_1_servo.encoder_estimator0.vel_estimate
     theta4dot_raw = knee_servo.encoder_estimator0.vel_estimate
 
+    theta1dot = 2 * math.pi * gear_ratio * theta1dot_raw
+    theta2dot = 2 * math.pi * gear_ratio * theta2dot_raw
+    theta3dot = 2 * math.pi * gear_ratio * theta3dot_raw
+    theta4dot = 2 * math.pi * gear_ratio * theta4dot_raw
+
     theta1 = 2 * math.pi * gear_ratio * (hip_3_zero_offset - theta1_raw)
     theta2 = 2 * math.pi * gear_ratio * (hip_2_zero_offset - theta2_raw)
     theta3 = 2 * math.pi * gear_ratio * (hip_1_zero_offset - theta3_raw)
