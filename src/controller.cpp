@@ -540,19 +540,20 @@ void calculate_left_leg_torques() {
 
             // Y:
 
-            y_pos_t = 0.100000000000000011102L*cosl(omega*get_time(false));
-            y_vel_t = -0.100000000000000011102L*omega*sinl(omega*get_time(false));
-            y_accel_t = -0.100000000000000011102L*powl(omega, 2)*cosl(omega*get_time(false));
+            y_pos_t = 0.0500000000000000011102L*cosl(omega*get_time(false));
+            y_vel_t = -0.0500000000000000011102L*omega*sinl(omega*get_time(false));
+            y_accel_t = -0.0500000000000000011102L*powl(omega, 2)*cosl(omega*get_time(false));
 
             // Z:
 
-            z_pos_t = 0.100000000000000005551L*sinl(omega*get_time(false)) - 0.850000000000000044409L;
-            z_vel_t = 0.100000000000000005551L*omega*cosl(omega*get_time(false));
-            z_accel_t = -0.100000000000000005551L*powl(omega, 2)*sinl(omega*get_time(false));
+            z_pos_t = 0.0500000000000000005551L*sinl(omega*get_time(false)) - 0.95000000000000044409L;
+            z_vel_t = 0.0500000000000000005551L*omega*cosl(omega*get_time(false));
+            z_accel_t = -0.0500000000000000005551L*powl(omega, 2)*sinl(omega*get_time(false));
 
-            left_leg->pos_desired << x_pos_t, y_pos_t, z_pos_t, phi_t, psi_t;
-            left_leg->vel_desired<< x_vel_t, y_vel_t, z_vel_t, psi_t, psi_dot_t;
-            left_leg->accel_desired << x_accel_t, y_accel_t, z_accel_t;
+            left_leg->pos_desired << 0, 0.1, -0.9, 0, 0;
+            // left_leg->pos_desired << x_pos_t, y_pos_t, z_pos_t, phi_t, psi_t;
+            // left_leg->vel_desired<< x_vel_t, y_vel_t, z_vel_t, psi_t, psi_dot_t;
+            // left_leg->accel_desired << x_accel_t, y_accel_t, z_accel_t;
 
             left_leg->update_torque_setpoint();
         }
@@ -899,19 +900,20 @@ void calculate_right_leg_torques() {
 
             // Y:
 
-            y_pos_t = 0.100000000000000011102L*cosl(omega*get_time(false));
-            y_vel_t = -0.100000000000000011102L*omega*sinl(omega*get_time(false));
-            y_accel_t = -0.100000000000000011102L*powl(omega, 2)*cosl(omega*get_time(false));
+            y_pos_t = 0.0500000000000000011102L*cosl(omega*get_time(false));
+            y_vel_t = -0.0500000000000000011102L*omega*sinl(omega*get_time(false));
+            y_accel_t = -0.0500000000000000011102L*powl(omega, 2)*cosl(omega*get_time(false));
 
             // Z:
 
-            z_pos_t = 0.100000000000000005551L*sinl(omega*get_time(false)) - 0.850000000000000044409L;
-            z_vel_t = 0.100000000000000005551L*omega*cosl(omega*get_time(false));
-            z_accel_t = -0.100000000000000005551L*powl(omega, 2)*sinl(omega*get_time(false));
-
-            right_leg->pos_desired << x_pos_t, y_pos_t, z_pos_t, phi_t, psi_t;
-            right_leg->vel_desired<< x_vel_t, y_vel_t, z_vel_t, psi_t, psi_dot_t;
-            right_leg->accel_desired << x_accel_t, y_accel_t, z_accel_t;
+            z_pos_t = 0.0500000000000000005551L*sinl(omega*get_time(false)) - 0.95000000000000044409L;
+            z_vel_t = 0.0500000000000000005551L*omega*cosl(omega*get_time(false));
+            z_accel_t = -0.0500000000000000005551L*powl(omega, 2)*sinl(omega*get_time(false));
+            
+            right_leg->pos_desired << 0, 0.1, -0.9, 0, 0;
+            // right_leg->pos_desired << x_pos_t, y_pos_t, z_pos_t, phi_t, psi_t;
+            // right_leg->vel_desired<< x_vel_t, y_vel_t, z_vel_t, psi_t, psi_dot_t;
+            // right_leg->accel_desired << x_accel_t, y_accel_t, z_accel_t;
 
 
             right_leg->update_torque_setpoint();
