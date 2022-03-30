@@ -1,0 +1,150 @@
+<?xml version="1.0"?>
+<robot name="visual">
+
+    <material name="blue">
+        <color rgba="0 0 0.8 1"/>
+    </material>
+    <material name="black">
+        <color rgba="0 0 0 1"/>
+    </material>
+    <material name="white">
+        <color rgba="1 1 1 1"/>
+    </material>
+
+    <link name="base_link">
+        <visual>
+            <geometry>
+                <box size="0.15 0.15 1.4"/>
+            </geometry>
+            <origin rpy="0 0 0" xyz="0.0 1 0.7"/>
+
+            <material name="black"/>
+        </visual>
+    </link>
+
+    <link name="hip_axis_3">
+        <visual>
+            <geometry>
+                <cylinder length="0.04" radius="0.08"/>
+            </geometry>
+
+            <material name="white"/>
+        </visual>
+    </link>
+
+    <link name="hip_axis_2">
+        <visual>
+            <geometry>
+                <cylinder length="0.04" radius="0.08"/>
+            </geometry>
+
+            <material name="white"/>
+        </visual>
+    </link>
+
+    <link name="hip_axis_1">
+        <visual>
+            <geometry>
+                <cylinder length="0.04" radius="0.08"/>
+            </geometry>
+
+            <material name="white"/>
+        </visual>
+    </link>
+
+    <link name="knee_actuator">
+        <visual>
+            <geometry>
+                <cylinder length="0.04" radius="0.08"/>
+            </geometry>
+
+            <material name="white"/>
+        </visual>
+    </link>
+
+    <link name="upper_leg">
+        <visual>
+            <geometry>
+                <box size="0.07 0.07 0.35"/>
+            </geometry>
+
+            <material name="white"/>
+        </visual>
+    </link>
+
+    <link name="lower_leg">
+        <visual>
+            <geometry>
+                <box size="0.07 0.07 0.35"/>
+            </geometry>
+            <origin rpy="0 0 0" xyz="0 0 -0.2"/>
+            <material name="white"/>
+        </visual>
+    </link>
+
+    <link name="knee">
+        <visual>
+            <geometry>
+                <cylinder length="0.06" radius="0.03"/>
+            </geometry>
+
+            <material name="blue"/>
+        </visual>
+    </link>
+
+    <joint name="base_to_hip_axis_3_joint" type="revolute">
+        <axis xyz="0 0 1"/>
+        <limit effort="10.0" lower="-0.5" upper="0.5" velocity="100"/>
+
+        <parent link="base_link"/>
+        <child link="hip_axis_3"/>
+        <origin xyz="0 0 1.377"/>
+    </joint>
+
+    <joint name="hip_axis_3_to_hip_axis_2_joint" type="revolute">
+        <axis xyz="0 0 1"/>
+        <limit effort="10.0" lower="-0.8" upper="0.8" velocity="100"/>
+        
+        <parent link="hip_axis_3"/>
+        <child link="hip_axis_2"/>
+        <origin xyz="0 -0.12 -0.1175" rpy="${pi/2} 0 0"/>
+    </joint>
+
+    <joint name="hip_axis_2_to_hip_axis_1_joint" type="revolute">
+        <axis xyz="0 0 1"/>
+        <limit effort="10.0" lower="-0.3" upper="1.8" velocity="100"/>
+        
+        <parent link="hip_axis_2"/>
+        <child link="hip_axis_1"/>
+        <origin xyz="0.06 0 -0.12" rpy="0 ${pi/2} 0"/>
+    </joint>
+
+    <joint name="hip_axis_1_to_knee_actuator_joint" type="fixed">
+        <parent link="hip_axis_1"/>
+        <child link="knee_actuator"/>
+        <origin xyz="0 0 -0.12" rpy="0 0 0"/>
+    </joint>
+
+    <joint name="hip_axis_1_to_upper_leg_joint" type="fixed">
+        <parent link="hip_axis_1"/>
+        <child link="upper_leg"/>
+        <origin xyz="0 -0.21 -0.06" rpy="${pi/2} 0 0"/>
+    </joint>
+
+    <joint name="upper_leg_to_knee_joint" type="fixed">
+        <parent link="upper_leg"/>
+        <child link="knee"/>
+        <origin xyz="0 0 0.21" rpy="${pi/2} 0 0"/>
+    </joint>
+
+    <joint name="knee_to_lower_leg_joint" type="revolute">
+        <axis xyz="0 1 0"/>
+        <limit effort="10.0" lower="-1.8" upper="1.8" velocity="100"/>
+
+        <parent link="knee"/>
+        <child link="lower_leg"/>
+        <origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
+    </joint>
+
+    
+</robot>
