@@ -66,5 +66,13 @@
         "typeinfo": "cpp"
     },
     "cmake.sourceDirectory": "${workspaceFolder}/src",
-    "python.pythonPath": "/usr/bin/python"
+    "python.pythonPath": "/usr/bin/python",
+    "python.autoComplete.extraPaths": [
+        "/home/vm/Documents/walking_controller/ros/install/leg_joint_state_publisher/lib/python3.8/site-packages",
+        "/opt/ros/galactic/lib/python3.8/site-packages"
+    ],
+    "python.analysis.extraPaths": [
+        "/home/vm/Documents/walking_controller/ros/install/leg_joint_state_publisher/lib/python3.8/site-packages",
+        "/opt/ros/galactic/lib/python3.8/site-packages"
+    ]
 }
