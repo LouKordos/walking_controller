@@ -66,6 +66,11 @@ hip_2_upper_limit = 0.25 # in rad
 hip_1_upper_limit = 1.4 # in rad
 knee_upper_limit = 1.2 # in rad
 
+hip_3_sign = -1
+hip_2_sign = 1
+hip_1_sign = -1
+knee_sign = -1
+
 gear_ratio = 1/8 # planetary gearbox ratio
 
 # plt.ion()
@@ -98,15 +103,15 @@ while True:
     # theta1_raw = theta2_raw = theta3_raw = theta4_raw = 0.1
     # theta1dot_raw = theta2dot_raw = theta3dot_raw = theta4dot_raw = -0.05
 
-    theta1dot = 2 * math.pi * gear_ratio * theta1dot_raw
-    theta2dot = 2 * math.pi * gear_ratio * theta2dot_raw
-    theta3dot = 2 * math.pi * gear_ratio * theta3dot_raw
-    theta4dot = 2 * math.pi * gear_ratio * theta4dot_raw
+    theta1dot = 2 * math.pi * gear_ratio * theta1dot_raw * hip_3_sign
+    theta2dot = 2 * math.pi * gear_ratio * theta2dot_raw * hip_2_sign
+    theta3dot = 2 * math.pi * gear_ratio * theta3dot_raw * hip_1_sign
+    theta4dot = 2 * math.pi * gear_ratio * theta4dot_raw * knee_sign
 
-    theta1 = 2 * math.pi * gear_ratio * (hip_3_zero_offset - theta1_raw)
-    theta2 = 2 * math.pi * gear_ratio * (hip_2_zero_offset - theta2_raw)
-    theta3 = 2 * math.pi * gear_ratio * (hip_1_zero_offset - theta3_raw)
-    theta4 = 2 * math.pi * gear_ratio * (knee_zero_offset - theta4_raw)
+    theta1 = 2 * math.pi * gear_ratio * (hip_3_zero_offset - theta1_raw) * hip_3_sign
+    theta2 = 2 * math.pi * gear_ratio * (hip_2_zero_offset - theta2_raw) * hip_2_sign
+    theta3 = 2 * math.pi * gear_ratio * (hip_1_zero_offset - theta3_raw) * hip_1_sign
+    theta4 = 2 * math.pi * gear_ratio * (knee_zero_offset - theta4_raw) * knee_sign
     
     message = "{theta1}|{theta2}|{theta3}|{theta4}|0|{theta1dot}|{theta2dot}|{theta3dot}|{theta4dot}|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0".format(theta1=theta1, theta2=theta2, theta3=theta3, theta4=theta4, theta1dot=theta1dot, theta2dot=theta2dot, theta3dot=theta3dot, theta4dot=theta4dot)
     sock.sendto(message.encode(), (UDP_IP, UDP_PORT))
@@ -145,4 +150,4 @@ while True:
     # plt.plot(data)
     # plt.draw()
     # plt.pause(0.01)
-    time.sleep(0.001)
+    time.sleep(0.01)
