@@ -292,13 +292,13 @@ void calculate_left_leg_torques() {
         perror("Left leg impedance control UDP socket creation failed."); 
         exit(EXIT_FAILURE);
     }
-    
-    int msg_length; 
+
+    int msg_length;
     socklen_t len;
 
     async_buf main_sbuf(plotDataDirPath + filename + "_left.csv");
     std::ostream log_stream(&main_sbuf);
-
+    
     // ofstream data_file;
     // data_file.open(plotDataDirPath + filename + "_left.csv");
     log_stream << "t_sim,t_controller,"
@@ -334,7 +334,6 @@ void calculate_left_leg_torques() {
     double current_traj_time_temp = 0;
     double previous_logging_duration = 0;
     double previous_file_write_duration = 0;
-
     struct timeval tv;
     tv.tv_sec = 1e+9; // Initially set to very high value to wait for first message because it takes some time to start up sim.
     tv.tv_usec = 0;
@@ -416,7 +415,6 @@ void calculate_left_leg_torques() {
             left_leg->theta3dot = theta3_dot;
             left_leg->theta4dot = theta4_dot;
             left_leg->theta5dot = theta5_dot;
-
             
             for(int i = 0; i < n; ++i) {
                 x(i, 0) = atof(state[i + 10].c_str());
