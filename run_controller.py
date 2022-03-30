@@ -6,7 +6,7 @@ import os
 parser = argparse.ArgumentParser(description='Wrapper script for running the biped controller docker image.')
 parser.add_argument("--laptop", "-l", help="Set environment variable IS_LAPTOP=1, e.g. to adjust CPU pinning.", action="store_true")
 parser.add_argument("--use_web_ui", help="Set environment variable USE_WEB_UI=1, to disable receiving commands from Web UI.", action="store_true")
-parser.add_argument("--skip_pinning", help="Set environment variable SKIP_PINNING=1, to skip CPU pinning ", action="store_true")
+parser.add_argument("--skip_pinning", help="Set environment variable SKIP_PINNING=1, to skip CPU pinning.", action="store_true")
 parser.add_argument("--debug", help="Compile for debugging and start with gdb", action="store_true")
 
 parser.add_argument('--real-time-factor', '--rtf', type=float, default=1.0, help='Set real-time-factor. This makes the controller run at [RTF] times realtime.')
