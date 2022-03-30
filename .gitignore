@@ -19,3 +19,7 @@ parsed_expr.txt
 raw_expr.txt
 ros/urdf/launch/__pycache__/
 ros/publisher-test/.vscode/
+ros/publisher-test/install
+ros/publisher-test/build
+ros/publisher-test/log
+ros/publisher-test/src/leg_joint_state_visualizer/leg_joint_state_visualizer/__pycache__/
