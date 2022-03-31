@@ -46,30 +46,43 @@ hip_2_zero_offset = 0 # in turns
 hip_1_zero_offset = 0 # in turns
 knee_zero_offset = 0 # in turns
 
-# hip_3_servo.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-# hip_2_servo.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-# hip_1_servo.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-# knee_servo.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+hip_3_servo.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+hip_2_servo.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+hip_1_servo.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+knee_servo.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+
+hip_3_servo.axis0.controller.config.control_mode = CONTROL_MODE_TORQUE_CONTROL
+hip_2_servo.axis0.controller.config.control_mode = CONTROL_MODE_TORQUE_CONTROL
+hip_1_servo.axis0.controller.config.control_mode = CONTROL_MODE_TORQUE_CONTROL
+knee_servo.axis0.controller.config.control_mode = CONTROL_MODE_TORQUE_CONTROL
 
 # hip_3_servo.axis0.controller.input_pos = hip_3_zero_offset
 # hip_2_servo.axis0.controller.input_pos = hip_2_zero_offset
 # hip_1_servo.axis0.controller.input_pos = hip_1_zero_offset
 # knee_servo.axis0.controller.input_pos = knee_zero_offset
 
-hip_3_lower_limit = -0.2 # in rad
+hip_3_lower_limit = -0.3 # in rad
 hip_2_lower_limit = -0.2 # in rad
-hip_1_lower_limit = -1 # in rad
+hip_1_lower_limit = -0.4 # in rad
 knee_lower_limit = -1 # in rad
 
-hip_3_upper_limit = 0.15 # in rad
+hip_3_upper_limit = 0.2 # in rad
 hip_2_upper_limit = 0.2 # in rad
-hip_1_upper_limit = 0.4 # in rad
+hip_1_upper_limit = 1 # in rad
 knee_upper_limit = 1 # in rad
 
+
+# Sign adjustments for angle and angular velocity readings
 hip_3_sign = -1
 hip_2_sign = 1
-hip_1_sign = -1
+hip_1_sign = 1
 knee_sign = -1
+
+# Sign adjustments for torque commands
+hip_3_torque_sign = 1
+hip_2_torque_sign = -1
+hip_1_torque_sign = -1
+knee_torque_sign = 1
 
 gear_ratio = 1/8 # planetary gearbox ratio
 
@@ -112,21 +125,17 @@ while True:
     theta2 = 2 * math.pi * gear_ratio * (hip_2_zero_offset - theta2_raw) * hip_2_sign
     theta3 = 2 * math.pi * gear_ratio * (hip_1_zero_offset - theta3_raw) * hip_1_sign
     theta4 = 2 * math.pi * gear_ratio * (knee_zero_offset - theta4_raw) * knee_sign
-    
-    message = "{theta1}|{theta2}|{theta3}|{theta4}|0|{theta1dot}|{theta2dot}|{theta3dot}|{theta4dot}|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0".format(theta1=theta1, theta2=theta2, theta3=theta3, theta4=theta4, theta1dot=theta1dot, theta2dot=theta2dot, theta3dot=theta3dot, theta4dot=theta4dot)
-    sock.sendto(message.encode(), (UDP_IP, UDP_PORT))
-    
-    # data, addr = sock.recvfrom(4096) # buffer size is 4096 bytes
-    # print("received message: %s" % data)
 
-    # tau_raw = [float(x) for x in data.decode().split("|")[:-1]]
-
-    # tau_1 = tau_raw[0] * gear_ratio
-    # tau_2 = tau_raw[1] * gear_ratio
-    # tau_3 = tau_raw[2] * gear_ratio
-    # tau_4 = tau_raw[3] * gear_ratio
+    # Compensate for linkage
+    theta4 -= theta3
+    theta4dot -= theta3dot
 
     if out_of_bounds(hip_3_lower_limit, hip_3_upper_limit, theta1) or out_of_bounds(hip_2_lower_limit, hip_2_upper_limit, theta2) or out_of_bounds(hip_1_lower_limit, hip_1_upper_limit, theta3) or out_of_bounds(knee_lower_limit, knee_upper_limit, theta4):
+        hip_3_servo.axis0.controller.input_torque = 0
+        hip_2_servo.axis0.controller.input_torque = 0
+        hip_1_servo.axis0.controller.input_torque = 0
+        knee_servo.axis0.controller.input_torque = 0
+        
         if hip_3_servo.axis0.current_state != AXIS_STATE_IDLE:
             hip_3_servo.axis0.requested_state = AXIS_STATE_IDLE
 
@@ -138,8 +147,31 @@ while True:
 
         if knee_servo.axis0.current_state != AXIS_STATE_IDLE:
             knee_servo.axis0.requested_state = AXIS_STATE_IDLE
-
+        
         print("Angles out of safe bounds, deactivating all servos!")
+    
+    message = "{theta1}|{theta2}|{theta3}|{theta4}|0|{theta1dot}|{theta2dot}|{theta3dot}|{theta4dot}|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0".format(theta1=theta1, theta2=theta2, theta3=theta3, theta4=theta4, theta1dot=theta1dot, theta2dot=theta2dot, theta3dot=theta3dot, theta4dot=theta4dot)
+    sock.sendto(message.encode(), (UDP_IP, UDP_PORT))
+    
+    # data, addr = sock.recvfrom(4096) # buffer size is 4096 bytes
+    # print("received message: %s" % data)
+
+    # tau_raw = [float(x) for x in data.decode().split("|")[:-1]]
+
+    # tau_1 = tau_raw[0] * gear_ratio * hip_3_torque_sign
+    # tau_2 = tau_raw[1] * gear_ratio * hip_2_torque_sign
+    # tau_3 = tau_raw[2] * gear_ratio * hip_1_torque_sign
+    # tau_4 = tau_raw[3] * gear_ratio * knee_torque_sign
+
+    # hip_3_servo.axis0.controller.input_torque = tau_1
+    # hip_2_servo.axis0.controller.input_torque = tau_2
+    # hip_1_servo.axis0.controller.input_torque = tau_3
+    # knee_servo.axis0.controller.input_torque = tau_4
+
+    # hip_3_servo.axis0.controller.input_torque = 0.5 * hip_3_torque_sign
+    # hip_2_servo.axis0.controller.input_torque = 0.5 * hip_2_torque_sign
+    # hip_1_servo.axis0.controller.input_torque = 0.5 * hip_1_torque_sign
+    # knee_servo.axis0.controller.input_torque = 0.5 * knee_torque_sign
 
     print("Hip3:", theta1, ", Hip2:", theta2, ", Hip1:", theta3, ", Knee:", theta4)
     # print("Hip3_raw:", theta1_raw, ", Hip2_raw:", theta2_raw, ", Hip1_raw:", theta3_raw, ", Knee_raw:", theta4_raw)
