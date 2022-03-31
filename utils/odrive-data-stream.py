@@ -46,9 +46,9 @@ hip_2_zero_offset = 0 # in turns
 hip_1_zero_offset = 0 # in turns
 knee_zero_offset =  -3.3768885135650635# in turns
 
-arm_motors = True
+arm_servos = True
 
-if arm_motors:
+if arm_servos:
     hip_3_servo.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
     hip_2_servo.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
     hip_1_servo.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
