@@ -67,12 +67,12 @@ knee_servo.axis0.controller.input_torque = 0
 hip_3_lower_limit = -0.5 # in rad
 hip_2_lower_limit = -0.25 # in rad
 hip_1_lower_limit = -0.4 # in rad
-knee_lower_limit = -1.1 # in rad
+knee_lower_limit = -1.2 # in rad
 
 hip_3_upper_limit = 0.3 # in rad
 hip_2_upper_limit = 0.25 # in rad
-hip_1_upper_limit = 1 # in rad
-knee_upper_limit = 1.1 # in rad
+hip_1_upper_limit = 1.1 # in rad
+knee_upper_limit = 1.2 # in rad
 
 
 # Sign adjustments for angle and angular velocity readings
