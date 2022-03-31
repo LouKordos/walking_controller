@@ -88,6 +88,7 @@ hip_1_torque_sign = -1
 knee_torque_sign = 1
 
 gear_ratio = 1/8 # planetary gearbox ratio
+print("Gear ratio is", gear_ratio)
 
 # plt.ion()
 # plt.show()
