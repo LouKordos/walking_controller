@@ -102,6 +102,8 @@ def out_of_bounds(lower, upper, angle):
     return angle < lower or angle > upper
 
 while True:
+    # start = time.time()
+
     if terminate:
         print("CTRL + C detected, deactivating servos and exiting...")
         hip_3_servo.axis0.requested_state = hip_2_servo.axis0.requested_state = hip_1_servo.axis0.requested_state = knee_servo.axis0.requested_state = AXIS_STATE_IDLE
@@ -157,20 +159,22 @@ while True:
     message = "{theta1}|{theta2}|{theta3}|{theta4}|0|{theta1dot}|{theta2dot}|{theta3dot}|{theta4dot}|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0".format(theta1=theta1, theta2=theta2, theta3=theta3, theta4=theta4, theta1dot=theta1dot, theta2dot=theta2dot, theta3dot=theta3dot, theta4dot=theta4dot)
     sock.sendto(message.encode(), (UDP_IP, UDP_PORT))
     
-    # data, addr = sock.recvfrom(4096) # buffer size is 4096 bytes
+    data, addr = sock.recvfrom(4096) # buffer size is 4096 bytes
     # print("received message: %s" % data)
 
-    # tau_raw = [float(x) for x in data.decode().split("|")[:-1]]
+    tau_raw = [float(x) for x in data.decode().split("|")[:-1]]
 
-    # tau_1 = tau_raw[0] * gear_ratio * hip_3_torque_sign
-    # tau_2 = tau_raw[1] * gear_ratio * hip_2_torque_sign
-    # tau_3 = tau_raw[2] * gear_ratio * hip_1_torque_sign
-    # tau_4 = tau_raw[3] * gear_ratio * knee_torque_sign
+    tau_1 = tau_raw[0] * gear_ratio * hip_3_torque_sign
+    tau_2 = tau_raw[1] * gear_ratio * hip_2_torque_sign
+    tau_3 = tau_raw[2] * gear_ratio * hip_1_torque_sign
+    tau_4 = tau_raw[3] * gear_ratio * knee_torque_sign
+    
+    print("tau_1:", tau_1, "tau_2:", tau_2, "tau_3:", tau_3, "tau_4:", tau_4)
 
-    # hip_3_servo.axis0.controller.input_torque = tau_1
-    # hip_2_servo.axis0.controller.input_torque = tau_2
-    # hip_1_servo.axis0.controller.input_torque = tau_3
-    # knee_servo.axis0.controller.input_torque = tau_4
+    hip_3_servo.axis0.controller.input_torque = tau_1
+    hip_2_servo.axis0.controller.input_torque = tau_2
+    hip_1_servo.axis0.controller.input_torque = tau_3
+    knee_servo.axis0.controller.input_torque = tau_4
 
     # hip_3_servo.axis0.controller.input_torque = 0.5 * hip_3_torque_sign
     # hip_2_servo.axis0.controller.input_torque = 0.5 * hip_2_torque_sign
@@ -186,4 +190,7 @@ while True:
     # plt.plot(data)
     # plt.draw()
     # plt.pause(0.01)
-    time.sleep(0.01)
+
+    # end = time.time()
+    # print(end - start)
+    # time.sleep(0.005)
