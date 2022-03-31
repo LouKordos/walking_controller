@@ -554,6 +554,24 @@ void calculate_left_leg_torques() {
             left_leg->accel_desired << x_accel_t, y_accel_t, z_accel_t;
 
             left_leg->update_torque_setpoint();
+
+            // For real leg
+            if(abs(theta1_dot - 1) < 0) {
+                left_leg->tau_setpoint(0, 0) = 0;
+                std::cout << "limiting hip3 torque" << std::endl;
+            }
+            if(abs(theta2_dot - 1) < 0) {
+                left_leg->tau_setpoint(1, 0) = 0;
+                std::cout << "limiting hip2 torque" << std::endl;
+            }
+            if(abs(theta3_dot - 1) < 0) {
+                left_leg->tau_setpoint(2, 0) = 0;
+                std::cout << "limiting hip1 torque" << std::endl;
+            }
+            if(abs(theta4_dot - 1) < 0) {
+                left_leg->tau_setpoint(3, 0) = 0;
+                std::cout << "limiting knee torque" << std::endl;
+            }
         }
         else {
             // IMPORTANT AND DANGEROUS MISTAKE: WHEN COPYING LEFT_LEG CODE AND REPLACING ALL LEFT WITH RIGHT, INDEX IS NOT CHANGED AND LEFT LEG TORQUES WILL BE USED FOR BOTH LEGS
