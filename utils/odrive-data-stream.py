@@ -46,20 +46,23 @@ hip_2_zero_offset = 0 # in turns
 hip_1_zero_offset = 0 # in turns
 knee_zero_offset = 0 # in turns
 
-hip_3_servo.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-hip_2_servo.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-hip_1_servo.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-knee_servo.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+arm_motors = True
+
+if arm_motors:
+    hip_3_servo.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+    hip_2_servo.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+    hip_1_servo.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+    knee_servo.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
 
 hip_3_servo.axis0.controller.config.control_mode = CONTROL_MODE_TORQUE_CONTROL
 hip_2_servo.axis0.controller.config.control_mode = CONTROL_MODE_TORQUE_CONTROL
 hip_1_servo.axis0.controller.config.control_mode = CONTROL_MODE_TORQUE_CONTROL
 knee_servo.axis0.controller.config.control_mode = CONTROL_MODE_TORQUE_CONTROL
 
-# hip_3_servo.axis0.controller.input_pos = hip_3_zero_offset
-# hip_2_servo.axis0.controller.input_pos = hip_2_zero_offset
-# hip_1_servo.axis0.controller.input_pos = hip_1_zero_offset
-# knee_servo.axis0.controller.input_pos = knee_zero_offset
+hip_3_servo.axis0.controller.input_torque = 0
+hip_2_servo.axis0.controller.input_torque = 0
+hip_1_servo.axis0.controller.input_torque = 0
+knee_servo.axis0.controller.input_torque = 0
 
 hip_3_lower_limit = -0.3 # in rad
 hip_2_lower_limit = -0.2 # in rad
