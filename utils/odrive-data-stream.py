@@ -56,15 +56,15 @@ knee_zero_offset = 0 # in turns
 # hip_1_servo.axis0.controller.input_pos = hip_1_zero_offset
 # knee_servo.axis0.controller.input_pos = knee_zero_offset
 
-hip_3_lower_limit = -0.48 # in rad
-hip_2_lower_limit = -0.4 # in rad
-hip_1_lower_limit = -0.4 # in rad
-knee_lower_limit = -1.2 # in rad
+hip_3_lower_limit = -0.3 # in rad
+hip_2_lower_limit = -0.2 # in rad
+hip_1_lower_limit = -1 # in rad
+knee_lower_limit = -1 # in rad
 
-hip_3_upper_limit = 0.48 # in rad
-hip_2_upper_limit = 0.25 # in rad
-hip_1_upper_limit = 1.4 # in rad
-knee_upper_limit = 1.2 # in rad
+hip_3_upper_limit = 0.3 # in rad
+hip_2_upper_limit = 0.2 # in rad
+hip_1_upper_limit = 0.4 # in rad
+knee_upper_limit = 1 # in rad
 
 hip_3_sign = -1
 hip_2_sign = 1
