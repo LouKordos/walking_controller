@@ -527,7 +527,7 @@ void calculate_left_leg_torques() {
             x_vel_t = 0;
             x_accel_t = 0;
             
-            double omega = 12.0; // Frequency for sinusoidal Trajectory in rad/s
+            double omega = 1.0; // Frequency for sinusoidal Trajectory in rad/s
 
             // X:
 
@@ -544,14 +544,14 @@ void calculate_left_leg_torques() {
 
             // Z:
 
-            z_pos_t = 0.0500000000000000005551L*sinl(omega*get_time(false)) - 0.95000000000000044409L;
+            z_pos_t = 0.0500000000000000005551L*sinl(omega*get_time(false)) - 0.9000000000000044409L;
             z_vel_t = 0.0500000000000000005551L*omega*cosl(omega*get_time(false));
             z_accel_t = -0.0500000000000000005551L*powl(omega, 2)*sinl(omega*get_time(false));
 
-            left_leg->pos_desired << 0, 0.1, -0.9, 0, 0;
-            // left_leg->pos_desired << x_pos_t, y_pos_t, z_pos_t, phi_t, psi_t;
-            // left_leg->vel_desired<< x_vel_t, y_vel_t, z_vel_t, psi_t, psi_dot_t;
-            // left_leg->accel_desired << x_accel_t, y_accel_t, z_accel_t;
+            // left_leg->pos_desired << 0, 0, -0.9, 0, 0;
+            left_leg->pos_desired << x_pos_t, y_pos_t, z_pos_t, phi_t, psi_t;
+            left_leg->vel_desired<< x_vel_t, y_vel_t, z_vel_t, psi_t, psi_dot_t;
+            left_leg->accel_desired << x_accel_t, y_accel_t, z_accel_t;
 
             left_leg->update_torque_setpoint();
         }
