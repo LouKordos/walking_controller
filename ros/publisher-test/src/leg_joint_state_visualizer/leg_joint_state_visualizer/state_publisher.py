@@ -6,6 +6,18 @@ from geometry_msgs.msg import Quaternion
 from sensor_msgs.msg import JointState
 from tf2_ros import TransformBroadcaster, TransformStamped
 
+import socket
+
+ 
+
+localIP     = "127.0.0.1"
+localPort   = 4200
+bufferSize  = 4096
+UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+# Bind to address and ip
+UDPServerSocket.bind((localIP, localPort))
+print("UDP server up and listening")
+
 class StatePublisher(Node):
 
     def __init__(self):
@@ -36,20 +48,22 @@ class StatePublisher(Node):
             while rclpy.ok():
                 rclpy.spin_once(self)
 
+                bytesAddressPair = UDPServerSocket.recvfrom(bufferSize)
+
+                message = bytesAddressPair[0]
+                
+                values = [float(x) for x in message.decode().split("|")]
+
+                theta1 = values[0]
+                theta2 = values[1]
+                theta3 = values[2]
+                theta4 = values[3]
+
                 # update joint_state
                 now = self.get_clock().now()
                 joint_state.header.stamp = now.to_msg()
                 joint_state.name = ['base_to_hip_axis_3_joint', 'hip_axis_3_to_hip_axis_2_joint', 'hip_axis_2_to_hip_axis_1_joint', 'knee_to_lower_leg_joint']
                 joint_state.position = [theta1, theta2, theta3, theta4]
-
-                # update transform
-                # # (moving in a circle with radius=2)
-                # odom_trans.header.stamp = now.to_msg()
-                # odom_trans.transform.translation.x = cos(angle)*2
-                # odom_trans.transform.translation.y = sin(angle)*2
-                # odom_trans.transform.translation.z = 0.7
-                # odom_trans.transform.rotation = \
-                #     euler_to_quaternion(0, 0, angle + pi/2) # roll,pitch,yaw
 
                 # send the joint state and transform
                 self.joint_pub.publish(joint_state)
@@ -66,13 +80,6 @@ class StatePublisher(Node):
 
         except KeyboardInterrupt:
             pass
-
-def euler_to_quaternion(roll, pitch, yaw):
-    qx = sin(roll/2) * cos(pitch/2) * cos(yaw/2) - cos(roll/2) * sin(pitch/2) * sin(yaw/2)
-    qy = cos(roll/2) * sin(pitch/2) * cos(yaw/2) + sin(roll/2) * cos(pitch/2) * sin(yaw/2)
-    qz = cos(roll/2) * cos(pitch/2) * sin(yaw/2) - sin(roll/2) * sin(pitch/2) * cos(yaw/2)
-    qw = cos(roll/2) * cos(pitch/2) * cos(yaw/2) + sin(roll/2) * sin(pitch/2) * sin(yaw/2)
-    return Quaternion(x=qx, y=qy, z=qz, w=qw)
 
 def main():
     node = StatePublisher()
