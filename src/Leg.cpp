@@ -2,11 +2,11 @@
 
 Leg::Leg(const double hip_offset_x, const double hip_offset_y, const double hip_offset_z, const double step_height_world, const int contact_state_port) : contactState(contact_state_port) {
     // Initiate damping ratio matrix, desired natural frequency, orientation gains as well as desired trajectory to avoid null pointer
-    h << 0.6, 0, 0,
-        0, 0.6, 0,
-        0, 0, 0.6;
+    h << 0.1, 0, 0,
+        0, 0.1, 0,
+        0, 0, 0.1;
     
-    omega_desired << 8.0 * M_PI, 12.0 * M_PI, 8.0 * M_PI;
+    omega_desired << 3.0 * M_PI, 4.0 * M_PI, 3.0 * M_PI;
 
     pos_desired << 0, 0, -1.115, 0, 0; // Cartesian xyz + euler roll and pitch
     vel_desired << 0, 0, 0, 0, 0; // Cartesian xyz + euler roll and pitch
