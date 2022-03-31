@@ -572,6 +572,12 @@ void calculate_left_leg_torques() {
                 left_leg->tau_setpoint(3, 0) = 0;
                 std::cout << "limiting knee torque" << std::endl;
             }
+
+            if(iteration_counter < 500) {
+                for(int i = 0; i < 5; i++) {
+                    constrain(left_leg->tau_setpoint(i, 0), -3, 3);
+                }
+            }
         }
         else {
             // IMPORTANT AND DANGEROUS MISTAKE: WHEN COPYING LEFT_LEG CODE AND REPLACING ALL LEFT WITH RIGHT, INDEX IS NOT CHANGED AND LEFT LEG TORQUES WILL BE USED FOR BOTH LEGS
