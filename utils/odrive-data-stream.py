@@ -44,7 +44,7 @@ print("Knee connected.")
 hip_3_zero_offset = 0 # in turns
 hip_2_zero_offset = 0 # in turns
 hip_1_zero_offset = 0 # in turns
-knee_zero_offset = 0 # in turns
+knee_zero_offset =  -3.3768885135650635# in turns
 
 arm_motors = True
 
