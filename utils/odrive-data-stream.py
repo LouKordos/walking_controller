@@ -42,9 +42,9 @@ knee_servo = odrive.find_any(serial_number=str(hex(56557058142768).split('x')[-1
 print("Knee connected.")
 
 hip_3_zero_offset = 0 # in turns
-hip_2_zero_offset = 0 # in turns
+hip_2_zero_offset = 0.05085518956184387 # in turns
 hip_1_zero_offset = 0 # in turns
-knee_zero_offset =  -3.3768885135650635# in turns
+knee_zero_offset =  0.4292362928390503 # in turns
 
 arm_servos = True
 
