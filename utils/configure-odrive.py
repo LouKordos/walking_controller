@@ -117,6 +117,8 @@ else:
 
 odrv0.axis0.requested_state = AXIS_STATE_IDLE
 
+time.sleep(2)
+
 # TODO: Add filtered input config
 
 print("Now starting anticogging calibration")
