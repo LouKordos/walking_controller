@@ -33,7 +33,10 @@ for name in filenames:
 filename = "../plot_data/" + str(largest_index) + "_mpc_log.csv"
 print("filename:", filename)
 
-os.mkdir(home_dir + "/Pictures/matplotlib_plots/mpc_log/{}".format(largest_index))
+try:
+    os.mkdir(home_dir + "/Pictures/matplotlib_plots/mpc_log/{}".format(largest_index))
+except FileExistsError:
+    print("Directory", home_dir + "/Pictures/matplotlib_plots/mpc_log/{}".format(largest_index), "already exists, skipping creation...")
 
 plot_image_dir = home_dir + "/Pictures/matplotlib_plots/mpc_log/{}/".format(largest_index)
 
