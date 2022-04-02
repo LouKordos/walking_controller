@@ -124,6 +124,7 @@ double real_time_factor = 1.0;
 double runtime_limit = -1;
 bool skip_pinning = false;
 bool is_laptop = false;
+bool skip_time_sync = false;
 
 // Setting up debugging and plotting csv file
 int largest_index = 0;
@@ -323,6 +324,13 @@ void calculate_left_leg_torques() {
     // torque_function_file.close();
 
     bool time_switch = false; // used for running a two-phase trajectory, otherwise obsolete
+    
+    // For when real leg is connected, skip time sync to still allow generating proper logs and thus plots. Otherwise the other threads will wait indefinitely.
+    if(skip_time_sync) {
+        time_synced_mutex.lock();
+        time_synced = true;
+        time_synced_mutex.unlock();
+    }
 
     while(!isTimeSynced()) { // Only start running Leg code after first MPC iteration to prevent problems with non-updated values
         if(quit_flag.load()) {
@@ -334,6 +342,7 @@ void calculate_left_leg_torques() {
     double current_traj_time_temp = 0;
     double previous_logging_duration = 0;
     double previous_file_write_duration = 0;
+
     struct timeval tv;
     tv.tv_sec = 1e+9; // Initially set to very high value to wait for first message because it takes some time to start up sim.
     tv.tv_usec = 0;
@@ -801,7 +810,7 @@ void calculate_right_leg_torques() {
 
         auto message_wait_start = high_resolution_clock::now();
 
-        if(iteration_counter > 0 && tv.tv_sec == 1e+9) {
+        if(iteration_counter > 0 && tv.tv_sec == 1e+9 || skip_time_sync) {
             tv.tv_sec = 0;
             tv.tv_usec = 100000;
             setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
@@ -1615,7 +1624,7 @@ void run_mpc() {
 
         auto message_wait_start = high_resolution_clock::now();
 
-        if(total_iterations > 0 && tv.tv_sec == 1e+9) {
+        if(total_iterations > 0 && tv.tv_sec == 1e+9 || skip_time_sync) {
             tv.tv_sec = 0;
             tv.tv_usec = 100000;
             setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
@@ -2713,6 +2722,9 @@ int main(int _argc, char **_argv)
 
     if(getenv("SKIP_PINNING") != NULL) {
         skip_pinning = atoi(getenv("SKIP_PINNING"));
+    }
+    if(getenv("SKIP_TIME_SYNC") != NULL) {
+        skip_time_sync = atoi(getenv("SKIP_TIME_SYNC"));
     }
     
     torque_calculation_interval *= 1 / real_time_factor;
