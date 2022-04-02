@@ -16,8 +16,8 @@ sock.bind(("127.0.0.1", 42067))
 
 pygame.init()
 
-window_width = 1000
-window_height = 1000
+window_width = 500
+window_height = 500
 
 screen = pygame.display.set_mode((window_width, window_height))
 pygame.display.set_caption('Move leg with mouse')
