@@ -557,7 +557,7 @@ void calculate_left_leg_torques() {
             z_vel_t = 0.0500000000000000005551L*omega*cosl(omega*get_time(false));
             z_accel_t = -0.0500000000000000005551L*powl(omega, 2)*sinl(omega*get_time(false));
 
-            left_leg->pos_desired << 0, 0, -0.9, 0, 0;
+            // left_leg->pos_desired << 0, 0, -0.9, 0, 0;
             // left_leg->pos_desired << x_pos_t, y_pos_t, z_pos_t, phi_t, psi_t;
             // left_leg->vel_desired<< x_vel_t, y_vel_t, z_vel_t, psi_t, psi_dot_t;
             // left_leg->accel_desired << x_accel_t, y_accel_t, z_accel_t;
@@ -2678,6 +2678,67 @@ void receive_controls() {
     close(sockfd);
 }
 
+void receive_mouse_position() {
+
+    struct timeval tv;
+    tv.tv_sec = 1000; 
+    tv.tv_usec = 0;
+
+    int sockfd;
+    char buffer[udp_buffer_size];
+    struct sockaddr_in servaddr, cliaddr;
+    
+    // Creating socket file descriptor
+    if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
+        perror("socket creation failed");
+        exit(EXIT_FAILURE);
+    }
+    
+    memset(&servaddr, 0, sizeof(servaddr));
+    memset(&cliaddr, 0, sizeof(cliaddr));
+    
+    // Filling server information
+    servaddr.sin_family = AF_INET; // IPv4
+    servaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    servaddr.sin_port = htons(4242);
+    
+    // Bind the socket with the server address
+    if ( bind(sockfd, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0 )
+    {
+        perror("Mouse position socket creation failed.");
+        exit(EXIT_FAILURE);
+    }
+    
+    int msg_length;
+    socklen_t len;
+
+    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
+
+    double t_stance_desired_change_time = 0;
+
+    while(true) {
+        if(quit_flag.load()) {
+            break;
+        }
+        
+        msg_length = recvfrom(sockfd, (char *)buffer, udp_buffer_size, 0, (struct sockaddr *) &servaddr, &len); 
+        buffer[msg_length] = '\0';
+
+        string data(buffer);
+
+        std::vector<string> position = split_string(data, '|');
+        
+        if(!data.empty() && position.size() > 1) {
+            left_leg->pos_desired << atof(position[0].c_str()), atof(position[1].c_str()), -0.9, 0, 0;
+            // std::cout << position[0] << std::endl;
+            left_leg->vel_desired << 0, 0, 0, 0, 0;
+            left_leg->accel_desired << 0, 0, 0;
+        }
+    }
+
+    close(sockfd);
+}
+
 void handle_exit(int) {
     quit_flag.store(true);
     std::cout << "Handled SIGINT, exiting" << std::endl;
@@ -2849,6 +2910,8 @@ int main(int _argc, char **_argv)
     sigfillset(&sa.sa_mask);
     sigaction(SIGINT,&sa,NULL);
 
+    auto receive_mouse_position_thread = std::thread(std::bind(receive_mouse_position));
+
     left_leg_torque_thread.join();
     right_leg_torque_thread.join();
     mpc_thread.join();
@@ -2856,6 +2919,7 @@ int main(int _argc, char **_argv)
     if(use_web_ui.load()) {
         web_ui_state_thread.join();
     }
+    receive_mouse_position_thread.join();
 
     exit(0);
 }
