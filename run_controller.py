@@ -25,4 +25,5 @@ print("Running command:", command, "\n")
 
 os.system(command)
 
-os.system("cd utils && python mpc_plots.py")
+os.system("cd utils && python3 mpc_plots.py")
+os.system("cd utils && python3 csv_plot.py")
