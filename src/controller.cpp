@@ -578,6 +578,16 @@ void calculate_left_leg_torques() {
                     constrain(left_leg->tau_setpoint(i, 0), -3, 3);
                 }
             }
+
+            double compensate_friction = false;
+            double mu = 0.05;
+
+            if(compensate_friction)  {
+                auto q_dot = left_leg->get_q_dot();
+                for(int i = 0; i < 5; i++) {
+                    left_leg->tau_setpoint(i, 0) += mu * q_dot(i, 0);
+                }
+            }
         }
         else {
             // IMPORTANT AND DANGEROUS MISTAKE: WHEN COPYING LEFT_LEG CODE AND REPLACING ALL LEFT WITH RIGHT, INDEX IS NOT CHANGED AND LEFT LEG TORQUES WILL BE USED FOR BOTH LEGS
