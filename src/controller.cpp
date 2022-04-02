@@ -1647,11 +1647,13 @@ void run_mpc() {
         
         std::vector<std::string> com_state = split_string(raw_state, '|'); // Split raw state message by message delimiter to parse individual elements
 
-        x_mutex.lock();
-        for(int i = 0; i < n; ++i) {
-            x_t(i, 0) = atof(com_state[i].c_str());
+        if(static_cast<int>(com_state.size()) >= n) {
+            x_mutex.lock();
+            for(int i = 0; i < n; ++i) {
+                x_t(i, 0) = atof(com_state[i].c_str());
+            }
+            x_mutex.unlock();
         }
-        x_mutex.unlock();
         
         auto state_update_end = high_resolution_clock::now();
 
