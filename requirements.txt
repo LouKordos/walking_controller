@@ -13,3 +13,5 @@ argparse
 ipympl
 ipykernel
 casadi
+odrive
+pygame
