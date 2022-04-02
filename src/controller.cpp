@@ -1661,33 +1661,38 @@ void run_mpc() {
 
         auto kf_start = high_resolution_clock::now();
 
-        x_predicted_kf = step_discrete_model((Eigen::Matrix<double, n, 1>() << x_t_kf, -9.81).finished(), u_t_prev, r_x_left, r_x_right, r_y_left, r_y_right, r_z_left, r_z_right, total_iterations < 2 ? dt : max(dt, previous_full_iteration_duration * 1e-6)).block<n-1, 1>(0, 0);
+        bool use_kf = false;
 
-        Eigen::Matrix<double, n, n> A_d_kf = Eigen::ArrayXXd::Zero(n, n);
-        Eigen::Matrix<double, n, m> B_d_kf = Eigen::ArrayXXd::Zero(n, m);
-        get_discretized_state_space_matrices(A_d_kf, B_d_kf, (Eigen::Matrix<double, n, 1>() << x_t_kf, -9.81).finished(), u_t_prev, r_x_left, r_x_right, r_y_left, r_y_right, r_z_left, r_z_right, total_iterations < 2 ? dt : max(dt, previous_full_iteration_duration * 1e-6));
+        if(use_kf) {
 
-        P = A_d_kf.block<n-1, n-1>(0, 0) * P * A_d_kf.block<n-1, n-1>(0, 0).transpose() + Q;
+            x_predicted_kf = step_discrete_model((Eigen::Matrix<double, n, 1>() << x_t_kf, -9.81).finished(), u_t_prev, r_x_left, r_x_right, r_y_left, r_y_right, r_z_left, r_z_right, total_iterations < 2 ? dt : max(dt, previous_full_iteration_duration * 1e-6)).block<n-1, 1>(0, 0);
 
-        // Get measurements (in a real scenario only the measured values would be received and thus this calculation is obsolete.)
-        if(noise_enabled) {
-            Y = C * x_t.block<n-1, 1>(0, 0) + noise_matrix.block<num_observed_states, 1>(0, total_iterations);
+            Eigen::Matrix<double, n, n> A_d_kf = Eigen::ArrayXXd::Zero(n, n);
+            Eigen::Matrix<double, n, m> B_d_kf = Eigen::ArrayXXd::Zero(n, m);
+            get_discretized_state_space_matrices(A_d_kf, B_d_kf, (Eigen::Matrix<double, n, 1>() << x_t_kf, -9.81).finished(), u_t_prev, r_x_left, r_x_right, r_y_left, r_y_right, r_z_left, r_z_right, total_iterations < 2 ? dt : max(dt, previous_full_iteration_duration * 1e-6));
+
+            P = A_d_kf.block<n-1, n-1>(0, 0) * P * A_d_kf.block<n-1, n-1>(0, 0).transpose() + Q;
+
+            // Get measurements (in a real scenario only the measured values would be received and thus this calculation is obsolete.)
+            if(noise_enabled) {
+                Y = C * x_t.block<n-1, 1>(0, 0) + noise_matrix.block<num_observed_states, 1>(0, total_iterations);
+            }
+            else {
+                Y = C * x_t.block<n-1, 1>(0, 0) /*+ noise_matrix.block<num_observed_states, 1>(0, total_iterations)*/;
+            }
+
+            // Update kalman gain (calculated as \frac{P*C.T}{C*P*C.T + R}
+            K_kf = (P * C.transpose()) * (C * P * C.transpose() + R).inverse();
+
+            // Calculate final weighed state estimate
+            x_t_kf = x_predicted_kf + K_kf * (Y - C * x_predicted_kf);
+
+            // Previous becomes current: Update P accordingly
+            P = (Eigen::MatrixXd::Identity(n-1, num_observed_states) - K_kf * C) * P;
+
         }
-        else {
-            Y = C * x_t.block<n-1, 1>(0, 0) /*+ noise_matrix.block<num_observed_states, 1>(0, total_iterations)*/;
-        }
-
-        // Update kalman gain (calculated as \frac{P*C.T}{C*P*C.T + R}
-        K_kf = (P * C.transpose()) * (C * P * C.transpose() + R).inverse();
-
-        // Calculate final weighed state estimate
-        x_t_kf = x_predicted_kf + K_kf * (Y - C * x_predicted_kf);
-
-        // Previous becomes currenanosecondsnt: Update P accordingly
-        P = (Eigen::MatrixXd::Identity(n-1, num_observed_states) - K_kf * C) * P;
 
         Eigen::Matrix<double, n-1, 1> x_kf_error = x_t.block<n-1, 1>(0, 0) - x_t_kf;
-
         u_t_prev = u_t;
 
         auto kf_end = high_resolution_clock::now();
@@ -1697,9 +1702,12 @@ void run_mpc() {
         auto delay_compensation_start = high_resolution_clock::now();
 
         // Step the model one timestep and use the resulting state as the initial state for the solver. This compensates for the roughly 1 sample delay due to the solver time
-        P_param.block<n,1>(0, 0) = step_discrete_model((Eigen::Matrix<double, n, 1>() << x_t_kf, -9.81).finished(), u_t, r_x_left, r_x_right, r_y_left, r_y_right, r_z_left, r_z_right, total_iterations < 2 ? dt : max(dt, previous_full_iteration_duration * 1e-6));
-        // P_param.block<n,1>(0, 0) = step_discrete_model(x_t, u_t, r_x_left, r_x_right, r_y_left, r_y_right, r_z_left, r_z_right, total_iterations < 2 ? dt : max(dt, previous_full_iteration_duration * 1e-6));
-
+        if(use_kf) {
+            P_param.block<n,1>(0, 0) = step_discrete_model((Eigen::Matrix<double, n, 1>() << x_t, -9.81).finished(), u_t, r_x_left, r_x_right, r_y_left, r_y_right, r_z_left, r_z_right, total_iterations < 2 ? dt : max(dt, previous_full_iteration_duration * 1e-6));
+        }
+        else {
+            P_param.block<n,1>(0, 0) = step_discrete_model(x_t, u_t, r_x_left, r_x_right, r_y_left, r_y_right, r_z_left, r_z_right, total_iterations < 2 ? dt : max(dt, previous_full_iteration_duration * 1e-6));
+        }
         auto delay_compensation_end = high_resolution_clock::now();
 
         double delay_compensation_duration = duration_cast<nanoseconds>(delay_compensation_end - delay_compensation_start).count();
