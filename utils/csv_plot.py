@@ -27,7 +27,8 @@ for name in filenames:
 		if index > largest_index:
 			largest_index = index
 	except:
-		print("Invalid parse with filename:", name)
+		# print("Invalid parse with filename:", name)
+		temp = 0
 
 filepath_left = "../plot_data/" + str(largest_index) + "_left.csv"
 filepath_right = "../plot_data/" + str(largest_index) + "_right.csv"
