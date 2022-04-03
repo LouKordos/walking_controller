@@ -11,20 +11,20 @@ import socket
 controller_ip = "127.0.0.1"
 controller_port = 4200
 
-rviz_ip = "192.168.122.1"
+rviz_ip = "192.168.122.168"
 rviz_port = 42070
 
 controller_socket = socket.socket(socket.AF_INET, # Internet
                      socket.SOCK_DGRAM) # UDP
 
 # Bind to temporary random port, doesn't matter which one
-controller_socket.bind((controller_ip, 42068))
+# controller_socket.bind((controller_ip, 42068))
 
 rviz_socket = socket.socket(socket.AF_INET, # Internet
                      socket.SOCK_DGRAM) # UDP
 
 # Bind to temporary random port, doesn't matter which one
-rviz_socket.bind((rviz_ip, 42067))
+# rviz_socket.bind(("127.0.0.1", 42067))
 
 terminate = False
 
