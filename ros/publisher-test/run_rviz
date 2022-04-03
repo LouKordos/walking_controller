@@ -1,0 +1,9 @@
+#!/bin/bash
+
+tmux new -s rviz -d
+tmux rename-window -t rviz joint-state-publisher
+tmux send-keys -t rviz ' colcon build --symlink-install --packages-select leg_joint_state_visualizer && source install/setup.bash && ros2 launch leg_joint_state_visualizer demo.launch.py' C-m
+tmux split-window -h -t rviz
+tmux select-window -t rviz:1
+tmux send-keys -t rviz 'rviz2 -d ./install/leg_joint_state_visualizer/share/leg_joint_state_visualizer/fixed-leg.rviz' C-m
+tmux attach -t rviz
