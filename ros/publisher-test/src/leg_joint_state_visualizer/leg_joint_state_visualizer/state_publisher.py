@@ -6,14 +6,12 @@ from tf2_ros import TransformBroadcaster
 
 import socket
 
- 
+rviz_ip = "192.168.122.168"
+rviz_port = 42070
+bufferSize = 4096
 
-localIP     = "127.0.0.1"
-localPort   = 4200
-bufferSize  = 4096
-UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
-# Bind to address and ip
-UDPServerSocket.bind((localIP, localPort))
+rviz_socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+rviz_socket.bind((rviz_ip, rviz_port))
 print("UDP server up and listening")
 
 class StatePublisher(Node):
@@ -40,10 +38,8 @@ class StatePublisher(Node):
         try:
             while rclpy.ok():
                 rclpy.spin_once(self)
-
-                bytesAddressPair = UDPServerSocket.recvfrom(bufferSize)
-
-                message = bytesAddressPair[0]
+                
+                message = rviz_socket.recvfrom(bufferSize)[0]
                 
                 values = [float(x) for x in message.decode().split("|")]
 
