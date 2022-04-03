@@ -8,14 +8,23 @@ import matplotlib.pyplot as plt
 import signal,sys,time
 import socket
 
-UDP_IP = "127.0.0.1"
-UDP_PORT = 4200
+controller_ip = "127.0.0.1"
+controller_port = 4200
 
-sock = socket.socket(socket.AF_INET, # Internet
+rviz_ip = "192.168.122.1"
+rviz_port = 42070
+
+controller_socket = socket.socket(socket.AF_INET, # Internet
                      socket.SOCK_DGRAM) # UDP
 
-sock.bind(("127.0.0.1", 42068))
-# sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVTIMEO, 1)
+# Bind to temporary random port, doesn't matter which one
+controller_socket.bind((controller_ip, 42068))
+
+rviz_socket = socket.socket(socket.AF_INET, # Internet
+                     socket.SOCK_DGRAM) # UDP
+
+# Bind to temporary random port, doesn't matter which one
+rviz_socket.bind((rviz_ip, 42067))
 
 terminate = False
 
@@ -94,7 +103,7 @@ print("Gear ratio is", gear_ratio)
 # plt.show()
 
 message = "{theta1}|{theta2}|{theta3}|{theta4}|0|{theta1dot}|{theta2dot}|{theta3dot}|{theta4dot}|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0".format(theta1=0, theta2=0, theta3=0, theta4=0, theta1dot=0, theta2dot=0, theta3dot=0, theta4dot=0)
-sock.sendto(message.encode(), (UDP_IP, UDP_PORT))
+controller_socket.sendto(message.encode(), (controller_ip, controller_port))
 
 data = []
 
@@ -163,9 +172,10 @@ while True:
         print("Angles out of safe bounds, deactivating all servos!")
     
     message = "{theta1}|{theta2}|{theta3}|{theta4}|0|{theta1dot}|{theta2dot}|{theta3dot}|{theta4dot}|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0".format(theta1=theta1, theta2=theta2, theta3=theta3, theta4=theta4, theta1dot=theta1dot, theta2dot=theta2dot, theta3dot=theta3dot, theta4dot=theta4dot)
-    sock.sendto(message.encode(), (UDP_IP, UDP_PORT))
+    controller_socket.sendto(message.encode(), (controller_ip, controller_port))
+    rviz_socket.sendto(message.encode(), (rviz_ip, rviz_port))
     
-    data, addr = sock.recvfrom(4096) # buffer size is 4096 bytes
+    data, addr = controller_socket.recvfrom(4096) # buffer size is 4096 bytes
     # print("received message: %s" % data)
 
     tau_raw = [float(x) for x in data.decode().split("|")[:-1]]
